@@ -26,7 +26,13 @@ int main() {
         // if (h_probs[i] > 1 || h_probs[i] < 0) {
         //     std::cout << "warning!! probs exceed [0,1]" << std::endl;
         // }
-        h_probs[i] = i;
+       h_probs[i] = i;
+       // if (i < probs_size / 2){
+       //     h_probs[i] = i % vocab_size;
+       // } else {
+       //     h_probs[i] = 
+       // }
+
     }
     cudaMemcpy(d_probs, h_probs, sizeof(float)*probs_size, cudaMemcpyHostToDevice);
     std::cout << "before launch kernel" << std::endl;
@@ -36,13 +42,18 @@ int main() {
     std::cout << "cuda memcpy device to host" << std::endl;
     cudaMemcpy(h_topK_workspace, topK_workspace + batch_size * beamwidth + 2 * batch_size * beamwidth * 8 * beamwidth, sizeof(int) * batch_size * beamwidth, cudaMemcpyDeviceToHost);
     //int* res = (int*) (topK_workspace + batch_size * beamwidth + 2 * batch_size * beamwidth * 8/*max block per beam*/ * beamwidth);
+    float* h_topK_val = (float*)malloc(sizeof(float) * (batch_size * beamwidth));
+    cudaMemcpy(h_topK_val, topK_workspace + 2 * batch_size * beamwidth * 8 * beamwidth,  sizeof(float) * batch_size * beamwidth, cudaMemcpyDeviceToHost);
     for(int i = 0; i < beamwidth; i++) {
         int id = h_topK_workspace[i];
         printf("topK id = %d\n", id);
+        float val = h_topK_val[i];
+        printf("topK val =%f\n", val);
     }
     std::cout << "before free" << std::endl;
     free(h_probs);
     free(h_topK_workspace);
+    free(h_topK_val);
     cudaFree(d_probs);
     cudaFree(topK_workspace);
 }

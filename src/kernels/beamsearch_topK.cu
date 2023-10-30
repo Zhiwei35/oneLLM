@@ -34,7 +34,8 @@ __global__ void topK_kernel_round1(const float* probs, const int vocab_size,
     for(int data_id = tid + block_lane * blockSize; data_id < vocab_size; data_id += BlockPerBeam * blockSize){
         int data_offset = data_id + row_id * vocab_size;
         float data = probs[data_offset];
-        thread_topK.insertHeap(data, data_id);
+        thread_topK.insertHeap(data, data_offset);//希望这个可以解决id为29999和29998的问题
+       //thread_topK.insertHeap(data, data_id);
     }
     //block local reduce
     topK<K> block_topK = blockreduce(temp_storage).Reduce(thread_topK, reduce_functor<K>);
@@ -42,8 +43,8 @@ __global__ void topK_kernel_round1(const float* probs, const int vocab_size,
     if(tid == 0){
         for(int k_offset = 0; k_offset < K; k_offset++) {
             // topK_vals[row_id * vocab_size + block_lane * blockSize + k_offset] = block_topK.val[k_offset];
-            topK_vals[row_id * BlockPerBeam + block_lane * K + k_offset] = block_topK.val[k_offset];
-            topK_ids[row_id * BlockPerBeam + block_lane * K + k_offset] = block_topK.id[k_offset];//索引offset要根据output buffer的shape来计算
+            topK_vals[row_id * BlockPerBeam * K + block_lane * K + k_offset] = block_topK.val[k_offset];
+            topK_ids[row_id * BlockPerBeam * K  + block_lane * K + k_offset] = block_topK.id[k_offset];//索引offset要根据output buffer的shape来计算
 
         }
     }
@@ -64,8 +65,8 @@ __global__ void topK_kernel_round2(const int* topK_ids, const float* topK_vals,
     int gid = blockIdx.x * blockDim.x + threadIdx.x;
     int row_id = bid;
     topK<K> thread_topK;
-    for(int i = tid; i < BlockPerBeam * K; i += blockDim.x) {
-        int data_offset = bid * K * BlockPerBeam * K + tid;
+    for(int i = tid; i < K * BlockPerBeam * K; i += blockDim.x) {
+        int data_offset = bid * K * BlockPerBeam * K + i;
         thread_topK.insertHeap(topK_vals[data_offset], topK_ids[data_offset]);
     }
     //下一行应该求出来的block_topK就是K个值了，不需要在这外面走K次for一个个求吧
