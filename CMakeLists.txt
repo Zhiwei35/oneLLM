@@ -24,19 +24,22 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode=arch=compute_${SM},code=\\\"s
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DWMMA")
     set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DWMMA")
   endif()
-message("-- Assign GPU architecture (sm=${SM})")
+message("-- Assign GPU architecture (sm=60 61 70 75})")
 
 else()
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS}  \
-                      -gencode=arch=compute_60,code=\\\"sm_60,compute_60\\\" \
-                      -gencode=arch=compute_61,code=\\\"sm_61,compute_61\\\" \
                       -gencode=arch=compute_70,code=\\\"sm_70,compute_70\\\" \
                       -gencode=arch=compute_75,code=\\\"sm_75,compute_75\\\" \
-                      -rdc=true")
+                      -gencode=arch=compute_80,code=\\\"sm_80,compute_80\\\" \
+                      -gencode=arch=compute_86,code=\\\"sm_86,compute_86\\\" \
+                        ")
+#                      -rdc=true")
+
 set(CMAKE_C_FLAGS    "${CMAKE_C_FLAGS}    -DWMMA")
 set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS}  -DWMMA")
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -DWMMA")
-message("-- Assign GPU architecture (sm=60,61,70,75)")
+set(CMAKE_CUDA_ARCHITECTURES 70 75 80 86)
+message("-- Assign GPU architecture (sm=70 75 80 86)")
 endif()
 
 set(CMAKE_C_FLAGS_DEBUG    "${CMAKE_C_FLAGS_DEBUG}    -Wall -O0")
@@ -63,6 +66,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(COMMON_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}
   ${CUDA_PATH}/include
+  #${PROJECT_SOURCE_DIR}/3rdparty/cub
 )
 
 set(COMMON_LIB_DIRS

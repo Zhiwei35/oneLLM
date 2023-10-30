@@ -4,4 +4,5 @@ add_executable(unittest
 target_link_libraries(  # Libs for test_beamsearch_kernel
   unittest PUBLIC
     -lcudart
+    -lcudadevrt
     beamsearch_topK) 

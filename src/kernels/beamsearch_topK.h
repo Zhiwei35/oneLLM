@@ -1,19 +1,19 @@
 #include <cuda_runtime.h>
-
+#include <float.h>
 template<int K>
 struct topK
 {
     float val[K];
     int id[K];
 
-    __device__ init(){
+    __device__ void init(){
         for (int i = 0; i < K; i++) {
             id[i] = -1;
             val[i] = FLT_MIN;
         }
     }
 
-    __device__ insertHeap(float data, int data_id){
+    __device__ void insertHeap(float data, int data_id){
         if(id[K-1] == -1 || val[K-1] < data){
             id[K-1] = data_id;
             val[K-1] = data;
@@ -30,10 +30,10 @@ struct topK
             }
         }
     }
-}
+};
 
 void launchTopKforBeamSearch(const float* probs, 
                             const int batch_size,
                             const int vocab_size, 
-                            const int beamwidth,
-                            float* topk_workspace)
+//                            const int beamwidth,
+                            float* topk_workspace);
