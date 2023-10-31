@@ -6,14 +6,13 @@
 #include <vector>      // std::vector
 
 #include <cuda.h>
-// #include <cuda_runtime.h>
 #include "src/kernels/beamsearch_topK.h"
 
 int main() {
     const int batch_size = 1;
     const int vocab_size = 30000;
     const int beamwidth = 2;
-    std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
+    // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int probs_size = batch_size * vocab_size * beamwidth;
     float* h_probs;
     float *d_probs;
@@ -22,35 +21,25 @@ int main() {
     float* topK_workspace;
     cudaMalloc((void**)&topK_workspace, sizeof(float) * (2 * batch_size * beamwidth + 2 * batch_size * beamwidth * 8/*max block per beam*/ * beamwidth));
     for(int i = 0; i < probs_size; i++) { // 0-59999
-        // h_probs[i] = rand() % 100 / (float)(100 + 1);
-        // if (h_probs[i] > 1 || h_probs[i] < 0) {
-        //     std::cout << "warning!! probs exceed [0,1]" << std::endl;
-        // }
        h_probs[i] = i;
-       // if (i < probs_size / 2){
-       //     h_probs[i] = i % vocab_size;
-       // } else {
-       //     h_probs[i] = 
-       // }
-
     }
     cudaMemcpy(d_probs, h_probs, sizeof(float)*probs_size, cudaMemcpyHostToDevice);
-    std::cout << "before launch kernel" << std::endl;
+    // debug info, better to retain: std::cout << "before launch kernel" << std::endl;
     launchTopKforBeamSearch(d_probs, batch_size, vocab_size, topK_workspace);
-    std::cout << "after launch kernel" << std::endl;
+    // debug info, better to retain: std::cout << "after launch kernel" << std::endl;
     int* h_topK_workspace = (int*)malloc(sizeof(int) * (batch_size * beamwidth));
-    std::cout << "cuda memcpy device to host" << std::endl;
+    // debug info, better to retain: std::cout << "cuda memcpy device to host" << std::endl;
+    // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     cudaMemcpy(h_topK_workspace, topK_workspace + batch_size * beamwidth + 2 * batch_size * beamwidth * 8 * beamwidth, sizeof(int) * batch_size * beamwidth, cudaMemcpyDeviceToHost);
-    //int* res = (int*) (topK_workspace + batch_size * beamwidth + 2 * batch_size * beamwidth * 8/*max block per beam*/ * beamwidth);
     float* h_topK_val = (float*)malloc(sizeof(float) * (batch_size * beamwidth));
     cudaMemcpy(h_topK_val, topK_workspace + 2 * batch_size * beamwidth * 8 * beamwidth,  sizeof(float) * batch_size * beamwidth, cudaMemcpyDeviceToHost);
     for(int i = 0; i < beamwidth; i++) {
         int id = h_topK_workspace[i];
-        printf("topK id = %d\n", id);
+        // debug info, better to retain: printf("topK id = %d\n", id);
         float val = h_topK_val[i];
-        printf("topK val =%f\n", val);
+        // debug info, better to retain: printf("topK val =%f\n", val);
     }
-    std::cout << "before free" << std::endl;
+    // debug info, better to retain: std::cout << "before free" << std::endl;
     free(h_probs);
     free(h_topK_workspace);
     free(h_topK_val);
