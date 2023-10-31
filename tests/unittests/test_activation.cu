@@ -14,8 +14,8 @@ void CPUSwiGLU(float* input, float* output, int batch_size, int intermedia_size)
         for(int i = 0; i < intermedia_size; i++) {
             int offset1 = batch_id * 2 * intermedia_size + i;
             int offset2 = batch_id * 2 * intermedia_size + i + intermedia_size;
-            int out_offset = batch_id * intermedia_size + i
-            float silu_out = input[offset1] / (1 + exp(-input[offset1]));
+            int out_offset = batch_id * intermedia_size + i;
+            float silu_out = input[offset1] / (1.0f + expf(-input[offset1]));
             output[out_offset] = silu_out * input[offset2];
         }
     }
@@ -25,8 +25,11 @@ bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
         if(fabs(CPUoutput[i] - GPUoutput[i]) > 1e-6){
             printf("the %dth res is wrong, CPUoutput = %f, GPUoutput = %f\n", i, CPUoutput[i], GPUoutput[i]);
+            return false;
         }
+
     }
+    return true;
 }
 int main() {
     constexpr int batch_size = 16;
@@ -42,12 +45,12 @@ int main() {
     h_output = (float*)malloc(sizeof(float) * output_size);
     cudaMalloc((void**)&d_output, sizeof(float) * output_size);
     for(int i = 0; i < input_size; i++) { // initialize host data
-        h_input[i] = i;
+        h_input[i] = (float)i;
     }
     cudaMemcpy(d_input, h_input, sizeof(float) * input_size, cudaMemcpyHostToDevice);
-    launchAct(d_input, d_output, intermedia_size);
+    launchAct(d_input, d_output, batch_size, intermedia_size);
     cudaMemcpy(h_output, d_output, sizeof(float) * output_size, cudaMemcpyDeviceToHost);
-    float* CPU_output = (float*)malloc(sizeof(float) * output_size)
+    float* CPU_output = (float*)malloc(sizeof(float) * output_size);
     CPUSwiGLU(h_input, CPU_output, batch_size, intermedia_size);
     bool is_true = CheckResult(CPU_output, h_output, output_size);
     if(is_true){
@@ -56,7 +59,9 @@ int main() {
         printf("test failed");
     }
 
-    free(h_probs);
-    cudaFree(d_probs);
-    cudaFree(topK_workspace);
+    free(h_input);
+    free(h_output);
+    free(CPU_output);
+    cudaFree(d_input);
+    cudaFree(d_output);
 }

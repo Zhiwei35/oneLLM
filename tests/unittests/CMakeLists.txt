@@ -1,8 +1,18 @@
-add_executable(unittest
+add_executable(topK
     test_beamsearch_topK.cu
 )
 target_link_libraries(  # Libs for test_beamsearch_kernel
-  unittest PUBLIC
+  topK PUBLIC
     -lcudart
     -lcudadevrt
-    beamsearch_topK) 
+    beamsearch_topK)
+
+add_executable(act
+    test_activation.cu
+)
+target_link_libraries(  # Libs for test_beamsearch_kernel
+  act PUBLIC
+    -lcudart
+    -lcudadevrt
+    activation)
+

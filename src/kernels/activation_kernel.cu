@@ -21,8 +21,10 @@ __global__ void silu_and_mul_kernel(
 }
 
 template<typename T>
-void launchAct(const T* input, T* out, const int intermedia_size) {
+void launchAct(const T* input, T* out, const int batch_size, const int intermedia_size) {
     dim3 grid(batch_size);
     dim3 block(256);
     silu_and_mul_kernel<T><<<grid, block>>>(out, input, intermedia_size);
 }
+
+template void launchAct(const float* input, float* output, const int batch_size, const int intermedia_size);
