@@ -26,5 +26,5 @@ void launchAct(const T* input, T* out, const int batch_size, const int intermedi
     dim3 block(256);
     silu_and_mul_kernel<T><<<grid, block>>>(out, input, intermedia_size);
 }
-
+// We must instancite the template, if not, will report linking issue
 template void launchAct(const float* input, float* output, const int batch_size, const int intermedia_size);
