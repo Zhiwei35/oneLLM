@@ -18,7 +18,7 @@ struct topK
             id[K-1] = data_id;
             val[K-1] = data;
         }
-        //一轮冒泡排序，重排，只需一轮，因为此时除了最后一个元素，其它都是有序
+        //Note: 仅需一轮冒泡排序（插入新元素的重排），因为此时除了最后一个新元素，其它都是有序
         for (int i = K - 2; i >= 0; i--){
             if(val[i + 1] > val[i] || id[i] == -1) {
                 float tmp = val[i];
@@ -35,5 +35,4 @@ struct topK
 void launchTopKforBeamSearch(const float* probs, 
                             const int batch_size,
                             const int vocab_size, 
-//                            const int beamwidth,
                             float* topk_workspace);
