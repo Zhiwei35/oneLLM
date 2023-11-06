@@ -19,17 +19,17 @@ template<typename T>
 struct Vec {
     using Type = T;
     static constexpr int size = 0;
-}
+};
 
 template<>
 struct Vec<float> {
     using Type = float4;
     static constexpr int size = 4;
-}
+};
 struct TwoFloat2{
     float2 x;
     float2 y;
-}
+};
 
 inline __device__ float2 GetRoPEfreq(int zid, int rot_embed_dim, float base, float t_step)
 {
@@ -66,7 +66,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
                                                     int          max_position_embeddings,/*default 2048 in llama, placeholder for ntk RoPE*/
                                                     bool         use_dynamic_ntk/*placeholder for ntk RoPE*/){
     int vec_size = Vec<T>::size;
-    using Vec_t = Vec<T>::Type;
+    using Vec_t = typename Vec<T>::Type;
     int token_id = blockIdx.x;
     int head_id = blockIdx.y;
     int tid = threadIdx.x;
@@ -74,8 +74,8 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     // 1. prapare rebuilding , do rebuild padding and transpose when store
     int dst_token_id = token_id + token_padding_offset; // token id after rebuild padding
 
-    int batch_id = dst_token_id / seqlen; //seqlen is max_seq_len for padding used to unify all seq's length
-    int local_token_id = dst_token_id % seqlen; //每个seq中的局部token id
+    int batch_id = dst_token_id / seq_len; //seqlen is max_seq_len for padding used to unify all seq's length
+    int local_token_id = dst_token_id % seq_len; //每个seq中的局部token id
 
     //2. bias add
     int qkv_head_num = head_num + 2 * kv_head_num;
@@ -83,22 +83,23 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int k_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size;
     int v_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size;
     // note: scalar add can be replaced by 3 overloaded function call, which is implemented by float add, float2 add and float4 add.
-    Vec_t q = *reinterpret_cast<Vec*>(&QKV[q_id]);
-    Vec_t q_bias = *reinterpret_cast<Vec*>(&qkv_bias[head_id * head_size + tid * vec_size]);
+    // TODO: reduce the pointer converter and fuse for loop
+    Vec_t q = *reinterpret_cast<Vec_t*>(&QKV[q_id]);
+    Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size]));
     for(int i = 0; i < vec_size; i++) {
-        *reinterpret_cast<T*>(&q)[i] += *reinterpret_cast<T*>(&q_bias)[i];
+        reinterpret_cast<T*>(&q)[i] += reinterpret_cast<T*>(&q_bias)[i];
     }
     
-    Vec_t k = QKV[k_id];
-    Vec_t k_bias = qkv_bias[head_id * head_size + tid + head_num * head_size];
+    Vec_t k = *reinterpret_cast<Vec_t*>(&QKV[k_id]);
+    Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size]));
     for(int i = 0; i < vec_size; i++) {
-        *reinterpret_cast<T*>(&k)[i] += *reinterpret_cast<T*>(&k_bias)[i];
+        reinterpret_cast<T*>(&k)[i] += reinterpret_cast<T*>(&k_bias)[i];
     }
 
-    Vec_t v = QKV[v_id];
-    Vec_t v_bias = qkv_bias[head_id * head_size + tid + head_num * head_size + kv_head_num * head_size];
+    Vec_t v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
+    Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size + kv_head_num * head_size]));
     for(int i = 0; i < vec_size; i++) {
-        *reinterpret_cast<T*>(&v)[i] += *reinterpret_cast<T*>(&v_bias)[i];
+        reinterpret_cast<T*>(&v)[i] += reinterpret_cast<T*>(&v_bias)[i];
     }
 
     //3. RoPE
@@ -107,24 +108,24 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     const int timestep = cur_seq_history_len + local_token_id;//+ local_token_id得到m，意思就是要结合history做全局位置编码
     // timestep为cos(m*theta)中的m
     // for first two of float2
-    TwoFloat2& q = *reinterpret_cast<TwoFloat2*>(&q); // q为float4 寄存器
+    TwoFloat2& q_ = *reinterpret_cast<TwoFloat2*>(&q); // q为float4 寄存器
     float2 coef0 = GetRoPEfreq(4 * tid, rotary_embedding_base, rotary_embedding_dim, timestep);
     // float freq0 = timestep / powf(rotary_embedding_base, 4 * tid / (float) rotary_embedding_dim); //分子zid = 0,2,4,,headsize/2-1,对应的theta下标为0,1,2.对应的headsize维度的索引为(0,1),(2,3)
     // float2 coef0 = make_float2(cos(freq0), sin(freq0));
-    q.x = GetRoPEres(q.x ,coef0);
+    q_.x = GetRoPEres(q_.x ,coef0);
     // rot0.x = coef0.x * q.x -  coef0.y * q.y; //q.x为x0,q.y为x1，head size维度上两个相邻
     // rot0.y = coef0.x * q.y +  coef0.y * q.x;
     // for second two of float4
-    float2 coef1 = GetRoPEfreq(4 * tid, rotary_embedding_base, rotary_embedding_dim, timestep);
+    float2 coef1 = GetRoPEfreq(4 * tid + 2, rotary_embedding_base, rotary_embedding_dim, timestep);
     // float freq1 = timestep / powf(rotary_embedding_base, (4 * tid + 2) / (float) rotary_embedding_dim) ;
     // float2 coef0 = make_float2(cos(freq1), sin(freq1));
-    q.y = GetRoPEres(q.y ,coef1);
+    q_.y = GetRoPEres(q_.y ,coef1);
     // float2 rot1;
     // rot1.x = coef1.x * q.x -  coef1.y * q.y; //q.x为x2,q.y为x3，head size维度上两个相邻
     // rot1.y = coef1.x * q.y +  coef1.y * q.x;
-    TwoFloat2& k = *reinterpret_cast<TwoFloat2*>(&k);
-    k.x = GetRoPEres(k.x ,coef0);
-    k.y = GetRoPEres(k.y ,coef1);
+    TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k);
+    k_.x = GetRoPEres(k_.x ,coef0);
+    k_.y = GetRoPEres(k_.y ,coef1);
     //4.write back to gmem and do transpose
     // [bs, head num, seqlen, head size]
     // pay attention to local token id and kv head num and max_seq_len(seq_len)
@@ -135,12 +136,12 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int dst_kv_id = batch_id * seq_len * kv_head_num * head_size + 
                             head_id * seq_len * head_size +
                                 local_token_id * head_size + tid * vec_size;
-    Vec q = *reinterpret_cast<Vec*>(&q);
-    Vec k = *reinterpret_cast<Vec*>(&k);
-    *reinterpret_cast<Vec*>(&q_buf[dst_q_id]) = q; // remember to add & before q_buf[], cause q_buf[] is a scalar
+    Vec_t q_res = *reinterpret_cast<Vec_t*>(&q_);
+    Vec_t k_res = *reinterpret_cast<Vec_t*>(&k_);
+    *reinterpret_cast<Vec_t*>(&q_buf[dst_q_id]) = q_res; // remember to add & before q_buf[], cause q_buf[] is a scalar
     if (head_id < kv_head_num) {//for MQA and GQA
-        *reinterpret_cast<Vec*>(&k_buf[dst_kv_id]) = k;
-        *reinterpret_cast<Vec*>(&v_buf[dst_kv_id]) = v;
+        *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k_res;
+        *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
     }
                                                     }
 template<typename T>

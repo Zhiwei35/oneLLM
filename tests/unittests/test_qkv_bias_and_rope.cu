@@ -5,12 +5,12 @@
 #include <string>      // std::string
 #include <vector>      // std::vector
 
-#include <iostream.h>
-#include "src/kernels/qkv_bias_and_rope.h"
+#include <iostream>
+#include "src/kernels/qkv_bias_and_RoPE.h"
 
-void CPUfunc(float* q_buf,
-                float* k_buf,
-                float* v_buf,
+void CPUfunc(float* q,
+                float* k,
+                float* v,
                 float* QKV,
                 const float* qkv_bias,
                 const int*   padding_offset,
@@ -60,12 +60,12 @@ void CPUfunc(float* q_buf,
                 for (int d = 0; d < head_size; d+=2) {
                     float inv_freq = timestep / powf(rotary_embedding_base, (d / 2) / (float)rotary_embedding_dim);
                     k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] = 
-                        k[b * kbatchstride + s * kv_head_num * head_size + head * head_size + d] * cos(inv_freq)
+                        k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] * cos(inv_freq)
                              - q[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] * sin(inv_freq);
                     
                     k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] = 
-                        k[b * kbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] * cos(inv_freq)
-                             + k[b * kbatchstride + s * kv_head_num * head_size + head * head_size + d] * sin(inv_freq);
+                        k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] * cos(inv_freq)
+                             + k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] * sin(inv_freq);
 
                 } 
             }            
@@ -102,7 +102,7 @@ int main() {
     const int head_size = 8;
     const int rotary_embedding_dim = 256;
     const int rotary_embedding_base = 10000;
-    const int max_position_embeddings = 2048,
+    const int max_position_embeddings = 2048;
     
     bool use_dynamic_ntk = false;
     float* q = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
