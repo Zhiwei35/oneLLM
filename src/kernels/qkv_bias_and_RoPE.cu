@@ -91,14 +91,12 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     
     Vec_t k = QKV[k_id];
     Vec_t k_bias = qkv_bias[head_id * head_size + tid + head_num * head_size];
-    k += k_bias;
     for(int i = 0; i < vec_size; i++) {
         *reinterpret_cast<T*>(&k)[i] += *reinterpret_cast<T*>(&k_bias)[i];
     }
 
     Vec_t v = QKV[v_id];
     Vec_t v_bias = qkv_bias[head_id * head_size + tid + head_num * head_size + kv_head_num * head_size];
-    v += v_bias;
     for(int i = 0; i < vec_size; i++) {
         *reinterpret_cast<T*>(&v)[i] += *reinterpret_cast<T*>(&v_bias)[i];
     }
