@@ -5,8 +5,7 @@
 #include <string>      // std::string
 #include <vector>      // std::vector
 
-#include <cuda.h>
-#include <iostream.h>
+#include <iostream>
 #include "src/kernels/qkv_linear.h"
 
 void CPUlinear(float* input, float* weight, float* output,
@@ -14,7 +13,7 @@ void CPUlinear(float* input, float* weight, float* output,
     for(int i = 0; i < m; i++) {
         for(int j = 0; j < n; j++) {
             for(int l = 0; l < k; l++) {
-                output[i * n + j] = input[i * k + l] * weight[l * n + j];
+                output[i * n + j] += weight[i * k + l] * input[l * n + j];
             }
         }
     }
@@ -34,7 +33,7 @@ bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
 int main() {
     const int seqlen = 1;
     const int hidden_units = 16;
-    const int hidden_units_2 = 256
+    const int hidden_units_2 = 256;
     // (16, 16) * (16, 1)
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     float* h_w;
@@ -56,17 +55,20 @@ int main() {
     float* d_out;
     cudaMalloc((void**)&d_out, sizeof(float) * hidden_units);
 
-    cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice);
+   // cublasSetVector(hidden_units_2, sizeof(float), h_w, 1, d_w, 1);
+   // cublasSetVector(hidden_units, sizeof(float), h_in, 1, d_in, 1);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
-    launchLinear<float>(d_in, d_out, seqlen, d_w, hidden_units);
+    launchLinear(d_in, d_out, seqlen, d_w, hidden_units);
     // debug info, better to retain: 
     std::cout << "after launch kernel" << std::endl;
     // debug info, better to retain: 
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     cudaMemcpy(h_out, d_out, sizeof(float) * hidden_units, cudaMemcpyDeviceToHost);
+    //cublasGetVector(hidden_units, sizeof(float), d_out, 1, h_out, 1);
     float* CPUout = (float*) malloc(sizeof(float) * hidden_units);
     CPUlinear(h_in, h_w, CPUout, hidden_units, hidden_units, seqlen);
     bool is_right = CheckResult(CPUout, h_out, hidden_units);

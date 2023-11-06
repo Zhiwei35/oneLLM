@@ -22,7 +22,7 @@ class cublasWrapper {
 
         cudaStream_t   stream_;
         void* cublas_workspace = nullptr;
-        BaseAllocator* allocator_ = nullptr;
+//        BaseAllocator* allocator_ = nullptr;
     
     public:
         cublasWrapper(cublasHandle_t cublas_handle_,
@@ -44,8 +44,9 @@ class cublasWrapper {
                 const void*       B,
                 const int         ldb,
                 void*             C,
-                const int         ldc);
-
+                const int         ldc,
+                float             alpha,
+                float             beta);
         // for qk*v and q*k
         void stridedBatchedGemm(cublasOperation_t transa,
                                 cublasOperation_t transb,
@@ -62,6 +63,6 @@ class cublasWrapper {
                                 const int         ldc,
                                 const int64_t     strideC,
                                 const int         batchCount,
-                                const float       f_alpha = 1.0f,
-                                const float       f_beta  = 0.0f);
-}
+                                float             f_alpha,
+                                float             f_beta);
+};

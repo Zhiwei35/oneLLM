@@ -17,12 +17,12 @@ cublasWrapper::cublasWrapper(cublasHandle_t cublas_handle,
     // }
 }
 
-cublasWrapper::~cublasMMWrapper()
+cublasWrapper::~cublasWrapper()
 {
-    if (allocator_) {
-        allocator_->free((void**)(&cublas_workspace_));
-        allocator_ = nullptr;
-    }
+//    if (allocator_) {
+//        allocator_->free((void**)(&cublas_workspace_));
+//        allocator_ = nullptr;
+//    }
 }
 // invoked in model example main function after initialize cublas wrapper
 void cublasWrapper::setFP32GemmConfig()
@@ -38,7 +38,7 @@ void cublasWrapper::setFP16GemmConfig()
     Atype_       = CUDA_R_16F;
     Btype_       = CUDA_R_16F;
     Ctype_       = CUDA_R_16F;
-    computeType_ = CUDA_R_32F;
+    computeType_ = CUDA_R_16F;
 }
 
 //fp32 gemm and fp16 gemm
@@ -52,13 +52,17 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                            const void*       B,
                            const int         ldb,
                            void*             C,
-                           const int         ldc
+                           const int         ldc,
                            float             f_alpha = 1.0f,
                            float             f_beta = 0.0f)
 {
-    int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
-    const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_alpha)) : reinterpret_cast<void*>(&f_alpha);
-    const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
+    //half h_alpha = (half)(f_alpha);
+    //half h_beta  = (half)(f_beta);
+    //int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
+    //const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_alpha)) : reinterpret_cast<void*>(&f_alpha);
+    //const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
+    const void* alpha = reinterpret_cast<void*>(&f_alpha);
+    const void* beta = reinterpret_cast<void*>(&f_beta);
     cublasGemmEx(cublas_handle_,
                 transa,
                 transb,
@@ -78,7 +82,7 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                 ldc,
                 computeType_,
                 CUBLAS_GEMM_DEFAULT);
-                //CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
+//                CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
 
 }
 
@@ -97,13 +101,16 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
                                         const int         ldc,
                                         const int64_t     strideC,
                                         const int         batchCount,
-                                        const float       f_alpha = 1.0f,
-                                        const float       f_beta  = 0.0f)
+                                        float       f_alpha = 1.0f,
+                                        float       f_beta  = 0.0f)
 {
-    int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
-    const void* alpha =
-        is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_alpha)) : reinterpret_cast<const void*>(&f_alpha);
-    const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<const void*>(&f_beta);
+    //int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
+    //const void* alpha =
+    //    is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_alpha)) : reinterpret_cast<const void*>(&f_alpha);
+    //const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_beta)) : reinterpret_cast<const void*>(&f_beta);
+    const void* alpha = reinterpret_cast<void*>(&f_alpha);
+    const void* beta = reinterpret_cast<void*>(&f_beta);
+
     cublasGemmStridedBatchedEx(cublas_handle_,
                                 transa,
                                 transb,
@@ -124,7 +131,7 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
                                 Ctype_,
                                 ldc,
                                 strideC,
-                                batch_count,
+                                batchCount,
                                 computeType_,
                                 CUBLAS_GEMM_DEFAULT);
 }
