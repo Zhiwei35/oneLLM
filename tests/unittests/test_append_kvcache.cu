@@ -79,6 +79,6 @@ int main() {
     cudaFree(d_v_src);
     cudaFree(d_k_dst);
     cudaFree(d_v_dst);
-    free(dcur_query_length);
-    free(dhistory_length);
+    cudaFree(dcur_query_length);
+    cudaFree(dhistory_length);
 }
