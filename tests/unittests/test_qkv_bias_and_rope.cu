@@ -73,17 +73,17 @@ void CPUfunc(float* q,
     }
 }
 
-bool CheckResult(float* q, float* k, float* dq, float* dk, 
+bool CheckResult(float* q, float* k, float* hq, float* hk, 
                 const int q_size, const int k_size) {
     for(int i = 0; i < q_size; i++) {
-        if(fabs(q[i] - dq[i]) > 1e-6){
-            printf("the %dth q is wrong, q = %f, dq = %f\n", i, q[i], dq[i]);
+        if(fabs(q[i] - hq[i]) > 1e-6){
+            printf("the %dth q is wrong, q = %f, hq = %f\n", i, q[i], hq[i]);
             return false;
         }
     }
     for(int i = 0; i < k_size; i++) {
-        if(fabs(k[i] - dk[i]) > 1e-6){
-            printf("the %dth k is wrong, k = %f, dk = %f\n", i, k[i], dk[i]);
+        if(fabs(k[i] - hk[i]) > 1e-6){
+            printf("the %dth k is wrong, k = %f, hk = %f\n", i, k[i], hk[i]);
             return false;
         }
     }
@@ -99,7 +99,7 @@ int main() {
     const int token_num = batch_size * seq_len;
     const int head_num = 2;
     const int kv_head_num = 1;
-    const int head_size = 8;
+    const int head_size = 128;
     const int rotary_embedding_dim = 256;
     const int rotary_embedding_base = 10000;
     const int max_position_embeddings = 2048;
@@ -173,10 +173,15 @@ int main() {
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     cudaMemcpy(q, dq, sizeof(float) * batch_size * seq_len * head_num * head_size, cudaMemcpyDeviceToHost);
     cudaMemcpy(k, dk, sizeof(float) * batch_size * seq_len * kv_head_num * head_size, cudaMemcpyDeviceToHost);
+    
     // float* CPUq = (float*) malloc(sizeof(float) * batch_size * seq_len * head_num * head_size);
     // float* CPUk = (float*) malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size);
-    CPUfunc(q,
-            k, //output
+    std::cout << "after memcpyd2h, dq[0] = " << q[0] << std::endl;
+    std::cout << "before CPU function" << std::endl;
+    float* hq = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
+    float* hk = (float*)malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size); //output
+    CPUfunc(hq,
+            hk, //output
             v,
             QKV,
             qkv_bias,
@@ -191,8 +196,8 @@ int main() {
             head_size,
             rotary_embedding_dim,
             rotary_embedding_base);
-
-    bool is_right = CheckResult(q, k, dq, dk, 
+    std::cout << "after CPU function" << std::endl;
+    bool is_right = CheckResult(q, k, hq, hk, 
                                     batch_size * seq_len * head_num * head_size, 
                                             batch_size * seq_len * kv_head_num * head_size);
     // debug info, better to retain: 
@@ -206,6 +211,8 @@ int main() {
     free(padding_offset);
     free(history_length);
     free(input_length);
+    free(hq);
+    free(hk);
     cudaFree(dq);
     cudaFree(dk);
     cudaFree(dv);

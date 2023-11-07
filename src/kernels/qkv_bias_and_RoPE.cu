@@ -71,6 +71,8 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int head_id = blockIdx.y;
     int tid = threadIdx.x;
     int token_padding_offset = padding_offset[token_id];
+    // 0. filter the redundant part, we'd better to allocate more threads than data to ensure all data can be vectorized
+    bool is_data = tid * vec_size < head_size;
     // 1. prapare rebuilding , do rebuild padding and transpose when store
     int dst_token_id = token_id + token_padding_offset; // token id after rebuild padding
 
@@ -84,22 +86,28 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int v_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size;
     // note: scalar add can be replaced by 3 overloaded function call, which is implemented by float add, float2 add and float4 add.
     // TODO: reduce the pointer converter and fuse for loop
-    Vec_t q = *reinterpret_cast<Vec_t*>(&QKV[q_id]);
-    Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size]));
-    for(int i = 0; i < vec_size; i++) {
-        reinterpret_cast<T*>(&q)[i] += reinterpret_cast<T*>(&q_bias)[i];
+    Vec_t q, k, v;
+    if(is_data){
+        q = *reinterpret_cast<Vec_t*>(&QKV[q_id]);
+        Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size]));
+        for(int i = 0; i < vec_size; i++) {
+            reinterpret_cast<T*>(&q)[i] += reinterpret_cast<T*>(&q_bias)[i];
+        }
     }
+    // note: kv judge condition is add a item that head_id<kv_head_id in case of GQA and MQA
+    if(is_data && head_id < kv_head_num){
+        k = *reinterpret_cast<Vec_t*>(&QKV[k_id]);
+        Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size]));
+        for(int i = 0; i < vec_size; i++) {
+            reinterpret_cast<T*>(&k)[i] += reinterpret_cast<T*>(&k_bias)[i];
+        }
     
-    Vec_t k = *reinterpret_cast<Vec_t*>(&QKV[k_id]);
-    Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size]));
-    for(int i = 0; i < vec_size; i++) {
-        reinterpret_cast<T*>(&k)[i] += reinterpret_cast<T*>(&k_bias)[i];
-    }
 
-    Vec_t v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
-    Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size + kv_head_num * head_size]));
-    for(int i = 0; i < vec_size; i++) {
-        reinterpret_cast<T*>(&v)[i] += reinterpret_cast<T*>(&v_bias)[i];
+        v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
+        Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid + head_num * head_size + kv_head_num * head_size]));
+        for(int i = 0; i < vec_size; i++) {
+            reinterpret_cast<T*>(&v)[i] += reinterpret_cast<T*>(&v_bias)[i];
+        }
     }
 
     //3. RoPE
@@ -136,12 +144,20 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int dst_kv_id = batch_id * seq_len * kv_head_num * head_size + 
                             head_id * seq_len * head_size +
                                 local_token_id * head_size + tid * vec_size;
-    Vec_t q_res = *reinterpret_cast<Vec_t*>(&q_);
-    Vec_t k_res = *reinterpret_cast<Vec_t*>(&k_);
-    *reinterpret_cast<Vec_t*>(&q_buf[dst_q_id]) = q_res; // remember to add & before q_buf[], cause q_buf[] is a scalar
-    if (head_id < kv_head_num) {//for MQA and GQA
-        *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k_res;
-        *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
+    if(blockIdx.x == 0 && tid ==0) printf("147 q = %f\n", q_.x.x);
+    if(is_data){
+        Vec_t q_res = *reinterpret_cast<Vec_t*>(&q_);
+        Vec_t k_res = *reinterpret_cast<Vec_t*>(&k_);
+        Vec_t* q_out = reinterpret_cast<Vec_t*>(q_buf);
+        q_out[dst_q_id] = q_res; // remember to add & before q_buf[], cause q_buf[] is a scalar
+        if(blockIdx.x == 0 && tid ==0) {
+            printf("152 q = %f\n", q_res.x);
+            printf("153 q_buf[dst_q_id] = %f\n", q_out[dst_q_id].x);
+        }
+        if (head_id < kv_head_num) {//for MQA and GQA
+            *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k_res;
+            *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
+        }
     }
                                                     }
 template<typename T>
@@ -164,7 +180,7 @@ void launchAddFusedQKVBiasTransposeAndRoPE(T*           q_buf,
                                             int          max_position_embeddings,
                                             bool         use_dynamic_ntk){
     dim3 grid(token_num ,head_num);
-    dim3 block(head_size / Vec<T>::size);// apply 2 eles vectorization to match RoPE
+    dim3 block((head_size / Vec<T>::size + 32 - 1) / 32 * 32);// apply 2 eles vectorization to match RoPE
     add_fusedQKV_bias_transpose_kernel<T><<<grid, block>>>( q_buf,
                                                             k_buf,
                                                             v_buf,
