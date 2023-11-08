@@ -116,24 +116,28 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     const int timestep = cur_seq_history_len + local_token_id;//+ local_token_id得到m，意思就是要结合history做全局位置编码
     // timestep为cos(m*theta)中的m
     // for first two of float2
+    
     TwoFloat2& q_ = *reinterpret_cast<TwoFloat2*>(&q); // q为float4 寄存器
-    float2 coef0 = GetRoPEfreq(4 * tid, rotary_embedding_base, rotary_embedding_dim, timestep);
+    TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k); 
+    if (is_data){ 
+        float2 coef0 = GetRoPEfreq(4 * tid, rotary_embedding_base, rotary_embedding_dim, timestep);
     // float freq0 = timestep / powf(rotary_embedding_base, 4 * tid / (float) rotary_embedding_dim); //分子zid = 0,2,4,,headsize/2-1,对应的theta下标为0,1,2.对应的headsize维度的索引为(0,1),(2,3)
     // float2 coef0 = make_float2(cos(freq0), sin(freq0));
-    q_.x = GetRoPEres(q_.x ,coef0);
+        q_.x = GetRoPEres(q_.x ,coef0);
     // rot0.x = coef0.x * q.x -  coef0.y * q.y; //q.x为x0,q.y为x1，head size维度上两个相邻
     // rot0.y = coef0.x * q.y +  coef0.y * q.x;
     // for second two of float4
-    float2 coef1 = GetRoPEfreq(4 * tid + 2, rotary_embedding_base, rotary_embedding_dim, timestep);
+        float2 coef1 = GetRoPEfreq(4 * tid + 2, rotary_embedding_base, rotary_embedding_dim, timestep);
     // float freq1 = timestep / powf(rotary_embedding_base, (4 * tid + 2) / (float) rotary_embedding_dim) ;
     // float2 coef0 = make_float2(cos(freq1), sin(freq1));
-    q_.y = GetRoPEres(q_.y ,coef1);
+        q_.y = GetRoPEres(q_.y ,coef1);
     // float2 rot1;
     // rot1.x = coef1.x * q.x -  coef1.y * q.y; //q.x为x2,q.y为x3，head size维度上两个相邻
     // rot1.y = coef1.x * q.y +  coef1.y * q.x;
-    TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k);
-    k_.x = GetRoPEres(k_.x ,coef0);
-    k_.y = GetRoPEres(k_.y ,coef1);
+        //TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k);
+        k_.x = GetRoPEres(k_.x ,coef0);
+        k_.y = GetRoPEres(k_.y ,coef1);
+    }
     //4.write back to gmem and do transpose
     // [bs, head num, seqlen, head size]
     // pay attention to local token id and kv head num and max_seq_len(seq_len)
