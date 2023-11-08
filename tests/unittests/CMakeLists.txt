@@ -8,7 +8,7 @@ target_link_libraries(  # Libs for test_beamsearch_kernel
     beamsearch_topK) 
 
 add_executable(appendkv
-    test_append_tokvcache.cu
+    test_append_kvcache.cu
 )
 target_link_libraries(  # Libs for test_beamsearch_kernel
     appendkv PUBLIC

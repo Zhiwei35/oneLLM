@@ -20,7 +20,7 @@ __global__ void append_key_cache(T*          k_dst, //[num layers, bs, head num,
     int batch_id = blockIdx.y;
     int head_id = blockIdx.z;
     int tid = threadIdx.x;
-    int token_id = (blockIdx.x * blockDim.x + tid) / head_size;
+    int token_id = blockIdx.x;
     
     // 当前layer的k cache
     T* k_cache_dst = k_dst + layer_offset;
@@ -53,7 +53,7 @@ __global__ void append_value_cache(T*          v_dst,
     int batch_id = blockIdx.y;
     int head_id = blockIdx.z;
     int tid = threadIdx.x;
-    int token_id = (blockIdx.x * blockDim.x + tid) / head_size;
+    int token_id = blockIdx.x;
     
     // 当前layer的v cache
     T* v_cache_dst = v_dst + layer_offset;
@@ -74,8 +74,8 @@ __global__ void append_value_cache(T*          v_dst,
 
 template<typename T>
 void launchAppendKVCache(T*          k_dst, // 每个layer都有单独的kv cache
-                         T*          v_dst, // 猜测为二级指针的原因是每个layer都单独一份，所以每个一级指针为每个layer的kv cache
-                         size_t       layer_offset,//layer offset = layer_id * batchxbeam * max_seq_len * kv_head_num * head_size
+                         T*          v_dst, // FT这里为二级指针的原因是每个layer都单独一份，所以每个一级指针为每个layer的kv cache，不过我这里就把所有layer的kv都由一个一维指针维护
+                         int       layer_offset,//layer offset = layer_id * batchxbeam * max_seq_len * kv_head_num * head_size
                          const T*     k_src, // from qkv bias and rope
                          const T*     v_src,
                          int          local_batch_size, // local bs may mean the bs in the current chat epoch
@@ -89,13 +89,13 @@ void launchAppendKVCache(T*          k_dst, // 每个layer都有单独的kv cach
                          bool          quant,
                          const float* kv_scale) // placeholder for int8/int4 kv cache
 {
-    constexpr int blockSize = 128;
+    int blockSize = head_size;
     //note: this is for vectorization of kv cache for attention
     //constexpr int x = (sizeof(T) == 4) ? 4 : 8;
 
     // dim3 grid((max_q_len * head_size / x + blockSize - 1) / blockSize, local_batch_size, local_head_num);
-    dim3 grid((max_q_len * head_size + blockSize - 1) / blockSize, local_batch_size, local_head_num);
-
+    //dim3 grid((max_q_len * head_size + blockSize - 1) / blockSize, local_batch_size, local_head_num);
+    dim3 grid(max_q_len, local_batch_size, local_head_num);
     if (quant & kv_scale != nullptr) {
     }
     else {
@@ -121,9 +121,9 @@ void launchAppendKVCache(T*          k_dst, // 每个layer都有单独的kv cach
     }
 }
 
-template void launchAppendKVCache(float**          k_dst, 
-                                  float**          v_dst, 
-                                  size_t       layer_offset,
+template void launchAppendKVCache(float*          k_dst, 
+                                  float*          v_dst, 
+                                  int       layer_offset,
                                   const float*     k_src, 
                                   const float*     v_src,
                                   int          local_batch_size, 
