@@ -8,6 +8,24 @@
 #include <iostream>
 #include "src/kernels/qkv_linear.h"
 
+#include <stdio.h>
+
+#define CHECK(call)                                   \
+do                                                    \
+{                                                     \
+    const cudaError_t error_code = call;              \
+    if (error_code != cudaSuccess)                    \
+    {                                                 \
+        printf("CUDA Error:\n");                      \
+        printf("    File:       %s\n", __FILE__);     \
+        printf("    Line:       %d\n", __LINE__);     \
+        printf("    Error code: %d\n", error_code);   \
+        printf("    Error text: %s\n",                \
+            cudaGetErrorString(error_code));          \
+        exit(1);                                      \
+    }                                                 \
+} while (0)
+
 void CPUlinear(float* input, float* weight, float* output,
                 int m, int k, int n) {
     for(int i = 0; i < m; i++) {
@@ -31,7 +49,7 @@ bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
 }
 
 int main() {
-    const int seqlen = 1;
+    const int seqlen = 16;
     const int hidden_units = 16;
     const int hidden_units_2 = 256;
     // (16, 16) * (16, 1)
@@ -44,21 +62,21 @@ int main() {
        h_w[i] = 1.0f;
     }
 
-    float* h_in = (float*) malloc(sizeof(float) * hidden_units);
+    float* h_in = (float*) malloc(sizeof(float) * hidden_units * seqlen);
     float* d_in;
-    cudaMalloc((void**)&d_in, sizeof(float) * hidden_units);
-    for(int i = 0; i < hidden_units; i++) { 
+    cudaMalloc((void**)&d_in, sizeof(float) * seqlen *  hidden_units);
+    for(int i = 0; i < hidden_units * seqlen; i++) { 
        h_in[i] = 1.0f;
     }
 
-    float* h_out = (float*) malloc(sizeof(float) * hidden_units);
+    float* h_out = (float*) malloc(sizeof(float) * hidden_units * seqlen);
     float* d_out;
-    cudaMalloc((void**)&d_out, sizeof(float) * hidden_units);
+    cudaMalloc((void**)&d_out, sizeof(float) * hidden_units * seqlen);
 
-    cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice);
-   // cublasSetVector(hidden_units_2, sizeof(float), h_w, 1, d_w, 1);
-   // cublasSetVector(hidden_units, sizeof(float), h_in, 1, d_in, 1);
+    CHECK(cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units * seqlen, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice));
+    //cublasSetVector(hidden_units_2, sizeof(float), h_w, 1, d_w, 1);
+    //cublasSetVector(hidden_units, sizeof(float), h_in, 1, d_in, 1);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
     launchLinear(d_in, d_out, seqlen, d_w, hidden_units);
@@ -67,11 +85,11 @@ int main() {
     // debug info, better to retain: 
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
-    cudaMemcpy(h_out, d_out, sizeof(float) * hidden_units, cudaMemcpyDeviceToHost);
+    CHECK(cudaMemcpy(h_out, d_out, sizeof(float) * hidden_units * seqlen, cudaMemcpyDeviceToHost));
     //cublasGetVector(hidden_units, sizeof(float), d_out, 1, h_out, 1);
-    float* CPUout = (float*) malloc(sizeof(float) * hidden_units);
+    float* CPUout = (float*) malloc(sizeof(float) * hidden_units * seqlen);
     CPUlinear(h_in, h_w, CPUout, hidden_units, hidden_units, seqlen);
-    bool is_right = CheckResult(CPUout, h_out, hidden_units);
+    bool is_right = CheckResult(CPUout, h_out, hidden_units * seqlen);
     // debug info, better to retain: 
     std::cout << "before free" << std::endl;
     std::cout << "passed" << std::endl;

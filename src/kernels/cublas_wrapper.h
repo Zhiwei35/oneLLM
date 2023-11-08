@@ -18,16 +18,16 @@ class cublasWrapper {
         cudaDataType_t Atype_;
         cudaDataType_t Btype_;
         cudaDataType_t Ctype_;
-        cudaDataType_t computeType_;   
+        cublasComputeType_t computeType_;   
 
-        cudaStream_t   stream_;
+        //cudaStream_t   stream_;
         void* cublas_workspace = nullptr;
 //        BaseAllocator* allocator_ = nullptr;
     
     public:
         cublasWrapper(cublasHandle_t cublas_handle_,
-                      cublasLtHandle_t cublaslt_handle_,
-                      cudaStream_t stream);
+                      cublasLtHandle_t cublaslt_handle_);
+                      //cudaStream_t stream);
                       // BaseAllocator* allocator); enable it when we use cublasLt API
 
         ~cublasWrapper();

@@ -1,15 +1,15 @@
 #include "cublas_wrapper.h"
-
+#include <iostream>
 #define CUBLAS_WORKSPACE_SIZE 32*1024*1024
 //waiting for final testing after developing allocator
 //can test first with mannual cudaMalloc
 cublasWrapper::cublasWrapper(cublasHandle_t cublas_handle,
-                                 cublasLtHandle_t cublaslt_handle,
-                                 cudaStream_t stream):
+                                 cublasLtHandle_t cublaslt_handle):
+//                                 cudaStream_t stream):
                                  //BaseAllocator* allocator):
     cublas_handle_(cublas_handle),
-    cublaslt_handle_(cublaslt_handle),
-    stream_(stream)
+    cublaslt_handle_(cublaslt_handle)
+//    stream_(stream)
     //allocator_(allocator) // cublas workspace will only be used in cublaslt API and algo search
 {
     // if (allocator_ != nullptr) {
@@ -30,7 +30,7 @@ void cublasWrapper::setFP32GemmConfig()
     Atype_       = CUDA_R_32F;
     Btype_       = CUDA_R_32F;
     Ctype_       = CUDA_R_32F;
-    computeType_ = CUDA_R_32F;
+    computeType_ = CUBLAS_COMPUTE_32F;
 }
 
 void cublasWrapper::setFP16GemmConfig()
@@ -38,7 +38,7 @@ void cublasWrapper::setFP16GemmConfig()
     Atype_       = CUDA_R_16F;
     Btype_       = CUDA_R_16F;
     Ctype_       = CUDA_R_16F;
-    computeType_ = CUDA_R_16F;
+    computeType_ = CUBLAS_COMPUTE_16F;
 }
 
 //fp32 gemm and fp16 gemm
@@ -63,7 +63,8 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
     //const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
     const void* alpha = reinterpret_cast<void*>(&f_alpha);
     const void* beta = reinterpret_cast<void*>(&f_beta);
-    cublasGemmEx(cublas_handle_,
+    cublasStatus_t status;
+    status = cublasGemmEx(cublas_handle_,
                 transa,
                 transb,
                 m,
@@ -83,7 +84,9 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                 computeType_,
                 CUBLAS_GEMM_DEFAULT);
 //                CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
-
+    if (status != CUBLAS_STATUS_SUCCESS){
+        std::cout << "kernel exec error!!" << "\n";
+    }
 }
 
 void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,

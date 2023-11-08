@@ -14,11 +14,15 @@ void launchLinear(const float* input,
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
     cublasLtHandle_t cublaslt_handle;
-    cudaStreamCreate(&stream);
+    std::cout << "before create stream" << "\n";
+    //cudaStreamCreate(&stream);
     cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
+    std::cout << "before create cublaswrapper" << "\n";
     cublasWrapper* cublas_wrapper = 
-                        new cublasWrapper(cublas_handle, cublaslt_handle, stream);
+                        new cublasWrapper(cublas_handle, cublaslt_handle);
+                       // , stream);
     cublas_wrapper->setFP32GemmConfig();
+    std::cout << "before call gemm" << "\n";
     cublas_wrapper->Gemm(CUBLAS_OP_N,
                         CUBLAS_OP_N,
                         hidden_units, //weight.output_dims,         //m
