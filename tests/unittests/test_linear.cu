@@ -49,7 +49,7 @@ bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
 }
 
 int main() {
-    const int seqlen = 16;
+    const int seqlen = 1;
     const int hidden_units = 16;
     const int hidden_units_2 = 256;
     // (16, 16) * (16, 1)
@@ -75,8 +75,6 @@ int main() {
 
     CHECK(cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units * seqlen, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice));
-    //cublasSetVector(hidden_units_2, sizeof(float), h_w, 1, d_w, 1);
-    //cublasSetVector(hidden_units, sizeof(float), h_in, 1, d_in, 1);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
     launchLinear(d_in, d_out, seqlen, d_w, hidden_units);
@@ -92,7 +90,7 @@ int main() {
     bool is_right = CheckResult(CPUout, h_out, hidden_units * seqlen);
     // debug info, better to retain: 
     std::cout << "before free" << std::endl;
-    std::cout << "passed" << std::endl;
+    std::cout << "linear passed" << std::endl;
     free(h_in);
     free(h_w);
     free(h_out);

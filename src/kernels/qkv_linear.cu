@@ -16,6 +16,8 @@ void launchLinear(const float* input,
     cublasLtHandle_t cublaslt_handle;
     std::cout << "before create stream" << "\n";
     //cudaStreamCreate(&stream);
+    // !!!remember to call cublasCreate to create cublas handle!fxxk nvidia, that spent me 1 day to check
+    cublasCreate(&cublas_handle);
     cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
     std::cout << "before create cublaswrapper" << "\n";
     cublasWrapper* cublas_wrapper = 
