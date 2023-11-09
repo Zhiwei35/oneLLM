@@ -8,7 +8,7 @@ target_link_libraries(  # Libs for test_beamsearch_kernel
     beamsearch_topK) 
 
 add_executable(causalmask
-    test_causal_mask.cu
+    test_casual_mask.cu
 )
 target_link_libraries(  # Libs for test_beamsearch_kernel
 causalmask PUBLIC

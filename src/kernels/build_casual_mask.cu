@@ -25,25 +25,27 @@
 //     0 0 1 1 1  
 
 template<typename T>
-__global__ void BuildCausalMasks(T* mask, 
-                                const int* q_lens,  //input lens, shape=[batch size]
-                                const int* k_lens,  //context lens, shape=[batch size]
-                                int max_q_len, 
-                                int max_k_len){
+__global__ void BuildCausalMasksConsideringContextPastKV(T* mask,
+                                                const int* q_lens,  //input lens, shape=[batch size]
+                                                const int* k_lens,  //context lens, shape=[batch size]
+                                                int max_q_len,
+                                                int max_k_len){
     int tid = threadIdx.x;
     int qlen = q_lens[blockIdx.x];
     int klen = k_lens[blockIdx.x];
-    mask += blockIdx.x * max_q_len * max_k_len + tid; 
+    mask += blockIdx.x * max_q_len * max_k_len;
     int offset = threadIdx.x;
     // note: this judgement confirms we dont exceed data boundry
     while (offset < max_q_len * max_k_len){
         int q = offset / max_k_len;
         int k = offset % max_k_len;
-        bool is_one = q < qlen && k < klen && k <= q + (klen - qlen);
+        bool is_one = q < qlen && k < klen && k <= q + (klen - qlen) && k >= klen - qlen;
         mask[offset] = static_cast<T>(is_one);
+
         offset += blockDim.x;
     }
 }
+
 template<typename T>
 void launchBuildCausalMasks(T* mask, 
                             const int* q_lens, 
@@ -52,7 +54,7 @@ void launchBuildCausalMasks(T* mask,
                             int max_k_len, 
                             int batch_size)
 {
-    BuildCausalMasks<<<batch_size, 256>>>(mask, q_lens, k_lens, max_q_len, max_k_len);
+    BuildCausalMasksConsideringContextPastKV<<<batch_size, 256>>>(mask, q_lens, k_lens, max_q_len, max_k_len);
 }
 
 template void launchBuildCausalMasks(float* mask, const int*, const int*, int, int, int);
