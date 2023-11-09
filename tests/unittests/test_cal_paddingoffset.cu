@@ -38,7 +38,7 @@ int main() {
     launchCalPaddingoffset(h_pinned_token_num, 
                            &h_token_num, 
                            d_padding_offset, 
-                           d_cum_seqlens
+                           d_cum_seqlens,
                            d_seq_lens, 
                            batch_size,
                            max_q_len);
@@ -49,6 +49,8 @@ int main() {
     // debug info, better to retain: std::cout << "cuda memcpy device to host" << std::endl;    
     for(int i = 0; i < batch_size * max_q_len; i++) {
         printf("padding_offset = %d\n", h_padding_offset[i]);
+    }
+    for(int i = 0; i < batch_size + 1; i++){
         printf("cum_seqlens =%d\n", h_cum_seqlens[i]);
     }
     //expected result is:

@@ -16,7 +16,8 @@ __global__ void CalPaddingoffset(int*      h_token_num, // calc to validate its 
     int cum_offset = 0;
     int total_seqlen = 0;
     for(int b = 0; b < batch_size; b++) {
-        int seqlen = seq_lens[i];
+        int seqlen = seq_lens[b];
+
         cum_seqlens[b] = total_seqlen;
         // each token in one seq has same cum offset
         for (int i = 0; i < seqlen; i++) {
@@ -40,7 +41,7 @@ void launchCalPaddingoffset(int*      h_pinned_token_num,
     h_pinned_token_num[0] = 0;
     CalPaddingoffset<<<1, 1>>>( // question: pinned memory can be accessed by GPU directly?
         h_pinned_token_num, padding_offset, cum_seqlens, seq_lens, batch_size, max_q_len
-    )
-    h_token_num[0] = h_pinned_token_num[0]
+    );
+    h_token_num[0] = h_pinned_token_num[0];
 }
 
