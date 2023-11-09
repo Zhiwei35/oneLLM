@@ -6,3 +6,12 @@ target_link_libraries(  # Libs for test_beamsearch_kernel
     -lcudart
     -lcudadevrt
     beamsearch_topK) 
+
+add_executable(paddingoffset
+    test_cal_paddingoffset.cu
+)
+target_link_libraries(  # Libs for test_cal_paddingoffset
+  paddingoffset PUBLIC
+    -lcudart
+    -lcudadevrt
+    cal_paddingoffset) 
