@@ -26,3 +26,11 @@ target_link_libraries(  # Libs for test_linear
     -lcudadevrt
     qkv_linear) 
 
+add_executable(fused_addres_rms
+    test_fused_addres_rms.cu
+)
+target_link_libraries(  # Libs for test_addres_rmsnorm
+    fused_addres_rms PUBLIC
+    -lcudart
+    -lcudadevrt
+    addresandrms) 
