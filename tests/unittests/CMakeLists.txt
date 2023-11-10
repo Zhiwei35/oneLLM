@@ -7,6 +7,14 @@ target_link_libraries(  # Libs for test_beamsearch_kernel
     -lcudadevrt
     beamsearch_topK) 
 
+add_executable(causalmask
+    test_casual_mask.cu
+)
+target_link_libraries(  # Libs for test_build_casual_mask
+causalmask PUBLIC
+    -lcudart
+    -lcudadevrt
+    build_casual_mask) 
 
 add_executable(appendkv
     test_append_kvcache.cu
@@ -25,4 +33,3 @@ target_link_libraries(  # Libs for test_linear
     -lcudart
     -lcudadevrt
     qkv_linear) 
-
