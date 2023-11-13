@@ -16,8 +16,38 @@ enum DataType
 {
     FP32,
     FP16,
-    INT8
+    INT8,
+    INT32,
+    BOOL,
+    BYTES,
+    UNSUPPORTED
 };
+
+template<typename T>
+DataType getTensorType()
+{
+    if (std::is_same<T, float>::value || std::is_same<T, const float>::value) {
+        return FP32;
+    }
+    else if (std::is_same<T, half>::value || std::is_same<T, const half>::value) {
+        return FP16;
+    }
+    else if (std::is_same<T, int>::value || std::is_same<T, const int>::value) {
+        return INT32;
+    }
+    else if (std::is_same<T, int8_t>::value || std::is_same<T, const int8_t>::value) {
+        return INT8;
+    }
+    else if (std::is_same<T, bool>::value || std::is_same<T, const bool>::value) {
+        return BOOL;
+    }
+    else if (std::is_same<T, char>::value || std::is_same<T, const char>::value) {
+        return BYTES;
+    }
+    else {
+        return UNSUPPORTED;
+    }
+}
 
 struct Tensor {
     Device              location;
@@ -26,6 +56,15 @@ struct Tensor {
     void*               data;
 
     Tensor() = default;
+
+    Tensor(const Device location_, 
+            const DataType dtype_,
+            const std::vector<int> shape_, 
+            void* data_):
+            location(location_),
+            dtype(dtype_),
+            shape(shape_){}
+
     Tensor(const Device location_, 
             const DataType dtype_,
             const std::vector<int> shape_, 
@@ -34,9 +73,12 @@ struct Tensor {
             dtype(dtype_),
             shape(shape_),
             data(data_){}
+            
     ~Tensor() {
-        delete data;
-        data = nullptr;
+        if(data) {
+            delete data;
+            data = nullptr;
+        }
     }
 
     int size() const {

@@ -29,23 +29,52 @@ LLaMAContextAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams params) {
     int num_tokens = params.num_tokens;
     int max_q_len = params.max_q_len;
     int max_k_len = params.max_k_len;
-    int num_layers = params.num_layers;   
+    int num_layers = params.num_layers;  
+    DataType type = getTensorType<T>(); 
     const int qkv_head_num = head_num + 2 * kv_head_num;
-    qkv_buf_wo_pad = allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_tokens * qkv_head_num * head_size);
-    q_buf_w_pad = allocator->Malloc(
-        q_buf_w_pad, sizeof(T) * qkv_head_num * batch_size * max_q_len * head_size);
-    k_buf_w_pad = q_buf_w_pad + head_num * batch_size * max_q_len * head_size;
-    v_buf_w_pad = k_buf_w_pad + kv_head_num * batch_size * max_q_len * head_size;
-    k_cache_buf = allocator->Malloc(
-        k_cache_buf, 2 * sizeof(T) * num_layers * batch_size * head_num * max_k_len * head_size);
-    v_cache_buf = k_cache_buf + num_layers * batch_size * head_num * max_k_len * head_size;
+    //tensor wrapper
+    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
+    q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, head_num, head_size});
+    k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, kv_head_num, head_size}); //why here isn't max_k_len, maybe max_k_len is the max k length across all epochs, max q len is the max lenght of cur epoch
+    v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, kv_head_num, head_size});
+    k_cache_buf = new Tensor(Device::GPU, type, {num_layers, batch_size, max_k_len, head_num, head_size});// why not kv_head_num
+    v_cache_buf = new Tensor(Device::GPU, type, {num_layers, batch_size, max_k_len, head_num, head_size});
+    qk_buf = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, max_k_len});
+    qkv_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, head_num, head_size});
+    qkv_buf_wo_pad_1 = new Tensor(Device::GPU, type, {num_tokens, head_num, head_size});
+    
+    qkv_buf_wo_pad->data = allocator->Malloc(qkv_buf_wo_pad->data, sizeof(T) * num_tokens * qkv_head_num * head_size);
+    q_buf_w_pad->data = allocator->Malloc(
+        q_buf_w_pad->data, sizeof(T) * qkv_head_num * batch_size * max_q_len * head_size);
+    k_buf_w_pad->data = q_buf_w_pad->data + head_num * batch_size * max_q_len * head_size;
+    v_buf_w_pad->data = k_buf_w_pad->data + kv_head_num * batch_size * max_q_len * head_size;
+    k_cache_buf->data = allocator->Malloc(
+        k_cache_buf->data, 2 * sizeof(T) * num_layers * batch_size * head_num * max_k_len * head_size);
+    v_cache_buf->data = k_cache_buf->data + num_layers * batch_size * head_num * max_k_len * head_size;
     // store qk and inplace store softmax output
-    qk_buf =
-        allocator->Malloc(qk_buf, sizeof(T) * batch_size * head_num * max_q_len * max_k_len);
+    qk_buf->data =
+        allocator->Malloc(qk_buf->data, sizeof(T) * batch_size * head_num * max_q_len * max_k_len);
     // store qk*v
-    qkv_buf_w_pad = allocator->Malloc(
-        qkv_buf_w_pad, sizeof(T) * batch_size * max_q_len * head_num * head_size);
-    qkv_buf_wo_pad= allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_token * head_num * head_size);
+    qkv_buf_w_pad->data = allocator->Malloc(
+        qkv_buf_w_pad->data, sizeof(T) * batch_size * max_q_len * head_num * head_size);
+    qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad->data, sizeof(T) * num_tokens * head_num * head_size);
+
+    // directly pointer
+    // qkv_buf_wo_pad = allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_tokens * qkv_head_num * head_size);
+    // q_buf_w_pad = allocator->Malloc(
+    //     q_buf_w_pad, sizeof(T) * qkv_head_num * batch_size * max_q_len * head_size);
+    // k_buf_w_pad = q_buf_w_pad + head_num * batch_size * max_q_len * head_size;
+    // v_buf_w_pad = k_buf_w_pad + kv_head_num * batch_size * max_q_len * head_size;
+    // k_cache_buf = allocator->Malloc(
+    //     k_cache_buf, 2 * sizeof(T) * num_layers * batch_size * head_num * max_k_len * head_size);
+    // v_cache_buf = k_cache_buf + num_layers * batch_size * head_num * max_k_len * head_size;
+    // // store qk and inplace store softmax output
+    // qk_buf =
+    //     allocator->Malloc(qk_buf, sizeof(T) * batch_size * head_num * max_q_len * max_k_len);
+    // // store qk*v
+    // qkv_buf_w_pad = allocator->Malloc(
+    //     qkv_buf_w_pad, sizeof(T) * batch_size * max_q_len * head_num * head_size);
+    // qkv_buf_wo_pad= allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_tokens * head_num * head_size);
 
 }
     

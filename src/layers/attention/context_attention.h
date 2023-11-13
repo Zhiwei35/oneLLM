@@ -1,6 +1,7 @@
 #include "src/weights/llama/attention_weights.h"
 #include "src/kernels/cublas_wrapper.h"
 #include "src/memory/allocator/cuda_allocator.h"
+#include "src/utils/tensor.h"
 
 struct LLaMAAttentionStaticParams{
     int   rotray_embedding_dim;
@@ -40,16 +41,28 @@ private:
     cublasWrapper* cublas_wrapper;
 
     // buffer
-    T*     qkv_buf_wo_pad = nullptr;
-    T*     q_buf_w_pad = nullptr;
-    T*     k_buf_w_pad = nullptr;
-    T*     v_buf_w_pad = nullptr;
-    T*     k_cache_buf = nullptr;
-    T*     v_cache_buf = nullptr;
-    T*     qk_buf = nullptr;
-    float* qk_buf_float = nullptr; // for acc
-    T*     qkv_buf_w_pad = nullptr;
-    T*     qkv_buf_wo_pad = nullptr;    
+    // T*     qkv_buf_wo_pad = nullptr;
+    // T*     q_buf_w_pad = nullptr;
+    // T*     k_buf_w_pad = nullptr;
+    // T*     v_buf_w_pad = nullptr;
+    // T*     k_cache_buf = nullptr;
+    // T*     v_cache_buf = nullptr;
+    // T*     qk_buf = nullptr;
+    // float* qk_buf_float = nullptr; // for acc
+    // T*     qkv_buf_w_pad = nullptr;
+
+    Tensor*  qkv_buf_wo_pad = nullptr;      
+    Tensor*  q_buf_w_pad = nullptr;
+    Tensor*  k_buf_w_pad = nullptr;
+    Tensor*  v_buf_w_pad = nullptr;
+    Tensor*  k_cache_buf = nullptr;
+    Tensor*  v_cache_buf = nullptr;
+    Tensor*  qk_buf = nullptr;
+    Tensor*  qk_buf_float = nullptr; // for acc
+    Tensor*  qkv_buf_w_pad = nullptr;
+    Tensor*  qkv_buf_wo_pad_1 = nullptr;      
+
+
 public:
     LLaMAContextAttentionLayer(int head_num,
                                int kv_head_num,
