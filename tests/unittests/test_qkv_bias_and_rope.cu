@@ -24,6 +24,7 @@ do                                                    \
     }                                                 \
 } while (0)
 
+//TODO: CPURoPE still has some issues
 void CPUfunc(float* q,
                 float* k,
                 float* v,
@@ -53,14 +54,15 @@ void CPUfunc(float* q,
                 }
                    //RoPE
                 for (int d = 0; d < head_size; d+=2) {
-                    float inv_freq = timestep / powf(rotary_embedding_base, (d / 2) / (float)rotary_embedding_dim);
+                    float x0 = q[b * qbatchstride + s * head_num * head_size + head * head_size + d];
+                    float x1 = q[b * qbatchstride + s * head_num * head_size + head * head_size + d + 1];
+                    // refer to https://zhuanlan.zhihu.com/p/647109286, d=0,2,4,dim-1
+                    float inv_freq = timestep / powf(rotary_embedding_base, (d) / (float)rotary_embedding_dim);
                     q[b * qbatchstride + s * head_num * head_size + head * head_size + d] = 
-                        q[b * qbatchstride + s * head_num * head_size + head * head_size + d] * cos(inv_freq)
-                             - q[b * qbatchstride + s * head_num * head_size + head * head_size + d + 1] * sin(inv_freq);
+                                                                        x0 * cos(inv_freq) - x1 * sin(inv_freq);
                     
                     q[b * qbatchstride + s * head_num * head_size + head * head_size + d + 1] = 
-                        q[b * qbatchstride + s * head_num * head_size + head * head_size + d + 1] * cos(inv_freq)
-                             + q[b * qbatchstride + s * head_num * head_size + head * head_size + d] * sin(inv_freq);
+                                                                        x1 * cos(inv_freq) + x0 * sin(inv_freq);
 
                 } 
             }
@@ -74,14 +76,14 @@ void CPUfunc(float* q,
                 }
                    //RoPE
                 for (int d = 0; d < head_size; d+=2) {
-                    float inv_freq = timestep / powf(rotary_embedding_base, (d / 2) / (float)rotary_embedding_dim);
+                    float x0 = k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d];
+                    float x1 = k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1];
+                    float inv_freq = timestep / powf(rotary_embedding_base, (d) / (float)rotary_embedding_dim);
                     k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] = 
-                        k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] * cos(inv_freq)
-                             - q[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] * sin(inv_freq);
+                                                                        x0 * cos(inv_freq) - x1 * sin(inv_freq);
                     
                     k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] = 
-                        k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d + 1] * cos(inv_freq)
-                             + k[b * kvbatchstride + s * kv_head_num * head_size + head * head_size + d] * sin(inv_freq);
+                                                                        x1 * cos(inv_freq) + x0 * sin(inv_freq);
 
                 } 
             }            
