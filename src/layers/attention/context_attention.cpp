@@ -29,18 +29,21 @@ LLaMAContextAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams params) {
     int num_tokens = params.num_tokens;
     int max_q_len = params.max_q_len;
     int max_k_len = params.max_k_len;
-    int num_layers = params.num_layers;  
     DataType type = getTensorType<T>(); 
     const int qkv_head_num = head_num + 2 * kv_head_num;
     //tensor wrapper
     qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
-    q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, head_num, head_size});
-    k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, kv_head_num, head_size}); //why here isn't max_k_len, maybe max_k_len is the max k length across all epochs, max q len is the max lenght of cur epoch
-    v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, kv_head_num, head_size});
-    k_cache_buf = new Tensor(Device::GPU, type, {num_layers, batch_size, max_k_len, head_num, head_size});// why not kv_head_num
-    v_cache_buf = new Tensor(Device::GPU, type, {num_layers, batch_size, max_k_len, head_num, head_size});
+    q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
+    k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size}); //why here isn't max_k_len, maybe max_k_len is the max k length across all epochs, max q len is the max lenght of cur epoch
+    v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
+    //transpose kv cache
+    k_cache_buf = new Tensor(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});// why not kv_head_num
+    v_cache_buf = new Tensor(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});
+    //q*k and softmax
     qk_buf = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, max_k_len});
-    qkv_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, max_q_len, head_num, head_size});
+    //qk * v
+    qkv_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
+    //remove padding
     qkv_buf_wo_pad_1 = new Tensor(Device::GPU, type, {num_tokens, head_num, head_size});
     
     qkv_buf_wo_pad->data = allocator->Malloc(qkv_buf_wo_pad->data, sizeof(T) * num_tokens * qkv_head_num * head_size);
@@ -111,14 +114,16 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     //3.concat past kv cache
     Tensor layer_id = inputs["layer_id"];
     Tensor cur_query_length = inputs["cur_query_length"];
-    launchAppendKVCache(k_cache_buf, v_cache_buf, layer_id, k_buf_w_pad, v_buf_w_pad, 
-                            cur_query_length, history_length);
-    //4.MHA/MQA/GQA part
-    //0.kv transpose to adapt batchgemm shape requirement([bs, head num, seqlen, head size]) if need
-    Tensor context_length = inputs["context_length"];
     Tensor all_k_cache = outputs["all_k_cache"];
     Tensor all_v_cache = outputs["all_v_cache"];
-    launchTransposeKVCache(k_cache_buf, v_cache_buf, layer_id, q_head_per_kv, context_length, all_k_cache, all_v_cache);
+    launchAppendKVCache(k_buf_w_pad, v_buf_w_pad, cur_query_length, history_length, 
+                                layer_id, all_k_cache, all_v_cache);
+    //4.MHA/MQA/GQA part
+    //0.kv transpose to adapt batchgemm shape requirement([bs, head num, seqlen, head size]) if need
+    //[bs, kv head num, max_seq_len, head size]=>[bs, q head num, max_k_len, head size]
+    Tensor context_length = inputs["context_length"];
+    launchTransposeKVCache(all_k_cache, all_v_cache, context_length, 
+                                layer_id, k_cache_buf, v_cache_buf);
 
     //1.qk
     launchLinearStridedBatchGemm(q_buf_w_pad, k_cache_buf, qk_buf);
@@ -135,7 +140,7 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
 
     // 5.output linear
     Tensor attention_output = outputs["attention_output"];
-    launchLinearGemm(qkv_buf_wo_pad, weights->output, attention_output);
+    launchLinearGemm(qkv_buf_wo_pad_1, weights->output, attention_output);
 
     if (is_free_buffer_after_fwd) {
         freeBuffer();

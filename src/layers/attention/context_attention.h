@@ -86,7 +86,10 @@ public:
                   int          num_tokens,
                   int          max_q_len,
                   int          max_k_len,
-                  int          max_seq_len); // whats the diff across these 3 max len
-        
+                  int          max_seq_len); 
+                  // whats the diff across these 3 max len:
+                  // max_seq_len is the max kv len considering context, ep. multiple epochs chat
+                  // max_q_len is the current max q len after padding
+                  // max_k_len is the current max k len after padding, that is, the max kv cache lenght at current epoch     
     void flashAttn();
 };

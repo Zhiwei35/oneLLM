@@ -37,3 +37,8 @@ add_library(fused_transpose_reshape_remv_pad STATIC fused_transpose_reshape_remv
 set_property(TARGET fused_transpose_reshape_remv_pad PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
 set_property(TARGET fused_transpose_reshape_remv_pad PROPERTY POSITION_INDEPENDENT_CODE  ON)
 set_property(TARGET fused_transpose_reshape_remv_pad PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
+add_library(transpose STATIC transpose_kernel.cu)
+set_property(TARGET transpose PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET transpose PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET transpose PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
