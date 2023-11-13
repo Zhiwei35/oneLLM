@@ -8,7 +8,7 @@
 
 // input: qkv_buf : qkv continouns buf when no padding
         // shape = [num_tokens, qkv_head_num, head_size], 因为各句子长度不一，所以不用bs * seqlen表示
-// output: q/k/v shape = [bs, head num, seqlen, head size] ?这里我感觉k的shape应该是[bs, head num, head size, seqlen]
+// output: q/k/v shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
 
 #include <math.h>
 #include <stdio.h>
@@ -21,11 +21,6 @@ struct Vec {
     static constexpr int size = 0;
 };
 
-//template<>
-//struct Vec<float> {
-//    using Type = float2;
-//    static constexpr int size = 2;
-//};
 template<>
 struct Vec<float> {
     using Type = float4;
@@ -62,21 +57,15 @@ inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_d
     TwoFloat2& q_ = *reinterpret_cast<TwoFloat2*>(&q); // q为float4 寄存器
     TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k);
     
-    float2 coef0 = GetRoPEfreq(4 * tid, base, rot_embed_dim, t_step);
-    // float freq0 = timestep / powf(rotary_embedding_base, 4 * tid / (float) rotary_embedding_dim); //分子zid = 0,2,4,,       headsize/2-1,对应的theta下标为0,1,2.对应的headsize维度的索引为(0,1),(2,3)
+    float2 coef0 = GetRoPEfreq(4 * tid, rot_embed_dim, base, t_step);
+    // float freq0 = timestep / powf(rotary_embedding_base, 4 * tid / (float) rotary_embedding_dim); //分子zid = 0,2,4,, headsize/2-1,对应的theta下标为0,1,2.对应的headsize维度的索引为(0,1),(2,3)
     q_.x = GetRoPEres(q_.x ,coef0);
-    //q = GetRoPEres(q, coef0);
     // rot0.x = coef0.x * q.x -  coef0.y * q.y; //q.x为x0,q.y为x1，head size维度上两个相邻
     // rot0.y = coef0.x * q.y +  coef0.y * q.x
-    float2 coef1 = GetRoPEfreq(4 * tid + 2, base, rot_embed_dim, t_step);
-    // float freq1 = timestep / powf(rotary_embedding_base, (4 * tid + 2) / (float) rotary_embedding_dim) ;
-    // float2 coef0 = make_float2(cos(freq1), sin(freq1));
+    float2 coef1 = GetRoPEfreq(4 * tid + 2, rot_embed_dim, base, t_step);
     q_.y = GetRoPEres(q_.y ,coef1);
-    // float2 rot1;
     // rot1.x = coef1.x * q.x -  coef1.y * q.y; //q.x为x2,q.y为x3，head size维度上两个相邻
     // rot1.y = coef1.x * q.y +  coef1.y * q.x;
-        //TwoFloat2& k_ = *reinterpret_cast<TwoFloat2*>(&k);
-    //k = GetRoPEres(k, coef0);
     k_.x = GetRoPEres(k_.x ,coef0);
     k_.y = GetRoPEres(k_.y ,coef1);
 }
@@ -128,8 +117,6 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
         for(int i = 0; i < vec_size; i++) {
             reinterpret_cast<T*>(&q)[i] += reinterpret_cast<T*>(&q_bias)[i];
         }
-        //q.x += q_bias.x;
-        //q.y += q_bias.y;
     }
     // note: kv judge condition is add a item that head_id<kv_head_id in case of GQA and MQA
     if(is_data && head_id < kv_head_num){
@@ -139,23 +126,18 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
         for(int i = 0; i < vec_size; i++) {
             reinterpret_cast<T*>(&k)[i] += reinterpret_cast<T*>(&k_bias)[i];
         }
-        //k.x += k_bias.x;
-        //k.y += k_bias.y;
 
         v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
         Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
         for(int i = 0; i < vec_size; i++) {
             reinterpret_cast<T*>(&v)[i] += reinterpret_cast<T*>(&v_bias)[i];
         }
-        //v.x += v_bias.x;
-        //v.y += v_bias.y;
-
     }
 
     //3. RoPE
     const int cur_seq_history_len = history_length[batch_id]; // pay attention to where the history lenght cumsum
     const int context_length = cur_seq_history_len + input_length[batch_id];
-    const int timestep = cur_seq_history_len + local_token_id;//+ local_token_id得到m，意思就是要结合history做全局位置编码
+    const int timestep = cur_seq_history_len + local_token_id;//+ local_token_id得到m，即要结合history length做全局位置编码
     // timestep为cos(m*theta)中的m
     
     apply_RoPE(q, k, tid, rotary_embedding_dim, rotary_embedding_base, timestep);
@@ -169,17 +151,10 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int dst_kv_id = batch_id * seq_len * kv_head_num * head_size + 
                             head_id * seq_len * head_size +
                                 local_token_id * head_size + tid * vec_size;
-    if(blockIdx.x == 0 && tid ==0) printf("147 q = %f\n", q.x);
     if(is_data){
-        //Vec_t* q_reg = reinterpret_cast<Vec_t*>(q_buf);
-        //q_reg[dst_q_id] = q;
         *reinterpret_cast<Vec_t*>(&q_buf[dst_q_id]) = q; // remember to add & before q_buf[], cause q_buf[] is a scalar
         if (head_id < kv_head_num) {//for MQA and GQA
             *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k;
-            //Vec_t* k_reg = reinterpret_cast<Vec_t*>(k_buf);
-            //k_reg[dst_kv_id] = k;
-            //Vec_t* v_reg = reinterpret_cast<Vec_t*>(v_buf);
-            //v_reg[dst_kv_id] = v;
             *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
         }
     }
