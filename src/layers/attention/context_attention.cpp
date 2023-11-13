@@ -131,7 +131,7 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     launchLinearStridedBatchGemm(qk_buf, v_cache_buf, qkv_buf_w_pad);
 
     //4.transpose+reshape([bs,head,seqlen,headsize]=>[bs,seqlen,head,headsize]=>[bs,seqlen,hiddenunits])+remove padding
-    launchTransposeOutRemovePadding(qkv_buf_w_pad, qkv_buf_wo_pad);
+    launchTransposeOutRemovePadding(qkv_buf_w_pad, &padding_offset, qkv_buf_wo_pad_1);
 
     // 5.output linear
     Tensor attention_output = outputs["attention_output"];
