@@ -125,7 +125,7 @@ struct TensorMap {
         return tensor.size() > 0 && tensor.data != nullptr;
     }
     // 增
-    inline void insert(const std::string& key, const Tensor& value)
+    inline void insert(const std::string& key, const Tensor value)
     {
         // TODO: add a check to check key is unique and value is valid
         // tensor_map_.insert({key, value});
@@ -142,6 +142,12 @@ struct TensorMap {
 
     //查
     inline Tensor at(const std::string& key) const
+    {
+         // TODO: add a check to check key is existed
+        return tensor_map_.at(key);
+    }
+
+    inline Tensor operator[](const std::string& key) const
     {
          // TODO: add a check to check key is existed
         return tensor_map_.at(key);

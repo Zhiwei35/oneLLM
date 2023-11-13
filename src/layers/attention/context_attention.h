@@ -1,5 +1,6 @@
 #include "src/weights/llama/attention_weights.h"
 #include "src/kernels/cublas_wrapper.h"
+#include "src/memory/allocator/cuda_allocator.h"
 
 struct LLaMAAttentionStaticParams{
     int   rotray_embedding_dim;
@@ -13,6 +14,7 @@ struct LLaMAAttentionDynParams {
     int num_tokens;
     int max_q_len;
     int max_k_len;
+    int num_layers;
 };
 
 template<typename T>
@@ -23,7 +25,9 @@ private:
     const int head_size;
     const int hidden_units;
     const int q_head_per_kv; //for GQA and MQA
-    // const bool is_free_buffer_after_fwd;
+    const int kv_head_num;
+    const bool is_free_buffer_after_fwd;
+    const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
 
     // this params are only saw in llama and are unchanged 
     const LLaMAAttentionStaticParams attn_static_params;
@@ -50,7 +54,7 @@ public:
     LLaMAContextAttentionLayer(int head_num,
                                int kv_head_num,
                                int head_size,
-                               LLaMAAttentionParams attn_params,
+                               LLaMAAttentionStaticParams attn_params,
                                cudaStream_t stream,
                                cublasWrapper* cublas_wrapper,
                                BaseAllocator* allocator,
