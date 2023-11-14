@@ -53,7 +53,8 @@ void launchLinearGemm(Tensor* input,
 }
 
 // We must instancite the template, if not, will report linking issue
-template void launchLinearGemm(Tensor* input, BaseWeight<float>& weight, Tensor* output);
+template void launchLinearGemm(Tensor* input, BaseWeight<float>& weight, Tensor* output, bool trans_a = false,
+                                bool trans_b = false);
 
 template<typename T>
 void launchLinearStridedBatchGemm(Tensor* input1,
