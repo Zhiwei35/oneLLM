@@ -46,7 +46,6 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
                                     T* mask,
                                     int batch_size,
                                     int head_nums,
-                                    int head_size,
                                     int q_len,
                                     int k_len,
                                     float scale)
@@ -64,7 +63,7 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
         T thread_max = FLT_MIN;
         T data[NUMS_PER_THREAD_PER_ROW]; // 面对这种一个block一个thread需要处理多行多列的时候，数据尽量用数组存储，计算出每个block和thread要处理几行几列
         for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
-            qk_offset = batch_id * head_nums * q_len * head_size + head_id * q_len * k_len
+            qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start;
             qk_data = qk[qk_offset];
             mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start;
@@ -92,7 +91,7 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
         __syncthreads();
         // write back into gmem
         for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
-            qk_offset = batch_id * head_nums * q_len * head_size + head_id * q_len * k_len
+            qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start;
             attn_score[qk_offset] = (data[col_start / blockDim.x] * inv_sum);
         }
@@ -120,7 +119,6 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
                                             (T*)mask->data,
                                             batch_size,
                                             head_nums,
-                                            head_size,
                                             q_length,
                                             k_length,
                                             scale)

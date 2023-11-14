@@ -51,3 +51,12 @@ target_link_libraries(  # Libs for test_linear
     -lcudart
     -lcudadevrt
     qkv_linear) 
+
+add_executable(attn_softmax
+    test_softmax.cu
+)
+target_link_libraries(  # Libs for test_softmax
+    attn_softmax PUBLIC
+    -lcudart
+    -lcudadevrt
+    softmax) 
