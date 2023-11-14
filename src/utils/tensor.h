@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <sstream>
+#include <iostream>
 
 enum Device
 {
@@ -80,7 +81,7 @@ struct Tensor {
             data = nullptr;
         }
     }
-
+    friend bool operator==(Tensor& t1, Tensor& t2);
     int size() const {
         if (data == nullptr || shape.size() == 0) {
             // TODO: add an reminder info
@@ -138,6 +139,18 @@ struct Tensor {
     }    
 };
 
+inline bool operator==(Tensor& t1, Tensor& t2){
+    if(t1.size() == t2.size()) {
+        for(int i = 0; i < t1.size(); i++) {
+            float d1 = reinterpret_cast<float*>(t1.data)[i];
+            float d2 = reinterpret_cast<float*>(t2.data)[i];
+            if (d1!=d2){
+                std::cout << "two tensor is not equal!" << "\n";
+            }
+        }
+    }
+}
+
 struct TensorMap {
     std::unordered_map<std::string, Tensor> tensor_map_;
 
@@ -161,13 +174,17 @@ struct TensorMap {
     ~TensorMap(){
         tensor_map_.clear();
     }
+    inline bool isExist(const std::string& key) const
+    {
+        return tensor_map_.find(key) != tensor_map_.end();
+    }
 
     inline bool isValid(const Tensor& tensor)
     {
         return tensor.size() > 0 && tensor.data != nullptr;
     }
     // 增
-    inline void insert(const std::string& key, const Tensor value)
+    inline void insert(const std::string& key, const Tensor& value)
     {
         // TODO: add a check to check key is unique and value is valid
         // tensor_map_.insert({key, value});
@@ -183,16 +200,22 @@ struct TensorMap {
     //改
 
     //查
-    inline Tensor at(const std::string& key) const
+    inline Tensor& at(const std::string& key)
     {
          // TODO: add a check to check key is existed
-        return tensor_map_.at(key);
+        if(isExist(key)){
+            return tensor_map_.at(key);
+        }
+        return;
     }
 
-    inline Tensor operator[](const std::string& key) const
+    inline Tensor& operator[](const std::string& key)
     {
          // TODO: add a check to check key is existed
-        return tensor_map_.at(key);
+        if(isExist(key)){
+            return tensor_map_.at(key);
+        }
+        return;
     }
 
     template<typename T>

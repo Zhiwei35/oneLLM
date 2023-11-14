@@ -1,7 +1,13 @@
 #include "src/weights/llama/attention_weights.h"
-#include "src/kernels/cublas_wrapper.h"
 #include "src/memory/allocator/cuda_allocator.h"
+#include "src/kernels/qkv_linear.h"
+#include "src/kernels/attn_softmax_kernel.h"
+#include "src/kernels/qkv_bias_and_RoPE.h"
+#include "src/kernels/fused_transpose_reshape_remv_pad.h"
+#include "src/kernels/append_to_kvcache.h"
+#include "src/kernels/transpose_kernel.h"
 #include "src/utils/tensor.h"
+#include "src/kernels/cublas_wrapper.h"
 
 struct LLaMAAttentionStaticParams{
     int   rotray_embedding_dim;
@@ -29,7 +35,7 @@ private:
     const int kv_head_num;
     const bool is_free_buffer_after_fwd;
     const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
-
+    float scale;
     // this params are only saw in llama and are unchanged 
     const LLaMAAttentionStaticParams attn_static_params;
     // this params are dynamic

@@ -52,7 +52,7 @@ public:
         }
     }
     template<typename T>
-    void* deviceMalloc(T* ptr, size_t size, bool is_host) {
+    T* deviceMalloc(T* ptr, size_t size, bool is_host) {
         // align to 32bytes to make float4 work
         // not sure if w/o it, float4 works or not
         size = ((size + 31) / 32) * 32;
@@ -90,7 +90,7 @@ public:
                                                 << size / 1024 << "KB"
                                                 << std::endl;
             BigBlocks.push_back(CudaBigBlock(new_buffer, size, true));
-            return new_buffer;
+            return (T*)new_buffer;
         }
         //小buf, 先去bigblocks里面找空闲的（free出来的）
         auto &SmallBlocks = cudaSmallBlocksMap[id];
@@ -113,7 +113,7 @@ public:
                                             << std::endl;
 
         SmallBlocks.push_back(CudaSmallBlock(new_buffer, size, true));
-        return new_buffer;
+        return (T*)new_buffer;
     }
 
     template<typename T>
@@ -125,7 +125,7 @@ public:
             cudaFreeHost(ptr);
             return;
         }
-        // 清理碎片：当小buf超出了1G时，清理未分配出去的smallblocks
+        // 清理碎片：当累计的小buf超出了1G时，清理未分配出去的smallblocks
         for (auto &it: cudaSmallBlocksMap) {
             if (FreeSize[it.first] > 1024 * 1024 * 1024) {
                 auto &cudaBlocks = it.second;
@@ -163,6 +163,7 @@ public:
                     return;
                 }
             }
+            //若是大block，那不归还到OS
             auto &bigBlocks = cudaBigBlocksMap[it.first];
             for (int i = 0; i < bigBlocks.size(); i++) {
                 if (bigBlocks[i].data == ptr) {
@@ -178,6 +179,7 @@ public:
         }
         std::cout << "NOT found the ptr in blocks, so free the ptr to OS using cudaFree"
                                             << std::endl;
-        cudaFree(ptr);        
+        cudaFree(ptr);    
+        ptr = nullptr;    
     }
 }
