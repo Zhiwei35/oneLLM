@@ -12,7 +12,9 @@
 template<typename T>
 void launchLinearGemm(Tensor* input,
                       BaseWeight<T>& weight, 
-                      Tensor* output) {
+                      Tensor* output,
+                      bool trans_a = false,
+                      bool trans_b = false) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
@@ -32,9 +34,11 @@ void launchLinearGemm(Tensor* input,
     // TODO:check 2nd dim of input = 1st dim of weight
     int output_ldc = input_lda;         
     int k = output->shape[1];
+    cublasOperation_t transA = trans_a ? CUBLAS_OP_T: CUBLAS_OP_N;
+    cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
     std::cout << "calling gemm" << "\n";
-    cublas_wrapper->Gemm(CUBLAS_OP_N,
-                        CUBLAS_OP_N,
+    cublas_wrapper->Gemm(transA,
+                        transB,
                         input_lda,      //m
                         k,              //n
                         weight_ldb,     //k
@@ -54,7 +58,9 @@ template void launchLinearGemm(Tensor* input, BaseWeight<float>& weight, Tensor*
 template<typename T>
 void launchLinearStridedBatchGemm(Tensor* input1,
                                   Tensor* input2,
-                                  Tensor* output)
+                                  Tensor* output,
+                                  bool trans_a = false,
+                                  bool trans_b = false)
 {
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
@@ -81,9 +87,10 @@ void launchLinearStridedBatchGemm(Tensor* input1,
     int batchCount = input1->shape[0] * input1->shape[1];
 
     std::cout << "calling batch gemm" << "\n";
-
-    cublas_wrapper->stridedBatchedGemm(CUBLAS_OP_N,
-                                       CUBLAS_OP_N,
+    cublasOperation_t transA = trans_a ? CUBLAS_OP_T: CUBLAS_OP_N;
+    cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
+    cublas_wrapper->stridedBatchedGemm(transA,
+                                       transB,
                                        m
                                        n,
                                        k,
@@ -100,4 +107,5 @@ void launchLinearStridedBatchGemm(Tensor* input1,
                                        1.0f,
                                        0.0f)
 }
-void launchLinearStridedBatchGemm<float>(Tensor* input1, Tensor* input2, Tensor* output);
+void launchLinearStridedBatchGemm<float>(Tensor* input1, Tensor* input2, Tensor* output, bool trans_a = false,
+                                        bool trans_b = false);
