@@ -10,9 +10,9 @@
 //                   const float* weight,
 //                   const int hidden_units){}
 template<typename T>
-void launchLinearGemm(Tensor* input,
+void launchLinearGemm(Tensor<T>* input,
                       BaseWeight<T>& weight, 
-                      Tensor* output,
+                      Tensor<T>* output,
                       bool trans_a = false,
                       bool trans_b = false) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
@@ -53,13 +53,13 @@ void launchLinearGemm(Tensor* input,
 }
 
 // We must instancite the template, if not, will report linking issue
-template void launchLinearGemm(Tensor* input, BaseWeight<float>& weight, Tensor* output, bool trans_a = false,
+template void launchLinearGemm(Tensor<float>* input, BaseWeight<float>& weight, Tensor<float>* output, bool trans_a = false,
                                 bool trans_b = false);
 
 template<typename T>
-void launchLinearStridedBatchGemm(Tensor* input1,
-                                  Tensor* input2,
-                                  Tensor* output,
+void launchLinearStridedBatchGemm(Tensor<T>* input1,
+                                  Tensor<T>* input2,
+                                  Tensor<T>* output,
                                   bool trans_a = false,
                                   bool trans_b = false)
 {
@@ -109,5 +109,5 @@ void launchLinearStridedBatchGemm(Tensor* input1,
                                        1.0f,
                                        0.0f);
 }
-template void launchLinearStridedBatchGemm<float>(Tensor* input1, Tensor* input2, Tensor* output, bool trans_a = false,
+template void launchLinearStridedBatchGemm(Tensor<float>* input1, Tensor<float>* input2, Tensor<float>* output, bool trans_a = false,
                                         bool trans_b = false);

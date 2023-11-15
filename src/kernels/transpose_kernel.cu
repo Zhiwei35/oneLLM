@@ -42,12 +42,12 @@ __global__ void transpose_value_cache(T*          v_dst,
 }
 
 template<typename T>
-void launchTransposeKVCache(Tensor* k_cache_src,
-                            Tensor* v_cache_src,
-                            Tensor* context_length,
+void launchTransposeKVCache(Tensor<T>* k_cache_src,
+                            Tensor<T>* v_cache_src,
+                            Tensor<T>* context_length,
                             size_t  layer_offset,
-                            Tensor* k_cache_dst,
-                            Tensor* v_cache_dst
+                            Tensor<T>* k_cache_dst,
+                            Tensor<T>* v_cache_dst
                             )
 {
     int batch_size = context_length->shape[0];
@@ -81,3 +81,11 @@ void launchTransposeKVCache(Tensor* k_cache_src,
                                               max_k_len,
                                               max_seq_len);
 }
+
+template void launchTransposeKVCache(Tensor<float>* k_cache_src,
+                            Tensor<float>* v_cache_src,
+                            Tensor<float>* context_length,
+                            size_t  layer_offset,
+                            Tensor<float>* k_cache_dst,
+                            Tensor<float>* v_cache_dst
+                            )

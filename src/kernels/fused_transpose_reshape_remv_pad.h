@@ -2,6 +2,6 @@
 #include <cuda.h>
 #include "src/utils/tensor.h"
 template<typename T>
-void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad, 
-                                    Tensor* padding_offset,
-                                    Tensor* qkv_buf_wo_pad_1);
+void launchTransposeOutRemovePadding(Tensor<T>* qkv_buf_w_pad, 
+                                    Tensor<T>* padding_offset,
+                                    Tensor<T>* qkv_buf_wo_pad_1);

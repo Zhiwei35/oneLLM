@@ -100,10 +100,10 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
     }
 }
 
-template<typename T>
-void launchScaleMaskAndSoftmax(Tensor* qk,
-                               Tensor* mask,
-                               Tensor* attn_score,
+template<typename T, typename T1>
+void launchScaleMaskAndSoftmax(Tensor<T>* qk,
+                               Tensor<T1>* mask,
+                               Tensor<T>* attn_score,
                                float scale)
 {
     // attention_score,    (batch_size, head_num, q_length, k_length), softmax output.
@@ -123,7 +123,7 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
         assert(block.x < 1024);
         ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
                                                 (T*)qk->data,
-                                                (T*)mask->data,
+                                                (T1*)mask->data,
                                                 batch_size,
                                                 head_nums,
                                                 q_length,
@@ -155,3 +155,8 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
                                             scale);       
     }
 }
+
+template void launchScaleMaskAndSoftmax(Tensor<float>* qk,
+                               Tensor<uint8_t>* mask,
+                               Tensor<float>* attn_score,
+                               float scale)

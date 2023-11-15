@@ -27,9 +27,9 @@ __global__ void fused_transpose_reshape_remv_pad(T*           src,
 }
 
 template<typename T>
-void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad, 
-                                    Tensor* padding_offset,
-                                    Tensor* qkv_buf_wo_pad_1)
+void launchTransposeOutRemovePadding(Tensor<T>* qkv_buf_w_pad, 
+                                    Tensor<T>* padding_offset,
+                                    Tensor<T>* qkv_buf_wo_pad_1)
 {
     int batch_size = qkv_buf_w_pad->shape[0];
     int head_num = qkv_buf_w_pad->shape[1];
@@ -48,6 +48,6 @@ void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad,
                                                          (int*)padding_offset->data);
 }
 
-template void launchTransposeOutRemovePadding<float>(Tensor* qkv_buf_w_pad, 
-                                            Tensor* padding_offset,
-                                            Tensor* qkv_buf_wo_pad_1);                                 
+template void launchTransposeOutRemovePadding(Tensor<float>* qkv_buf_w_pad, 
+                                            Tensor<float>* padding_offset,
+                                            Tensor<float>* qkv_buf_wo_pad_1);                                 
