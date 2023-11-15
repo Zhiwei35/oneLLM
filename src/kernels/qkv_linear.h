@@ -6,11 +6,11 @@
 
 //TODO: when enable int8/int4 weight only, we can add a new type param T2 to represent weight type
 template<typename T>
-void launchLinearGemm(Tensor* input,
+void launchLinearGemm(Tensor<T>* input,
                       BaseWeight<T>& weight, 
-                      Tensor* output);
+                      Tensor<T>* output);
 
 template<typename T>
-void launchLinearStridedBatchGemm(Tensor* input1,
-                                  Tensor* input2,
-                                  Tensor* output);
+void launchLinearStridedBatchGemm(Tensor<T>* input1,
+                                  Tensor<T>* input2,
+                                  Tensor<T>* output);
