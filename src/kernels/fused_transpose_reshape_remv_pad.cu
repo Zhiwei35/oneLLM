@@ -10,6 +10,7 @@ __global__ void fused_transpose_reshape_remv_pad(T*           src,
                                                 const int    head_num,
                                                 const int    head_size,
                                                 const int*   padding_offset/*for remove padding*/)
+{
     int token_id = blockIdx.x; // token nums
     // map to input id
     int batch_id = (blockIdx.x + padding_offset[token_id]) / seq_len;
@@ -23,7 +24,7 @@ __global__ void fused_transpose_reshape_remv_pad(T*           src,
         int head_size_id = i % head_size;
         dst[dst_offset + i] = src[src_offset + head_id * seq_len * head_size + head_size_id];
     }
-
+}
 
 template<typename T>
 void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad, 
@@ -37,16 +38,16 @@ void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad,
     int num_tokens = qkv_buf_wo_pad_1->shape[0];
     dim3 grid(num_tokens);
     dim3 block(std::min(head_num * head_size, 1024));
-    fused_transpose_reshape_remv_pad<T><<<grid, block>>>(qkv_buf_w_pad->data,
-                                                         qkv_buf_wo_pad_1->data,
+    fused_transpose_reshape_remv_pad<T><<<grid, block>>>((T*)qkv_buf_w_pad->data,
+                                                         (T*)qkv_buf_wo_pad_1->data,
                                                          num_tokens,
                                                          batch_size,
                                                          seq_len,
                                                          head_num,
                                                          head_size,
-                                                         padding_offset->data);
+                                                         (int*)padding_offset->data);
 }
 
-void launchTransposeOutRemovePadding<float>(Tensor* qkv_buf_w_pad, 
+template void launchTransposeOutRemovePadding<float>(Tensor* qkv_buf_w_pad, 
                                             Tensor* padding_offset,
                                             Tensor* qkv_buf_wo_pad_1);                                 

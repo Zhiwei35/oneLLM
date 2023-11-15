@@ -9,5 +9,5 @@ void launchTransposeKVCache(Tensor* k_cache_src,
                             size_t  layer_offset,
                             int q_head_per_kv,
                             Tensor* k_cache_dst,
-                            Tensor* v_cache_dst,
+                            Tensor* v_cache_dst
                             );

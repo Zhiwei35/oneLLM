@@ -2,6 +2,7 @@
 #include <cuda.h>
 #include "src/kernels/cublas_wrapper.h"
 #include "src/utils/tensor.h"
+#include "src/weights/llama/attention_weights.h"
 
 //TODO: when enable int8/int4 weight only, we can add a new type param T2 to represent weight type
 template<typename T>

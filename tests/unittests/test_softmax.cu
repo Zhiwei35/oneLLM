@@ -14,7 +14,7 @@ int main() {
     const int q_length = 8;
     const int k_length = 8;
     const int head_size = 4;
-    float scale = rsqrt(head_size);
+    float scale = rsqrt(float(head_size));
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int qk_size = batch_size * head_num * q_length * k_length;
     float* h_qk;
@@ -44,11 +44,11 @@ int main() {
     Tensor mask(Device::GPU, type, {batch_size, q_length, k_length}, (void*)d_mask);
     Tensor score(Device::GPU, type, {batch_size, head_num, q_length, k_length});
     std::cout << "before launch softmax kernel" << std::endl;
-    launchScaleMaskAndSoftmax(&qk, &mask, &score, scale);
+    launchScaleMaskAndSoftmax<float>(&qk, &mask, &score, scale);
     std::cout << "after launch softmax kernel" << std::endl;
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
-    cudaMemcpy(h_score, score->data, sizeof(float) * qk_size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(h_score, score.data, sizeof(float) * qk_size, cudaMemcpyDeviceToHost);
     for(int i = 0; i < qk_size; i++) {
         printf("attn score[%d] = %f\n", i, h_score[i]);
     }

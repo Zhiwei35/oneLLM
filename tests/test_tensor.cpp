@@ -1,7 +1,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
-#include <gtest/gtest.h>
+//#include <gtest/gtest.h>
 #include "src/utils/tensor.h"
 
 void test1(){
@@ -28,8 +28,8 @@ void test2()
 {
     int*   v1 = new int[4]{1, 10, 20, 30};
     float* v2 = new float[2]{1.0f, 2.0f};
-    Tensor t1 = Tensor(MEMORY_CPU, TYPE_INT32, {4}, v1);
-    Tensor t2 = Tensor(MEMORY_CPU, TYPE_INT32, {2}, v2);
+    Tensor t1 = Tensor(CPU, INT32, {4}, v1);
+    Tensor t2 = Tensor(CPU, INT32, {2}, v2);
 
     TensorMap map({{"t1", t1}});
     if(map.size() == 1){

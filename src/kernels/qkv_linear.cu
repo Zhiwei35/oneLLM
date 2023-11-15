@@ -42,11 +42,11 @@ void launchLinearGemm(Tensor* input,
                         input_lda,      //m
                         k,              //n
                         weight_ldb,     //k
-                        input->data,   //A
+                        (T*)input->data,   //A
                         input_lda,      //lda
-                        weight.data,   //B
+                        (T*)weight.data,   //B
                         weight_ldb,     //ldb 
-                        output->data,  //C
+                        (T*)output->data,  //C
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);
@@ -65,6 +65,7 @@ void launchLinearStridedBatchGemm(Tensor* input1,
 {
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
+    cublasLtHandle_t cublaslt_handle;
     std::cout << "creating stream" << "\n";
     cublasCreate(&cublas_handle);
     cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
@@ -92,21 +93,21 @@ void launchLinearStridedBatchGemm(Tensor* input1,
     cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
     cublas_wrapper->stridedBatchedGemm(transA,
                                        transB,
-                                       m
+                                       m,
                                        n,
                                        k,
-                                       input1->data, //A
+                                       (T*)input1->data, //A
                                        lda,
                                        strideA,
-                                       input2->Data, //B
+                                       (T*)input2->data, //B
                                        ldb,
                                        strideB,
-                                       output->data, //C
+                                       (T*)output->data, //C
                                        ldc,
                                        strideC,
                                        batchCount,
                                        1.0f,
-                                       0.0f)
+                                       0.0f);
 }
-void launchLinearStridedBatchGemm<float>(Tensor* input1, Tensor* input2, Tensor* output, bool trans_a = false,
+template void launchLinearStridedBatchGemm<float>(Tensor* input1, Tensor* input2, Tensor* output, bool trans_a = false,
                                         bool trans_b = false);

@@ -1,6 +1,7 @@
 #include <unordered_map>
 #include <map>
 #include <vector>
+#include <iostream>
 #include "src/memory/allocator/base_allocator.h"
 
 struct CudaBigBlock {
@@ -13,7 +14,7 @@ struct CudaBigBlock {
         data(data_),
         size(size_),
         is_allocated(is_allocated_){}
-}
+};
 
 struct CudaSmallBlock {
     void *data;
@@ -25,7 +26,7 @@ struct CudaSmallBlock {
         data(data_),
         size(size_),
         is_allocated(is_allocated_){}
-}
+};
 
 class CudaAllocator: public BaseAllocator {
 private:
@@ -51,8 +52,8 @@ public:
             }            
         }
     }
-    template<typename T>
-    T* deviceMalloc(T* ptr, size_t size, bool is_host) {
+
+    void* deviceMalloc(void* ptr, size_t size, bool is_host) {
         // align to 32bytes to make float4 work
         // not sure if w/o it, float4 works or not
         size = ((size + 31) / 32) * 32;
@@ -90,14 +91,14 @@ public:
                                                 << size / 1024 << "KB"
                                                 << std::endl;
             BigBlocks.push_back(CudaBigBlock(new_buffer, size, true));
-            return (T*)new_buffer;
+            return new_buffer;
         }
         //小buf, 先去bigblocks里面找空闲的（free出来的）
-        auto &SmallBlocks = cudaSmallBlocksMap[id];
+        auto &SmallBlocks = cudaSmallBlocksMap[dev_id];
         for (int i = 0; i < SmallBlocks.size(); i++) {
             if (SmallBlocks[i].size >= size && !SmallBlocks[i].is_allocated) {
                 SmallBlocks[i].is_allocated = true;
-                allocatedSize[i] += SmallBlocks[i].size;//小buf size
+                FreeSize[i] += SmallBlocks[i].size;//小buf size
                 std::cout << "allocate a existed small block, id = " << i 
                                 <<", size = "<< size / 1024 << "KB"
                                 <<", block size = "<< SmallBlocks[i].size / 1024 << "KB"
@@ -113,11 +114,10 @@ public:
                                             << std::endl;
 
         SmallBlocks.push_back(CudaSmallBlock(new_buffer, size, true));
-        return (T*)new_buffer;
+        return new_buffer;
     }
 
-    template<typename T>
-    void deviceFree(T* ptr, bool is_host) {
+    void deviceFree(void* ptr, bool is_host) {
         if (ptr == nullptr) {
             return;
         }
@@ -180,6 +180,5 @@ public:
         std::cout << "NOT found the ptr in blocks, so free the ptr to OS using cudaFree"
                                             << std::endl;
         cudaFree(ptr);    
-        ptr = nullptr;    
     }
-}
+};

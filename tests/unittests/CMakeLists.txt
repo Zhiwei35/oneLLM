@@ -43,14 +43,14 @@ target_link_libraries(  # Libs for test_append_kvcache
     -lcudadevrt
     appendtokvcache) 
 
-add_executable(linear
-    test_linear.cu
-)
-target_link_libraries(  # Libs for test_linear
-  linear PUBLIC
-    -lcudart
-    -lcudadevrt
-    qkv_linear) 
+#add_executable(linear
+#    test_linear.cu
+#)
+#target_link_libraries(  # Libs for test_linear
+#  linear PUBLIC
+#    -lcudart
+#    -lcudadevrt
+#    qkv_linear) 
 
 add_executable(attn_softmax
     test_softmax.cu

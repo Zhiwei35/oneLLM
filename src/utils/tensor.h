@@ -5,7 +5,9 @@
 #include <numeric>
 #include <sstream>
 #include <iostream>
-
+#include <cuda_fp16.h>
+#include "src/utils/string_utils.h"
+#include "src/utils/macro.h"
 enum Device
 {
     CPU_PINNED,
@@ -60,8 +62,7 @@ struct Tensor {
 
     Tensor(const Device location_, 
             const DataType dtype_,
-            const std::vector<int> shape_, 
-            void* data_):
+            const std::vector<int> shape_):
             location(location_),
             dtype(dtype_),
             shape(shape_){}
@@ -76,7 +77,7 @@ struct Tensor {
             data(data_){}
             
     ~Tensor() {
-        if(data) {
+        if(data!=nullptr) {
             delete data;
             data = nullptr;
         }
@@ -114,7 +115,7 @@ struct Tensor {
         return ((T*)data) + offset;
     }
     // for debug
-    std::string Tensor::DeviceString() const
+    std::string DeviceString() const
     {
         static const std::unordered_map<Device, std::string> devicetring{
             {CPU, "CPU"}, {CPU_PINNED, "CPU_PINNED"}, {GPU, "GPU"}};
@@ -146,9 +147,12 @@ inline bool operator==(Tensor& t1, Tensor& t2){
             float d2 = reinterpret_cast<float*>(t2.data)[i];
             if (d1!=d2){
                 std::cout << "two tensor is not equal!" << "\n";
+                return false;
             }
         }
+        return true;
     }
+    return false;
 }
 
 struct TensorMap {
@@ -171,9 +175,16 @@ struct TensorMap {
             }
         }        
     };
+
     ~TensorMap(){
         tensor_map_.clear();
     }
+
+    inline size_t size() const
+    {
+        return tensor_map_.size();
+    }
+
     inline bool isExist(const std::string& key) const
     {
         return tensor_map_.find(key) != tensor_map_.end();
@@ -203,19 +214,20 @@ struct TensorMap {
     inline Tensor& at(const std::string& key)
     {
          // TODO: add a check to check key is existed
-        if(isExist(key)){
-            return tensor_map_.at(key);
-        }
-        return;
+        ONELLM_CHECK_WITH_INFO(isExist(key), fmtstr("Cannot find a tensor of name %s in the tensor map (keys: %s)",
+                                  key.c_str(),
+                                  vec2str(keys()).c_str()));
+        return tensor_map_.at(key);
+        
     }
 
     inline Tensor& operator[](const std::string& key)
     {
-         // TODO: add a check to check key is existed
-        if(isExist(key)){
-            return tensor_map_.at(key);
-        }
-        return;
+        ONELLM_CHECK_WITH_INFO(isExist(key), fmtstr("Cannot find a tensor of name %s in the tensor map    (keys: %s)",
+                                  key.c_str(),
+                                  vec2str(keys()).c_str()));
+        return tensor_map_.at(key);
+
     }
 
     template<typename T>

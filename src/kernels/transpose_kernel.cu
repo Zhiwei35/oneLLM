@@ -47,7 +47,7 @@ void launchTransposeKVCache(Tensor* k_cache_src,
                             Tensor* context_length,
                             size_t  layer_offset,
                             Tensor* k_cache_dst,
-                            Tensor* v_cache_dst,
+                            Tensor* v_cache_dst
                             )
 {
     int batch_size = context_length->shape[0];

@@ -2,19 +2,19 @@
 
 enum WeightType
 {
-    FP32,
-    FP16,
-    INT8,
+    FP32_W,
+    FP16_W,
+    INT8_W
 };
 
 inline int getBitNum(WeightType type)
 {
     switch (type) {
-        case WeightType::FP32:
+        case WeightType::FP32_W:
             return 32;
-        case WeightType::FP16:
+        case WeightType::FP16_W:
             return 16;
-        case WeightType::INT8:
+        case WeightType::INT8_W:
             return 8;
     }
     return 0;

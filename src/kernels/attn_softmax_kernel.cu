@@ -1,6 +1,7 @@
-#include "src/kernels/softmax_kernel.h"
+#include "src/kernels/attn_softmax_kernel.h"
 #include <float.h>
 #include <math.h>
+#include <assert.h>
 // attention_score,    (batch_size, head_num, q_length, k_length), softmax output.
 // qk,                 (batch_size, head_num, q_length, k_length), QK^T.
 // attention_mask,     (batch_size, q_length, k_length), attention mask.
@@ -40,7 +41,7 @@ __inline__ __device__ T blockReduce(T val) {
 }
 
 
-template<typename T>
+template<typename T, int NUMS_PER_THREAD_PER_ROW>
 __global__ void ScaleMaskAndSoftmax(T* attn_score,
                                     T* qk,
                                     T* mask,
@@ -52,7 +53,7 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
 {
     int batch_id = blockIdx.y;
     int head_id = blockIdx.z;
-    const int NUMS_PER_THREAD_PER_ROW = ceil(k_len / blockDim.x);
+    //const int NUMS_PER_THREAD_PER_ROW = ceil(k_len / blockDim.x);
     __shared__ T inv_sum, s_max;
     
     for(int row_start = blockIdx.x; row_start < q_len; row_start += gridDim.x) {
@@ -62,14 +63,15 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
         T mask_data = static_cast<T>(0);
         T thread_max = FLT_MIN;
         T data[NUMS_PER_THREAD_PER_ROW]; // 面对这种一个block一个thread需要处理多行多列的时候，数据尽量用数组存储，计算出每个block和thread要处理几行几列
-        for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
+        //for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
+        for(int col_start = 0; col_start < NUMS_PER_THREAD_PER_ROW; col_start++){   
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
-                            + row_start * k_len + col_start;
+                            + row_start * k_len + col_start * blockDim.x + threadIdx.x;
             qk_data = qk[qk_offset];
-            mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start;
+            mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start * blockDim.x + threadIdx.x;
             mask_data = mask[mask_offset];
-            T data[col_start / blockDim.x] = (T)(scale) * qk_data + mask_data;
-            thread_max = max(data[col_start / blockDim.x], thread_max);
+            data[col_start] = (T)(scale) * qk_data + mask_data;
+            thread_max = max(data[col_start], thread_max);
         }
         // warp/block reduce
         T max_val = blockReduce<MaxOp, T>(thread_max);
@@ -114,12 +116,42 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
     dim3 grid(q_length, batch_size, head_nums);
 
     dim3 block((k_length + 32 - 1) / 32 * 32);//align with 32x threads
-    ScaleMaskAndSoftmax<T><<<grid, block>>>((T*)attn_score->data,
+        if (block.x > 2048 && block.x <= 4096) {
+        constexpr int NUMS_PER_THREAD_PER_ROW = 4;
+        block.x /= 4;
+        block.x = (block.x + 32 - 1) / 32 * 32;
+        assert(block.x < 1024);
+        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
+                                                (T*)qk->data,
+                                                (T*)mask->data,
+                                                batch_size,
+                                                head_nums,
+                                                q_length,
+                                                k_length,
+                                                scale);      
+    } else if (block.x > 1024) {
+        constexpr int NUMS_PER_THREAD_PER_ROW = 2;
+        block.x /= 2;
+        block.x = (block.x + 32 - 1) / 32 * 32;
+        assert(block.x < 1024);
+        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
                                             (T*)qk->data,
                                             (T*)mask->data,
                                             batch_size,
                                             head_nums,
                                             q_length,
                                             k_length,
-                                            scale)
+                                            scale);
+    } else {
+        constexpr int NUMS_PER_THREAD_PER_ROW = 1;
+        assert(block.x < 1024);
+        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
+                                            (T*)qk->data,
+                                            (T*)mask->data,
+                                            batch_size,
+                                            head_nums,
+                                            q_length,
+                                            k_length,
+                                            scale);       
+    }
 }
