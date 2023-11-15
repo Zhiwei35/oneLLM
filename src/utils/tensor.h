@@ -70,18 +70,18 @@ struct Tensor {
     Tensor(const Device location_, 
             const DataType dtype_,
             const std::vector<int> shape_, 
-            T* data_):
+            void* data_):
             location(location_),
             dtype(dtype_),
             shape(shape_),
             data(data_){}
-            
-    ~Tensor() {
-        if(data!=nullptr) {
-            delete data;
-            data = nullptr;
-        }
-    }
+// note: data's destructor is invoked by allocator's free API or cudaFree API            
+//    ~Tensor() {
+//        if(data!=nullptr) {
+//            delete data;
+//            data = nullptr;
+//        }
+//    }
     friend bool operator==(Tensor& t1, Tensor& t2);
     int size() const {
         if (data == nullptr || shape.size() == 0) {
@@ -143,8 +143,8 @@ struct Tensor {
 inline bool operator==(Tensor& t1, Tensor& t2){
     if(t1.size() == t2.size()) {
         for(int i = 0; i < t1.size(); i++) {
-            float d1 = (float*)t1.data[i];
-            float d2 = (float*)t2.data[i];
+            float d1 = ((float*)t1.data)[i];
+            float d2 = ((float*)t2.data)[i];
             if (d1!=d2){
                 std::cout << "two tensor is not equal!" << "\n";
                 return false;

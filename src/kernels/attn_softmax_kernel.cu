@@ -2,6 +2,7 @@
 #include <float.h>
 #include <math.h>
 #include <assert.h>
+#include <stdio.h>
 // attention_score,    (batch_size, head_num, q_length, k_length), softmax output.
 // qk,                 (batch_size, head_num, q_length, k_length), QK^T.
 // attention_mask,     (batch_size, q_length, k_length), attention mask.
@@ -18,7 +19,6 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T>
 __inline__ __device__ T warpReduce(T val) {
   for (int mask = 32 / 2; mask > 0; mask /= 2) {
-    // you can change L61 with __shfl_down_sync like 6_warp_level_reduce and see performance change
     val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
   }
   return val;
@@ -36,15 +36,16 @@ __inline__ __device__ T blockReduce(T val) {
     if (lane_id == 0){
         warp[warp_id] = val;
     }
+    __syncthreads();
     float warp_val = tid < warp_nums ? warp[warp_id] : 0;
     return warpReduce<ReductionOp, T>(warp_val);
 }
 
 
-template<typename T, int NUMS_PER_THREAD_PER_ROW>
-__global__ void ScaleMaskAndSoftmax(T* attn_score,
-                                    T* qk,
-                                    T* mask,
+template<int NUMS_PER_THREAD_PER_ROW>
+__global__ void ScaleMaskAndSoftmax(float* attn_score,
+                                    float* qk,
+                                    uint8_t* mask,
                                     int batch_size,
                                     int head_nums,
                                     int q_len,
@@ -53,57 +54,73 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
 {
     int batch_id = blockIdx.y;
     int head_id = blockIdx.z;
+    //note: NUMS_PER_THREAD_PER_ROW must be a constant value that known at compile time, following expr is invalid
     //const int NUMS_PER_THREAD_PER_ROW = ceil(k_len / blockDim.x);
-    __shared__ T inv_sum, s_max;
-    
+    __shared__ float inv_sum, s_max;
+    //warning: remember 1st priority thing is filtering the out-of-boundary threads
+    if(threadIdx.x >= k_len){
+        return;
+    }
     for(int row_start = blockIdx.x; row_start < q_len; row_start += gridDim.x) {
         int qk_offset = 0;
         int mask_offset = 0;
-        T qk_data = static_cast<T>(0);
-        T mask_data = static_cast<T>(0);
-        T thread_max = FLT_MIN;
-        T data[NUMS_PER_THREAD_PER_ROW]; // 面对这种一个block一个thread需要处理多行多列的时候，数据尽量用数组存储，计算出每个block和thread要处理几行几列
+        float qk_data = static_cast<float>(0);
+        uint8_t mask_data = static_cast<uint8_t>(0);
+        float thread_max = FLT_MIN;
+        float data[NUMS_PER_THREAD_PER_ROW]; // 面对这种一个block一个thread需要处理多行多列的时候，数据尽量用数组存储，计算出每个block和thread要处理几行几列
         //for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
         for(int col_start = 0; col_start < NUMS_PER_THREAD_PER_ROW; col_start++){   
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start * blockDim.x + threadIdx.x;
             qk_data = qk[qk_offset];
+            
             mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start * blockDim.x + threadIdx.x;
             mask_data = mask[mask_offset];
-            data[col_start] = (T)(scale) * qk_data + mask_data;
-            thread_max = max(data[col_start], thread_max);
+            
+            //debug info,printf("before,data[%d]=%f\n",col_start, data[col_start]);
+            data[col_start] = scale * qk_data + (float)mask_data;
+            //debug info,printf("after,scale*qk_data=%f, (float)mask_data=%f,data[%d]=%f\n",scale * qk_data, (float)mask_data, col_start, data[col_start]);
+            thread_max = fmax(data[col_start], thread_max);
         }
         // warp/block reduce
-        T max_val = blockReduce<MaxOp, T>(thread_max);
+        float max_val = blockReduce<MaxOp, float>(thread_max);
         if (threadIdx.x == 0) {
             s_max = max_val;
+            //debug info,printf("row max = %f\n", s_max);
         }
         __syncthreads();
         // thread local fenzi/fenmu
-        T thread_sum;
-        for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
-            data[col_start / blockDim.x] = exp(data[col_start / blockDim.x] - s_max);
-            thread_sum += data[col_start / blockDim.x];
+        float thread_sum = 0.0f;
+        //for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
+        for(int col_start = 0; col_start < NUMS_PER_THREAD_PER_ROW; col_start++){ 
+            //debug info to see useless threads if its available,printf("blockIdx.x=%d, threadIdx.x=%d\n",blockIdx.x, threadIdx.x);
+            
+            qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
+                            + row_start * k_len + col_start * blockDim.x + threadIdx.x;
+            mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start * blockDim.x +         threadIdx.x;
+            data[col_start] = expf(data[col_start] - s_max);
+            thread_sum += data[col_start];
+            //debug info,printf("after, data[%d]=%f, thread_sum = %f\n",col_start, data[col_start], thread_sum);
         }
         // row sum
-        T sum = blockReduce<SumOp, T>(thread_sum);
+        float sum = blockReduce<SumOp, float>(thread_sum);
         if(threadIdx.x == 0) {
             inv_sum = 1 / sum;//maybe sum(fenmu) need to add a small value to keep stable
+            //debug info, printf("row sum = %f\n", sum);
         }
         __syncthreads();
         // write back into gmem
-        for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
+       for(int col_start = 0; col_start < NUMS_PER_THREAD_PER_ROW; col_start++){ 
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
-                            + row_start * k_len + col_start;
-            attn_score[qk_offset] = (data[col_start / blockDim.x] * inv_sum);
+                            + row_start * k_len + col_start * blockDim.x + threadIdx.x;
+            attn_score[qk_offset] = (data[col_start] * inv_sum);
         }
     }
 }
 
-template<typename T, typename T1>
-void launchScaleMaskAndSoftmax(Tensor<T>* qk,
-                               Tensor<T1>* mask,
-                               Tensor<T>* attn_score,
+void launchScaleMaskAndSoftmax(Tensor* qk,
+                               Tensor* mask,
+                               Tensor* attn_score,
                                float scale)
 {
     // attention_score,    (batch_size, head_num, q_length, k_length), softmax output.
@@ -116,14 +133,14 @@ void launchScaleMaskAndSoftmax(Tensor<T>* qk,
     dim3 grid(q_length, batch_size, head_nums);
 
     dim3 block((k_length + 32 - 1) / 32 * 32);//align with 32x threads
-        if (block.x > 2048 && block.x <= 4096) {
+    if (block.x > 2048 && block.x <= 4096) {
         constexpr int NUMS_PER_THREAD_PER_ROW = 4;
         block.x /= 4;
         block.x = (block.x + 32 - 1) / 32 * 32;
         assert(block.x < 1024);
-        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
-                                                (T*)qk->data,
-                                                (T1*)mask->data,
+        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((float*)(attn_score->data),
+                                                (float*)(qk->data),
+                                                (uint8_t*)(mask->data),
                                                 batch_size,
                                                 head_nums,
                                                 q_length,
@@ -134,9 +151,9 @@ void launchScaleMaskAndSoftmax(Tensor<T>* qk,
         block.x /= 2;
         block.x = (block.x + 32 - 1) / 32 * 32;
         assert(block.x < 1024);
-        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
-                                            (T*)qk->data,
-                                            (T*)mask->data,
+        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((float*)(attn_score->data),
+                                            (float*)(qk->data),
+                                            (uint8_t*)(mask->data),
                                             batch_size,
                                             head_nums,
                                             q_length,
@@ -145,9 +162,9 @@ void launchScaleMaskAndSoftmax(Tensor<T>* qk,
     } else {
         constexpr int NUMS_PER_THREAD_PER_ROW = 1;
         assert(block.x < 1024);
-        ScaleMaskAndSoftmax<T, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((T*)attn_score->data,
-                                            (T*)qk->data,
-                                            (T*)mask->data,
+        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((float*)(attn_score->data),
+                                            (float*)(qk->data),
+                                            (uint8_t*)(mask->data),
                                             batch_size,
                                             head_nums,
                                             q_length,
@@ -155,8 +172,3 @@ void launchScaleMaskAndSoftmax(Tensor<T>* qk,
                                             scale);       
     }
 }
-
-template void launchScaleMaskAndSoftmax(Tensor<float>* qk,
-                               Tensor<uint8_t>* mask,
-                               Tensor<float>* attn_score,
-                               float scale)

@@ -34,7 +34,8 @@ int main() {
        h_qk[i] = 4.0f;
     }
     for(int i = 0; i < batch_size * q_length * k_length; i++) {
-       h_mask[i] = (uint8_t)(i % 255);
+       h_mask[i] = (uint8_t)(1);
+       //h_mask[i] = (uint8_t)(i % 255);
     }    
 
     cudaMemcpy(d_qk, h_qk, sizeof(float)* qk_size, cudaMemcpyHostToDevice);
@@ -42,7 +43,7 @@ int main() {
     DataType type = getTensorType<float>(); 
     Tensor qk(Device::GPU, type, {batch_size, head_num, q_length, k_length}, d_qk);
     Tensor mask(Device::GPU, type, {batch_size, q_length, k_length}, d_mask);
-    Tensor score(Device::GPU, type, {batch_size, head_num, q_length, k_length});
+    Tensor score(Device::GPU, type, {batch_size, head_num, q_length, k_length}, d_score);
     std::cout << "before launch softmax kernel" << std::endl;
     launchScaleMaskAndSoftmax(&qk, &mask, &score, scale);
     std::cout << "after launch softmax kernel" << std::endl;
