@@ -51,6 +51,14 @@ target_link_libraries(  # Libs for test_linear
     -lcudart
     -lcudadevrt
     qkv_linear)
+add_executable(bmm
+    test_batch_gemm.cu
+)
+target_link_libraries(  # Libs for test_linear
+  bmm PUBLIC
+    -lcudart
+    -lcudadevrt
+    qkv_linear)
 
 add_executable(test_trans
     test_transpose.cu
