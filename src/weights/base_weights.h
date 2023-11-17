@@ -1,10 +1,12 @@
+#pragma once
 #include <vector>
 
-enum WeightType
+enum class WeightType
 {
     FP32_W,
     FP16_W,
-    INT8_W
+    INT8_W,
+    UNSUPPORTED_W
 };
 
 inline int getBitNum(WeightType type)
@@ -20,19 +22,19 @@ inline int getBitNum(WeightType type)
     return 0;
 }
 template<typename T>
-inline int getWeightType()
+inline WeightType getWeightType()
 {
     if (std::is_same<T, float>::value || std::is_same<T, const float>::value) {
-        return FP32_W;
+        return WeightType::FP32_W;
     }
     else if (std::is_same<T, half>::value || std::is_same<T, const half>::value) {
-        return FP16_W;
+        return WeightType::FP16_W;
     }
     else if (std::is_same<T, int8_t>::value || std::is_same<T, const int8_t>::value) {
-        return INT8_W;
+        return WeightType::INT8_W;
     }
     else {
-        return UNSUPPORTED;
+        return WeightType::UNSUPPORTED_W;
     }
 }
 

@@ -18,7 +18,7 @@ int main() {
     const int layer_offset = 1 * local_batch_size * max_seq_len * kv_head_num * head_size;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int kvcache_size = layer_offset;
-    const int layer_id = 0;
+//    const int layer_id = 0;
 
     float* h_k_src;
     float *d_k_src;

@@ -159,6 +159,18 @@ struct TensorMap {
     std::unordered_map<std::string, Tensor> tensor_map_;
 
     TensorMap() = default;
+    TensorMap(std::initializer_list<std::pair<std::string, Tensor>> tensor_map){
+        for (auto& pair : tensor_map) {
+            if (isValid(pair.second)) {
+                insert(pair.first, pair.second);
+            }
+            else {
+                std::cout << "this is not a valid tensor, skip to insert into tensormap" << std::endl;
+                //ONELLM_INFO(fmtstr("%s is not a valid tensor, skipping insert into TensorMap", pair.first.c_str()));
+            }
+        }
+    }
+
     TensorMap(const std::unordered_map<std::string, Tensor>& tensor_map) {
         // C++ 11 traverse
         // for (auto& kv : tensor_map) {

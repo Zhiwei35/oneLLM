@@ -1,5 +1,5 @@
 struct LLaMAAttentionStaticParams{
-    int   rotray_embedding_dim;
+    int   rotary_embedding_dim;
     float rotary_embedding_base;
     int   max_position_embeddings;
     bool  use_dynamic_ntk; // for dyn scaling rope

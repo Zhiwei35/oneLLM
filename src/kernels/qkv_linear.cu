@@ -8,8 +8,8 @@
 void launchLinearGemm(Tensor* input,
                       BaseWeight& weight, 
                       Tensor* output,
-                      bool trans_a = false,
-                      bool trans_b = false) {
+                      bool trans_a,
+                      bool trans_b) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
@@ -50,8 +50,8 @@ void launchLinearGemm(Tensor* input,
 void launchLinearStridedBatchGemm(Tensor* input1,
                                   Tensor* input2,
                                   Tensor* output,
-                                  bool trans_a = false,
-                                  bool trans_b = false)
+                                  bool trans_a,
+                                  bool trans_b)
 {
     cudaStream_t stream;
     cublasHandle_t cublas_handle;

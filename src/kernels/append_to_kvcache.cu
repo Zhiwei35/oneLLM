@@ -13,8 +13,7 @@ __global__ void append_key_cache(float*          k_dst, //[num layers, bs, kv he
                                  const int*   cur_query_length,
                                  const int*   history_length,
                                  const int    max_q_len, 
-                                 const int    max_seq_len)
-{
+                                 const int    max_seq_len){
     int batch_id = blockIdx.y;
     int head_id = blockIdx.z;
     int tid = threadIdx.x;
@@ -89,27 +88,25 @@ void launchAppendKVCache(Tensor*     k_src, // from qkv bias and rope
     //note: this is for vectorization of kv cache for attention
     //constexpr int x = (sizeof(T) == 4) ? 4 : 8;
     dim3 grid(max_q_len, batch_size, kv_head_num);
-    if (quant & kv_scale != nullptr) {
-    }
-    else {
-        append_key_cache<<<grid, blockSize>>>((float*)k_dst,
+    
+    append_key_cache<<<grid, blockSize>>>((float*)k_dst->data,
                                               layer_offset,
-                                              (float*)k_src,
+                                              (float*)k_src->data,
                                               kv_head_num,
                                               head_size,
-                                              (int*)cur_query_length,
-                                              (int*)history_length,
+                                              (int*)cur_query_length->data,
+                                              (int*)history_length->data,
                                               max_q_len,
                                               max_seq_len);
 
-        append_value_cache<<<grid, blockSize>>>((float*)v_dst,
+    append_value_cache<<<grid, blockSize>>>((float*)v_dst->data,
                                                 layer_offset,
-                                                (float*)v_src,
+                                                (float*)v_src->data,
                                                 kv_head_num,
                                                 head_size,
-                                                (int*)cur_query_length,
-                                                (int*)history_length,
+                                                (int*)cur_query_length->data,
+                                                (int*)history_length->data,
                                                 max_q_len,
                                                 max_seq_len);
-    }
+    
 }

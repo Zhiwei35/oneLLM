@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
-
+#include "src/utils/tensor.h"
 // void launchAppendKVCache(T*          k_dst, // 每个layer都有单独的kv cache
 //                          T*          v_dst, // 猜测为二级指针的原因是每个layer都单独一份，所以每个一级指针为每个layer的kv cache
 //                          int       layer_offset,//layer offset = layer_id * batchxbeam * max_seq_len * kv_head_num * head_size
@@ -23,4 +23,4 @@ void launchAppendKVCache(Tensor*     k_src, // from qkv bias and rope
                          Tensor*     cur_query_length, // current epoch or local input length,[batchsize]
                          Tensor*     history_length,
                          Tensor*     k_dst, 
-                         Tensor*     v_dst)
+                         Tensor*     v_dst);//少写一个;都会发生很多奇怪的错误

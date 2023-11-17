@@ -17,7 +17,7 @@ int main() {
     const int max_k_len = 2;
     const int head_size = 2;
     const int num_layers = 2;
-    const int layer_id = 0;
+//    const int layer_id = 0;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     const int k_size = num_layers * batch_size * kv_head_num * max_seq_len * head_size;
     const int out_k_size = batch_size * head_num * max_k_len * head_size;
@@ -25,7 +25,7 @@ int main() {
     float* d_k;
     h_k = (float*)malloc(sizeof(float) * k_size);
     cudaMalloc((void**)&d_k, sizeof(float) * k_size);
-    const int k_size = batch_size * kv_head_num * max_seq_len * head_size;
+//    const int k_size = batch_size * kv_head_num * max_seq_len * head_size;
     float* h_v;
     float* d_v;
     h_v = (float*)malloc(sizeof(float) * k_size);
@@ -47,22 +47,24 @@ int main() {
        h_v[i] = i;
        h_k[i] = i;
     }
-    for(int i = 0; i < batch_size; i++) {
-       h_ctx_len[i] = 2;
-    }    
     int* h_layer_id = (int*)malloc(sizeof(int)*batch_size);
     int* d_layer_id;
     cudaMalloc((void**)&d_layer_id,sizeof(int)*batch_size);
 
+    for(int i = 0; i < batch_size; i++) {
+       h_ctx_len[i] = 2;
+       h_layer_id[i] = 0;
+    }    
+    
     cudaMemcpy(d_k, h_k, sizeof(float) * k_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_v, h_v, sizeof(float) * k_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ctx_len, h_ctx_len, sizeof(float) * batch_size, cudaMemcpyHostToDevice);
 
     DataType type = getTensorType<float>(); 
-    DataType type_ctx = getTensorType<int>(); 
+    DataType type_int = getTensorType<int>(); 
     Tensor in_k(Device::GPU, type, {batch_size, kv_head_num, max_seq_len, head_size}, d_k);
     Tensor in_v(Device::GPU, type, {batch_size, kv_head_num, max_seq_len, head_size}, d_v);
-    Tensor ctx_len(Device::GPU, type_ctx, {batch_size}, d_ctx_len);
+    Tensor ctx_len(Device::GPU, type_int, {batch_size}, d_ctx_len);
     Tensor out_k(Device::GPU, type, {batch_size, head_num, max_k_len, head_size}, d_trans_k);
     Tensor out_v(Device::GPU, type, {batch_size, head_num, max_k_len, head_size}, d_trans_v);
     Tensor layer_id(Device::GPU, type_int, {batch_size}, d_layer_id);

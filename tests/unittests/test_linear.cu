@@ -83,7 +83,7 @@ int main() {
     Tensor out(Device::GPU, type, {seqlen, hidden_units}, d_out);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
-    launchLinear(&in, weight, &out);
+    launchLinearGemm(&in, weight, &out);
     // debug info, better to retain: 
     std::cout << "after launch kernel" << std::endl;
     // debug info, better to retain: 
