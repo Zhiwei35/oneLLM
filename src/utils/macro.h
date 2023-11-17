@@ -15,7 +15,7 @@ inline void onellmAssert(bool result, const char* const file, int const line, st
     }
 }
 
-#define ONELLM_CHECK(val) myAssert(val, __FILE__, __LINE__)
+#define ONELLM_CHECK(val) onellmAssert(val, __FILE__, __LINE__)
 #define ONELLM_CHECK_WITH_INFO(val, info)                                                                                  \
     do {                                                                                                               \
         bool is_valid_val = (val);                                                                                     \

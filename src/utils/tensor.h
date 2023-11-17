@@ -99,7 +99,9 @@ struct Tensor {
     template<typename T>
     inline T getVal() const
     {
-        // TODO: add type check
+        // TODO: add type check, this is very important, because we often naturally access GPU data, which is wrong
+        // for example, I am in transpose kernel to use layer_id->getVal<int>(), which is wrong
+        ONELLM_CHECK(location == CPU);
         return getVal<T>(0);
     }
 

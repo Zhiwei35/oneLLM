@@ -45,6 +45,10 @@ int main() {
     cudaMalloc((void**)&d_v_dst,sizeof(float) * kvcache_size);
     float* kv_scale;
     cudaMalloc((void**)&kv_scale, sizeof(float));
+    int* h_layer_id = (int*)malloc(sizeof(int)*local_batch_size);
+    int* d_layer_id;
+    cudaMalloc((void**)&d_layer_id,sizeof(int)*local_batch_size);
+
     for(int i = 0; i < kv_size; i++) {
        h_k_src[i] = 1.0f;
        h_v_src[i] = 1.0f;
@@ -52,11 +56,8 @@ int main() {
     for(int i = 0; i < local_batch_size; i++) {
        cur_query_length[i] = 16;
        history_length[i] = 1;
+       h_layer_id[i] = 0;
     }
-    int* h_layer_id = (int*)malloc(sizeof(int)*local_batch_size);
-    int* d_layer_id;
-    cudaMalloc((void**)&d_layer_id,sizeof(int)*local_batch_size);
-
     cudaMemcpy(d_v_src, h_v_src, sizeof(float)*kv_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_k_src, h_k_src, sizeof(float)*kv_size, cudaMemcpyHostToDevice);
     cudaMemcpy(dcur_query_length, cur_query_length, sizeof(int)*local_batch_size, cudaMemcpyHostToDevice);

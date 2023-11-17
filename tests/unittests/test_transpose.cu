@@ -30,18 +30,18 @@ int main() {
     float* d_v;
     h_v = (float*)malloc(sizeof(float) * k_size);
     cudaMalloc((void**)&d_v, sizeof(float) * k_size);
-    float* h_ctx_len;
-    float* d_ctx_len;
-    h_ctx_len = (float*)malloc(sizeof(int) * batch_size);
+    int* h_ctx_len;
+    int* d_ctx_len;
+    h_ctx_len = (int*)malloc(sizeof(int) * batch_size);
     cudaMalloc((void**)&d_ctx_len, sizeof(int) * batch_size);
     float* h_trans_k;
     float* d_trans_k;
-    h_trans_k = (float*)malloc(sizeof(float) * k_size / num_layers);
-    cudaMalloc((void**)&d_trans_k, sizeof(float) * k_size / num_layers);
+    h_trans_k = (float*)malloc(sizeof(float) * out_k_size);
+    cudaMalloc((void**)&d_trans_k, sizeof(float) * out_k_size);
     float* h_trans_v;
     float* d_trans_v;
-    h_trans_v = (float*)malloc(sizeof(float) * k_size / num_layers);
-    cudaMalloc((void**)&d_trans_v, sizeof(float) * k_size / num_layers);   
+    h_trans_v = (float*)malloc(sizeof(float) * out_k_size);
+    cudaMalloc((void**)&d_trans_v, sizeof(float) * out_k_size);   
 
     for(int i = 0; i < k_size; i++) {
        h_v[i] = i;
@@ -58,8 +58,8 @@ int main() {
     
     cudaMemcpy(d_k, h_k, sizeof(float) * k_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_v, h_v, sizeof(float) * k_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ctx_len, h_ctx_len, sizeof(float) * batch_size, cudaMemcpyHostToDevice);
-
+    cudaMemcpy(d_ctx_len, h_ctx_len, sizeof(int) * batch_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_layer_id, h_layer_id, sizeof(int) * batch_size, cudaMemcpyHostToDevice);
     DataType type = getTensorType<float>(); 
     DataType type_int = getTensorType<int>(); 
     Tensor in_k(Device::GPU, type, {batch_size, kv_head_num, max_seq_len, head_size}, d_k);
