@@ -91,7 +91,7 @@ void LLaMAContextAttentionLayer::freeBuffer(){
     allocator->free((void**)(&qkv_buf_wo_pad->data));
 }
 
-void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights)
+void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights)
 {   //Can we wrapper the output buf pointer into tensor also?
     //maybe we can create a method to arrange the input tensor and pointer to a struct
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
@@ -113,7 +113,7 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     //max_cache_seq_len = max_seq_len + max_prefix_prompt_length
     //{batch_size, kv_head_num, max_q_len, head_size}=>(num_layer ,batchxbeam ,max_cache_seq_len, hidden_units_};
     Tensor layer_id = inputs["layer_id"];
-    Tensor cur_query_length = inputs["cur_query_length"];
+    //Tensor cur_query_length = inputs["cur_query_length"];
     Tensor all_k_cache = outputs["all_k_cache"];
     Tensor all_v_cache = outputs["all_v_cache"];
     launchAppendKVCache(&k_buf_w_pad, &v_buf_w_pad, &cur_query_length, &history_length, 
