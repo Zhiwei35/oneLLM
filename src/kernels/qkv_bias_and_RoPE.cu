@@ -10,7 +10,7 @@
         // shape = [num_tokens, qkv_head_num, head_size], 因为各句子长度不一，所以不用bs * seqlen表示
 // output: q shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
 //         k/v shape = [bs, kv head num, seqlen, head size]
-
+// seqlen=max_q_len
 #include <math.h>
 #include <stdio.h>
 

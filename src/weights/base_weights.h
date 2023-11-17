@@ -39,8 +39,8 @@ inline WeightType getWeightType()
 }
 
 struct BaseWeight {
-    BaseWeight(std::vector<int> shape_, void* data_, WeightType wtype, void* bias_):
-            shape(shape_), data(data_), type(wtype), bias(bias_){};
+//    BaseWeight(std::vector<int> shape_, void* data_, WeightType wtype, void* bias_):
+//            shape(shape_), data(data_), type(wtype), bias(bias_){};
     std::vector<int> shape;
     void*   data;
     WeightType type;

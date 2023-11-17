@@ -79,7 +79,10 @@ int main() {
     DataType type = getTensorType<float>();
     WeightType wtype = getWeightType<float>(); 
     Tensor in(Device::GPU, type, {seqlen, hidden_units}, d_in);
-    BaseWeight weight({hidden_units, hidden_units}, d_w, wtype, nullptr);
+    BaseWeight weight;
+    weight.shape = {hidden_units, hidden_units};
+    weight.data = d_w;
+    weight.type = wtype;
     Tensor out(Device::GPU, type, {seqlen, hidden_units}, d_out);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
