@@ -57,14 +57,13 @@ void launchTransposeKVCache(Tensor* k_cache_src,
     
     int max_k_len = k_cache_dst->shape[2];
     int head_size = k_cache_dst->shape[3];
-    int head_size = k_cache_dst->shape.back();
     //note: here MUSTN'T use layer_id->getVal<int>(), because we cant access GPU memory directly by []
     size_t layer_offset = 0 * batch_size * kv_head_num * max_seq_len * head_size;
     int q_head_per_kv = head_num / kv_head_num;
     int blockSize = 128;
     dim3 block(128);
     dim3 grid((max_k_len * head_size + blockSize - 1) / blockSize, batch_size, head_num); // q head num
-    std:: cout << "before call cuda kernel" << "\n";
+    
     transpose_value_cache<<<grid, block>>>((float*)v_cache_dst->data, 
                                               (float*)v_cache_src->data,
                                               layer_offset,
