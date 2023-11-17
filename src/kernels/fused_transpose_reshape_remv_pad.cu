@@ -1,9 +1,8 @@
 #include "src/kernels/fused_transpose_reshape_remv_pad.h"
 // [b,h,s,d]=>[b,s,h,d]=>[num tokens,h,d]
 // padding_offset.shape = [num_tokens]
-template<typename T>
-__global__ void fused_transpose_reshape_remv_pad(T*           src,
-                                                T*           dst,
+__global__ void fused_transpose_reshape_remv_pad(float*           src,
+                                                float*           dst,
                                                 const int    num_tokens,
                                                 const int    batch_size,
                                                 const int    seq_len,
@@ -26,10 +25,9 @@ __global__ void fused_transpose_reshape_remv_pad(T*           src,
     }
 }
 
-template<typename T>
-void launchTransposeOutRemovePadding(Tensor<T>* qkv_buf_w_pad, 
-                                    Tensor<T>* padding_offset,
-                                    Tensor<T>* qkv_buf_wo_pad_1)
+void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad, 
+                                    Tensor* padding_offset,
+                                    Tensor* qkv_buf_wo_pad_1)
 {
     int batch_size = qkv_buf_w_pad->shape[0];
     int head_num = qkv_buf_w_pad->shape[1];
@@ -38,8 +36,8 @@ void launchTransposeOutRemovePadding(Tensor<T>* qkv_buf_w_pad,
     int num_tokens = qkv_buf_wo_pad_1->shape[0];
     dim3 grid(num_tokens);
     dim3 block(std::min(head_num * head_size, 1024));
-    fused_transpose_reshape_remv_pad<T><<<grid, block>>>((T*)qkv_buf_w_pad->data,
-                                                         (T*)qkv_buf_wo_pad_1->data,
+    fused_transpose_reshape_remv_pad<<<grid, block>>>((float*)qkv_buf_w_pad->data,
+                                                         (float*)qkv_buf_wo_pad_1->data,
                                                          num_tokens,
                                                          batch_size,
                                                          seq_len,
@@ -47,7 +45,3 @@ void launchTransposeOutRemovePadding(Tensor<T>* qkv_buf_w_pad,
                                                          head_size,
                                                          (int*)padding_offset->data);
 }
-
-template void launchTransposeOutRemovePadding(Tensor<float>* qkv_buf_w_pad, 
-                                            Tensor<float>* padding_offset,
-                                            Tensor<float>* qkv_buf_wo_pad_1);                                 

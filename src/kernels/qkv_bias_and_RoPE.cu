@@ -8,7 +8,8 @@
 
 // input: qkv_buf : qkv continouns buf when no padding
         // shape = [num_tokens, qkv_head_num, head_size], 因为各句子长度不一，所以不用bs * seqlen表示
-// output: q/k/v shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
+// output: q shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
+//         k/v shape = [bs, kv head num, seqlen, head size]
 
 #include <math.h>
 #include <stdio.h>
@@ -70,7 +71,6 @@ inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_d
     k_.y = GetRoPEres(k_.y ,coef1);
 }
 
-template<typename T>
 __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
                                                     T*           k_buf,
                                                     T*           v_buf,
@@ -89,8 +89,8 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
                                                     float        rotary_embedding_base, // default 10000 in llama
                                                     int          max_position_embeddings,/*default 2048 in llama, placeholder for ntk RoPE*/
                                                     bool         use_dynamic_ntk/*placeholder for ntk RoPE*/){
-    int vec_size = Vec<T>::size;
-    using Vec_t = typename Vec<T>::Type;
+    int vec_size = Vec<float>::size;
+    using Vec_t = typename Vec<float>::Type;
     int token_id = blockIdx.x;
     int head_id = blockIdx.y;
     int tid = threadIdx.x;
@@ -159,62 +159,46 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
         }
     }
                                                     }
-template<typename T>
-void launchAddFusedQKVBiasTransposeAndRoPE(T*           q_buf,
-                                            T*           k_buf,
-                                            T*           v_buf,
-                                            T*           QKV,
-                                            const T*     qkv_bias,
-                                            const int*   padding_offset,
-                                            const int*   history_length,
-                                            const int*   input_length,
-                                            const int    batch_size,
-                                            const int    seq_len,
-                                            const int    token_num,
-                                            const int    head_num,
-                                            const int    kv_head_num,
-                                            const int    head_size,
-                                            const int    rotary_embedding_dim,
-                                            float        rotary_embedding_base,
-                                            int          max_position_embeddings,
-                                            bool         use_dynamic_ntk){
+
+// input: qkv_buf : qkv continouns buf when no padding
+        // shape = [num_tokens, qkv_head_num, head_size], 因为各句子长度不一，所以不用bs * seqlen表示
+// output: q shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
+//         k/v shape = [bs, kv head num, seqlen, head size], 这里的seqlen应该是max_q_len
+void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
+                                           Tensor* k_buf,
+                                           Tensor* v_buf,
+                                           Tensor* QKV,
+                                           Tensor* qkv_bias,
+                                           Tensor* padding_offset,
+                                           Tensor* history_length,
+                                           Tensor* input_length,
+                                           LLaMAAttentionStaticParams& params){
+    int token_num = QKV->shape[0];
+    int qkv_head_num = QKV->shape[1];
+    int head_size = QKV->shape[2];
+    int batch_size = q_buf->shape[0];
+    int head_num = q_buf->shape[1];
+    int seq_len = q_buf->shape[2];
+    int kv_head_num = (qkv_head_num - head_num) / 2;
+
     dim3 grid(token_num ,head_num);
-    dim3 block((head_size / Vec<T>::size + 32 - 1) / 32 * 32);// apply 2 eles vectorization to match RoPE
-    add_fusedQKV_bias_transpose_kernel<T><<<grid, block>>>( q_buf,
-                                                            k_buf,
-                                                            v_buf,
-                                                            QKV,
-                                                            qkv_bias,
-                                                            padding_offset,
-                                                            history_length,
-                                                            input_length,
+    dim3 block((head_size / Vec<float>::size + 32 - 1) / 32 * 32);// apply 2 eles vectorization to match RoPE
+    add_fusedQKV_bias_transpose_kernel<<<grid, block>>>( (float*)q_buf->data,
+                                                            (float*)k_buf->data,
+                                                            (float*)v_buf->data,
+                                                            (float*)QKV->data,
+                                                            (float*)qkv_bias->data,
+                                                            (int*)padding_offset->data,
+                                                            (int*)history_length->data,
+                                                            (int*)input_length->data,
                                                             batch_size,
                                                             seq_len,
                                                             token_num,
                                                             head_num,
                                                             kv_head_num,
                                                             head_size,
-                                                            rotary_embedding_dim,
-                                                            rotary_embedding_base,
-                                                            max_position_embeddings,
-                                                            use_dynamic_ntk);
+                                                            params.rotary_embedding_dim,
+                                                            params.rotary_embedding_base,
+                                                            params.max_position_embeddings,
+                                                            params.use_dynamic_ntk);
 }
-
-template void launchAddFusedQKVBiasTransposeAndRoPE(float* q_buf,
-                                                    float* k_buf,
-                                                    float* v_buf,
-                                                    float* QKV,
-                                                    const float* qkv_bias,
-                                                    const int*   padding_offset,
-                                                    const int*   history_length,
-                                                    const int*   input_length,
-                                                    const int    batch_size,
-                                                    const int    seq_len,
-                                                    const int    token_num,
-                                                    const int    head_num,
-                                                    const int    kv_head_num,
-                                                    const int    head_size,
-                                                    const int    rotary_embedding_dim,
-                                                    float        rotary_embedding_base,
-                                                    int          max_position_embeddings,
-                                                    bool         use_dynamic_ntk);

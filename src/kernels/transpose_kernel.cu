@@ -1,10 +1,11 @@
 #include "src/kernels/transpose_kernel.h"
 #include <iostream>
-//[bs, kv head num, max_seq_len, head size]=>[bs, q head num, max_k_len, head size]
+//if MQA or GQA, we should use this transpose to broadcast kv head num to q head num
+//[num layers, bs, kv head num, max_seq_len, head size]=>[bs, q head num, max_k_len, head size]
 //context_length.shape=[bs]
-template<typename T>
-__global__ void transpose_value_cache(T*          v_dst, 
-                                      const T*    v_src,
+// 这个kernel叫repeat_interleave或者broadcast比较合理
+__global__ void transpose_value_cache(float*          v_dst, 
+                                      const float*    v_src,
                                       const size_t layer_offset,
                                       const int    head_num,
                                       const int    q_head_per_kv,
@@ -41,13 +42,12 @@ __global__ void transpose_value_cache(T*          v_dst,
     }
 }
 
-template<typename T>
-void launchTransposeKVCache(Tensor<T>* k_cache_src,
-                            Tensor<T>* v_cache_src,
-                            Tensor<T>* context_length,
-                            size_t  layer_offset,
-                            Tensor<T>* k_cache_dst,
-                            Tensor<T>* v_cache_dst
+void launchTransposeKVCache(Tensor* k_cache_src,
+                            Tensor* v_cache_src,
+                            Tensor* context_length,
+                            Tensor* layer_id,
+                            Tensor* k_cache_dst,
+                            Tensor* v_cache_dst
                             )
 {
     int batch_size = context_length->shape[0];
@@ -56,13 +56,13 @@ void launchTransposeKVCache(Tensor<T>* k_cache_src,
     int head_num = k_cache_dst->shape[1];
     int max_k_len = k_cache_dst->shape[2];
     int head_size = k_cache_dst->shape[3];
-
+    size_t layer_offset = layer_id->getVal<int>() * batch_size * kv_head_num * max_seq_len * head_size;
     int q_head_per_kv = head_num / kv_head_num;
     int blockSize = 128;
     dim3 block(128);
     dim3 grid((max_k_len * head_size + blockSize - 1) / blockSize, batch_size, head_num); // q head num
-    transpose_value_cache<T><<<grid, block>>>((T*)v_cache_dst, 
-                                              (const T*)v_cache_src,
+    transpose_value_cache<<<grid, block>>>((float*)v_cache_dst, 
+                                              (float*)v_cache_src,
                                               layer_offset,
                                               head_num,
                                               q_head_per_kv,
@@ -71,8 +71,8 @@ void launchTransposeKVCache(Tensor<T>* k_cache_src,
                                               max_k_len,
                                               max_seq_len);
                                               
-    transpose_value_cache<T><<<grid, block>>>((T*)k_cache_dst, 
-                                              (const T*)k_cache_src,
+    transpose_value_cache<<<grid, block>>>((float*)k_cache_dst, 
+                                              (float*)k_cache_src,
                                               layer_offset,
                                               head_num,
                                               q_head_per_kv,
@@ -81,11 +81,3 @@ void launchTransposeKVCache(Tensor<T>* k_cache_src,
                                               max_k_len,
                                               max_seq_len);
 }
-
-template void launchTransposeKVCache(Tensor<float>* k_cache_src,
-                            Tensor<float>* v_cache_src,
-                            Tensor<float>* context_length,
-                            size_t  layer_offset,
-                            Tensor<float>* k_cache_dst,
-                            Tensor<float>* v_cache_dst
-                            )

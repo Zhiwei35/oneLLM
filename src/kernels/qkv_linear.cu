@@ -4,15 +4,10 @@
 //weight * input
 //weight shape = [hidden_units, hidden_units]
 //input shape = [hidden_units, seqlen]
-// void launchLinearGemm(const float* input,
-//                   float* output, 
-//                   const int input_2nd_dim, 
-//                   const float* weight,
-//                   const int hidden_units){}
-template<typename T>
-void launchLinearGemm(Tensor<T>* input,
-                      BaseWeight<T>& weight, 
-                      Tensor<T>* output,
+
+void launchLinearGemm(Tensor* input,
+                      BaseWeight& weight, 
+                      Tensor* output,
                       bool trans_a = false,
                       bool trans_b = false) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
@@ -42,24 +37,19 @@ void launchLinearGemm(Tensor<T>* input,
                         input_lda,      //m
                         k,              //n
                         weight_ldb,     //k
-                        (T*)input->data,   //A
+                        (float*)(input->data),   //A
                         input_lda,      //lda
-                        (T*)weight.data,   //B
+                        (float*)(weight.data),   //B
                         weight_ldb,     //ldb 
-                        (T*)output->data,  //C
+                        (float*)(output->data),  //C
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);
 }
 
-// We must instancite the template, if not, will report linking issue
-template void launchLinearGemm(Tensor<float>* input, BaseWeight<float>& weight, Tensor<float>* output, bool trans_a = false,
-                                bool trans_b = false);
-
-template<typename T>
-void launchLinearStridedBatchGemm(Tensor<T>* input1,
-                                  Tensor<T>* input2,
-                                  Tensor<T>* output,
+void launchLinearStridedBatchGemm(Tensor* input1,
+                                  Tensor* input2,
+                                  Tensor* output,
                                   bool trans_a = false,
                                   bool trans_b = false)
 {
@@ -96,18 +86,16 @@ void launchLinearStridedBatchGemm(Tensor<T>* input1,
                                        m,
                                        n,
                                        k,
-                                       (T*)input1->data, //A
+                                       (float*)(input1->data), //A
                                        lda,
                                        strideA,
-                                       (T*)input2->data, //B
+                                       (float*)(input2->data), //B
                                        ldb,
                                        strideB,
-                                       (T*)output->data, //C
+                                       (float*)(output->data), //C
                                        ldc,
                                        strideC,
                                        batchCount,
                                        1.0f,
                                        0.0f);
 }
-template void launchLinearStridedBatchGemm(Tensor<float>* input1, Tensor<float>* input2, Tensor<float>* output, bool trans_a = false,
-                                        bool trans_b = false);

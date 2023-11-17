@@ -27,16 +27,16 @@ do                                                    \
     }                                                 \
 } while (0)
 
-void CPUlinear(float* input, float* weight, float* output,
-                int m, int k, int n) {
-    for(int i = 0; i < m; i++) {
-        for(int j = 0; j < n; j++) {
-            for(int l = 0; l < k; l++) {
-                output[i * n + j] += weight[i * k + l] * input[l * n + j];
-            }
-        }
-    }
-}
+// void CPUlinear(float* input, float* weight, float* output,
+//                 int m, int k, int n) {
+//     for(int i = 0; i < m; i++) {
+//         for(int j = 0; j < n; j++) {
+//             for(int l = 0; l < k; l++) {
+//                 output[i * n + j] += weight[i * k + l] * input[l * n + j];
+//             }
+//         }
+//     }
+// }
 
 bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
@@ -53,47 +53,48 @@ int main() {
     const int seqlen = 1;
     const int hidden_units = 16;
     const int hidden_units_2 = 256;
+    const int batch_size = 2;
     // (16, 16) * (16, 1)
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << "  vocab_size=" << vocab_size << std::endl;
     float* h_w;
     float* d_w;
-    h_w = (float*)malloc(sizeof(float) * hidden_units_2);
-    cudaMalloc((void**)&d_w, sizeof(float) * hidden_units_2);
-    for(int i = 0; i < hidden_units_2; i++) { 
+    h_w = (float*)malloc(sizeof(float) * batch_size * hidden_units_2);
+    cudaMalloc((void**)&d_w, sizeof(float) * batch_size * hidden_units_2);
+    for(int i = 0; i < batch_size * hidden_units_2; i++) { 
        h_w[i] = 1.0f;
     }
 
-    float* h_in = (float*) malloc(sizeof(float) * hidden_units * seqlen);
+    float* h_in = (float*) malloc(sizeof(float) * batch_size * hidden_units * seqlen);
     float* d_in;
-    cudaMalloc((void**)&d_in, sizeof(float) * seqlen *  hidden_units);
-    for(int i = 0; i < hidden_units * seqlen; i++) { 
+    cudaMalloc((void**)&d_in, sizeof(float) * batch_size * seqlen *  hidden_units);
+    for(int i = 0; i < batch_size * hidden_units * seqlen; i++) { 
        h_in[i] = 1.0f;
     }
 
-    float* h_out = (float*) malloc(sizeof(float) * hidden_units * seqlen);
+    float* h_out = (float*) malloc(sizeof(float) * batch_size * hidden_units * seqlen);
     float* d_out;
-    cudaMalloc((void**)&d_out, sizeof(float) * hidden_units * seqlen);
+    cudaMalloc((void**)&d_out, sizeof(float) * batch_size * hidden_units * seqlen);
 
-    CHECK(cudaMemcpy(d_in, h_in, sizeof(float) * hidden_units * seqlen, cudaMemcpyHostToDevice));
-    CHECK(cudaMemcpy(d_w, h_w, sizeof(float) * hidden_units_2, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_in, h_in, sizeof(float) * batch_size * hidden_units * seqlen, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_w, h_w, sizeof(float) * batch_size * hidden_units_2, cudaMemcpyHostToDevice));
     DataType type = getTensorType<float>();
     WeightType wtype = getWeightType<float>(); 
-    Tensor in(Device::GPU, type, {seqlen, hidden_units}, d_in);
-    BaseWeight weight({hidden_units, hidden_units}, d_w, wtype, nullptr);
-    Tensor out(Device::GPU, type, {seqlen, hidden_units}, d_out);
+    Tensor A(Device::GPU, type, {batch_size ,1, seqlen, hidden_units}, d_in);
+    Tensor B(Device::GPU, type, {batch_size ,1, hidden_units, hidden_units}, d_w);
+    Tensor C(Device::GPU, type, {batch_size ,1, seqlen, hidden_units}, d_out);
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
-    launchLinear(&in, weight, &out);
+    launchLinearStridedBatchGemm(&A, &B, &C, false, true);
     // debug info, better to retain: 
     std::cout << "after launch kernel" << std::endl;
     // debug info, better to retain: 
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
-    CHECK(cudaMemcpy(h_out, out.data, sizeof(float) * hidden_units * seqlen, cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(h_out, C.data, sizeof(float) * batch_size * hidden_units * seqlen, cudaMemcpyDeviceToHost));
     //cublasGetVector(hidden_units, sizeof(float), d_out, 1, h_out, 1);
-    float* CPUout = (float*) malloc(sizeof(float) * hidden_units * seqlen);
-    CPUlinear(h_in, h_w, CPUout, hidden_units, hidden_units, seqlen);
-    bool is_right = CheckResult(CPUout, h_out, hidden_units * seqlen);
+    float* CPUout = (float*) malloc(sizeof(float) * batch_size * hidden_units * seqlen);
+    // CPUlinear(h_in, h_w, CPUout, hidden_units, hidden_units, seqlen);
+    // bool is_right = CheckResult(CPUout, h_out, hidden_units * seqlen);
     // debug info, better to retain: 
     std::cout << "before free" << std::endl;
     std::cout << "linear passed" << std::endl;

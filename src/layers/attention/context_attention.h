@@ -8,22 +8,7 @@
 #include "src/kernels/transpose_kernel.h"
 #include "src/utils/tensor.h"
 #include "src/kernels/cublas_wrapper.h"
-
-struct LLaMAAttentionStaticParams{
-    int   rotray_embedding_dim;
-    float rotary_embedding_base;
-    int   max_position_embeddings;
-    bool  use_dynamic_ntk; // for dyn scaling rope
-};
-
-struct LLaMAAttentionDynParams {
-    int batch_size;
-    int num_tokens;
-    int max_q_len;
-    int max_k_len;
-    int num_layers;
-};
-
+#include "src/models/llama/llama_params.h"
 template<typename T>
 class LLaMAContextAttentionLayer {
 private:
@@ -78,7 +63,7 @@ public:
                                cublasWrapper* cublas_wrapper,
                                BaseAllocator* allocator,
                                bool is_free_buffer_after_fwd);
-    
+    template<typename T>
     void allocForForward(LLaMAAttentionDynParams params);
     void free();
     void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights);
