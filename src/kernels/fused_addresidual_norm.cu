@@ -61,17 +61,24 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
     using Vec_t = typename Vec<T>::Type;
     int batch_id = blockIdx.x;
     int tid = threadIdx.x;
-    Vec_t rsd, bia, dout, s, tmp;
+    Vec_t *rsd, *bia, *s;
+    Vec_t dout, tmp;
     
     T thread_accm = static_cast<T>(0);
+    if (residual != nullptr && bias != nullptr){
+        rsd = reinterpret_cast<Vec_t*>(residual + batch_id * hidden_units);//note the offset     should divide vec size
+        bia = reinterpret_cast<Vec_t*>(const_cast<T*>(bias));
+    }
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
-        rsd = reinterpret_cast<Vec_t*>(residual)[batch_id * hidden_units / vec_size + i];//note the offset should divide vec size
-        bia = reinterpret_cast<Vec_t*>(const_cast<T*>(bias))[i];
+        //if (residual != nullptr && bias != nullptr){
+           // rsd = reinterpret_cast<Vec_t*>(residual)[batch_id * hidden_units / vec_size + i];//note the offset should divide vec size
+          //  bia = reinterpret_cast<Vec_t*>(const_cast<T*>(bias))[i];
+        //}
         dout = reinterpret_cast<Vec_t*>(decoder_out)[batch_id * hidden_units / vec_size + i];// note the offset should divide vec size
-        tmp.x = dout.x + rsd.x + bia.x;
-        tmp.y = dout.y + rsd.y + bia.y;
-        tmp.z = dout.z + rsd.z + bia.z;
-        tmp.w = dout.w + rsd.w + bia.w;
+        tmp.x = dout.x + rsd[i].x + bia[i].x;
+        tmp.y = dout.y + rsd[i].y + bia[i].y;
+        tmp.z = dout.z + rsd[i].z + bia[i].z;
+        tmp.w = dout.w + rsd[i].w + bia[i].w;
         thread_accm += tmp.x * tmp.x + tmp.y * tmp.y + 
                        tmp.z * tmp.z + tmp.w * tmp.w;
     } // addresidual
@@ -86,12 +93,15 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
+    if (scale != nullptr){
+        s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale));
+    }
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
-        s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];
-        out[i].x = s.x * out[i].x * inv_fenmu;
-        out[i].y = s.y * out[i].y * inv_fenmu;
-        out[i].z = s.z * out[i].z * inv_fenmu;
-        out[i].w = s.w * out[i].w * inv_fenmu;
+        //s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];
+        out[i].x = s[i].x * out[i].x * inv_fenmu;
+        out[i].y = s[i].y * out[i].y * inv_fenmu;
+        out[i].z = s[i].z * out[i].z * inv_fenmu;
+        out[i].w = s[i].w * out[i].w * inv_fenmu;
     }    
 }
 
