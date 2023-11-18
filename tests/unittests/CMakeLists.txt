@@ -1,11 +1,20 @@
-# add_executable(unittest
-#     test_beamsearch_topK.cu
-# )
-# target_link_libraries(  # Libs for test_beamsearch_kernel
-#   unittest PUBLIC
-#     -lcudart
-#     -lcudadevrt
-#     beamsearch_topK) 
+add_executable(topK
+    test_beamsearch_topK.cu
+)
+target_link_libraries(  # Libs for test_beamsearch_kernel
+  topK PUBLIC
+    -lcudart
+    -lcudadevrt
+    beamsearch_topK)
+
+add_executable(act
+    test_activation.cu
+)
+target_link_libraries(  # Libs for test_swiglu
+  act PUBLIC
+    -lcudart
+    -lcudadevrt
+    activation)
 
 add_executable(biasRope
      test_qkv_bias_and_rope.cu
@@ -46,15 +55,16 @@ target_link_libraries(  # Libs for test_append_kvcache
 add_executable(linear
     test_linear.cu
 )
-target_link_libraries(  # Libs for test_linear
+target_link_libraries(  # Libs for test_gemm
   linear PUBLIC
     -lcudart
     -lcudadevrt
     qkv_linear)
+    
 add_executable(bmm
     test_batch_gemm.cu
 )
-target_link_libraries(  # Libs for test_linear
+target_link_libraries(  # Libs for test__batch_gemm
   bmm PUBLIC
     -lcudart
     -lcudadevrt
@@ -63,15 +73,16 @@ target_link_libraries(  # Libs for test_linear
 add_executable(test_trans
     test_transpose.cu
 )
-target_link_libraries(  # Libs for test_linear
+target_link_libraries(  # Libs for test_transpose
   test_trans PUBLIC
     -lcudart
     -lcudadevrt
     transpose)
+    
 add_executable(fused_trans_remv_pad
     test_fused_trans_remv_pad.cu
 )
-target_link_libraries(  # Libs for test_linear
+target_link_libraries(  # Libs for test_remov_pad
   fused_trans_remv_pad PUBLIC
     -lcudart
     -lcudadevrt
