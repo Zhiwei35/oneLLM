@@ -164,26 +164,32 @@ int main() {
     cudaMemcpy(dpadding_offset, padding_offset, sizeof(int) * seq_len * batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(dQKV, QKV, sizeof(float) * token_num * (head_num + 2 * kv_head_num) * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(dqkv_bias, qkv_bias, sizeof(float) * (head_num + 2 * kv_head_num) * head_size, cudaMemcpyHostToDevice);
+    
+    DataType type = getTensorType<float>(); 
+    Tensor q_buf(Device::GPU, type, {batch_size, head_num, seq_len, head_size}, dq);
+    Tensor k_buf(Device::GPU, type, {batch_size, kv_head_num, seq_len, head_size}, dk);
+    Tensor v_buf(Device::GPU, type, {batch_size, kv_head_num, seq_len, head_size}, dv);
+    Tensor QKV_buf(Device::GPU, type, {token_num, head_num + 2 * kv_head_num, head_size}, dQKV);
+    Tensor qkv_bias_buf(Device::GPU, type, {(head_num + 2 * kv_head_num), head_size}, dqkv_bias);
+    Tensor input_length_buf(Device::GPU, type, {batch_size}, dinput_length);
+    Tensor history_length_buf(Device::GPU, type, {batch_size}, dhistory_length);
+    Tensor padding_offset_buf(Device::GPU, type, {batch_size, seq_len}, dpadding_offset);
+    LLaMAAttentionStaticParams params;
+    params.rotary_embedding_dim = rotary_embedding_dim;
+    params.rotary_embedding_base = rotary_embedding_base;
+    params.max_position_embeddings = max_position_embeddings;
+    params.use_dynamic_ntk = false;
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
-    launchAddFusedQKVBiasTransposeAndRoPE<float>(dq,
-                                                 dk,
-                                                 dv,
-                                                 dQKV,
-                                                 dqkv_bias,
-                                                 dpadding_offset,
-                                                 dhistory_length,
-                                                 dinput_length,
-                                                 batch_size,
-                                                 seq_len,
-                                                 token_num,
-                                                 head_num,
-                                                 kv_head_num,
-                                                 head_size,
-                                                 rotary_embedding_dim,
-                                                 rotary_embedding_base,
-                                                 max_position_embeddings,
-                                                 use_dynamic_ntk);
+    launchAddFusedQKVBiasTransposeAndRoPE(&q_buf,
+                                          &k_buf,
+                                          &v_buf,
+                                          &QKV_buf,
+                                          &qkv_bias_buf,
+                                          &padding_offset_buf,
+                                          &history_length_buf,
+                                          &input_length_buf,
+                                          params);
     // debug info, better to retain: 
     std::cout << "after launch kernel" << std::endl;
     // debug info, better to retain: 
@@ -192,8 +198,6 @@ int main() {
     CHECK(cudaMemcpy(q, dq, sizeof(float) * batch_size * seq_len * head_num * head_size, cudaMemcpyDeviceToHost));
     CHECK(cudaMemcpy(k, dk, sizeof(float) * batch_size * seq_len * kv_head_num * head_size, cudaMemcpyDeviceToHost));
     
-    // float* CPUq = (float*) malloc(sizeof(float) * batch_size * seq_len * head_num * head_size);
-    // float* CPUk = (float*) malloc(sizeof(float) * batch_size * seq_len * kv_head_num * head_size);
     std::cout << "after memcpyd2h, dq[0] = " << q[0] << std::endl;
     std::cout << "before CPU function" << std::endl;
     float* hq = (float*)malloc(sizeof(float) * batch_size * seq_len * head_num * head_size); //output
