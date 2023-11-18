@@ -9,7 +9,7 @@
 #include "src/utils/tensor.h"
 #include "src/kernels/cublas_wrapper.h"
 #include "src/models/llama/llama_params.h"
-template<typename T>
+//template<typename T>
 class LLaMAContextAttentionLayer {
 private:
     // this params are shared across all LLMs
@@ -19,12 +19,12 @@ private:
     const int q_head_per_kv; //for GQA and MQA
     const int kv_head_num;
     const bool is_free_buffer_after_fwd;
-    const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
+    //const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
     float scale;
     // this params are only saw in llama and are unchanged 
     const LLaMAAttentionStaticParams attn_static_params;
     // this params are dynamic
-    const LLaMAAttentionDynParams attn_dyn_params;
+    //const LLaMAAttentionDynParams attn_dyn_params;
 
     cudaStream_t stream;
     BaseAllocator* allocator;
@@ -64,13 +64,13 @@ public:
                                BaseAllocator* allocator,
                                bool is_free_buffer_after_fwd);
     template<typename T>
-    void allocForForward(LLaMAAttentionDynParams params);
+    void allocForForward(LLaMAAttentionDynParams& params);
     void free();
-    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights);
-    void naiveMHA(T*          key_cache_ptr,
-                  T*          val_cache_ptr,
+    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params);
+    void naiveMHA(float*          key_cache_ptr,
+                  float*          val_cache_ptr,
                   size_t       cache_layer_offset,
-                  const T*     attention_mask,
+                  const float*     attention_mask,
                   const int*   padding_offset,
                   const int*   context_length,
                   int          batch_size,

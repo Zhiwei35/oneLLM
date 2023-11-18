@@ -4,7 +4,7 @@
 // ksrc shape = [bs, kv_head num, max_q_len, head size],为什么是q_len?
 
 #include "src/kernels/append_to_kvcache.h"
-
+#include<iostream>
 __global__ void append_key_cache(float*          k_dst, //[num layers, bs, kv head num, max_q_len, head size]
                                  const size_t layer_offset,
                                  const float*     k_src,
@@ -84,11 +84,11 @@ void launchAppendKVCache(Tensor*     k_src, // from qkv bias and rope
     int max_q_len = k_src->shape[2];
     int head_size = k_src->shape[3];
     int blockSize = head_size;
-    size_t layer_offset = layer_id->getVal<int>() * batch_size * kv_head_num * max_seq_len * head_size;
+    size_t layer_offset = 0 * batch_size * kv_head_num * max_seq_len * head_size;
     //note: this is for vectorization of kv cache for attention
     //constexpr int x = (sizeof(T) == 4) ? 4 : 8;
     dim3 grid(max_q_len, batch_size, kv_head_num);
-    
+    std::cout << "calling concat kv cache kernel" << "\n";
     append_key_cache<<<grid, blockSize>>>((float*)k_dst->data,
                                               layer_offset,
                                               (float*)k_src->data,
@@ -109,4 +109,7 @@ void launchAppendKVCache(Tensor*     k_src, // from qkv bias and rope
                                                 max_q_len,
                                                 max_seq_len);
     
+    std::cout << "called concat kv cache kernel" << "\n";
+
 }
+

@@ -1,3 +1,4 @@
+#include <iostream>
 #include "src/kernels/fused_transpose_reshape_remv_pad.h"
 // [b,h,s,d]=>[b,s,h,d]=>[num tokens,h,d]
 // padding_offset.shape = [num_tokens]
@@ -36,6 +37,7 @@ void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad,
     int num_tokens = qkv_buf_wo_pad_1->shape[0];
     dim3 grid(num_tokens);
     dim3 block(std::min(head_num * head_size, 1024));
+    std::cout << "calling remove pad kernel" << "\n";
     fused_transpose_reshape_remv_pad<<<grid, block>>>((float*)qkv_buf_w_pad->data,
                                                          (float*)qkv_buf_wo_pad_1->data,
                                                          num_tokens,
@@ -44,4 +46,7 @@ void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad,
                                                          head_num,
                                                          head_size,
                                                          (int*)padding_offset->data);
+    std::cout << "called remove pad kernel" << "\n";
+
 }
+

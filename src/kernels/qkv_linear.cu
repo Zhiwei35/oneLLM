@@ -45,6 +45,7 @@ void launchLinearGemm(Tensor* input,
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);
+    std::cout << "called gemm" << "\n";
 }
 
 void launchLinearStridedBatchGemm(Tensor* input1,
@@ -98,4 +99,5 @@ void launchLinearStridedBatchGemm(Tensor* input1,
                                        batchCount,
                                        1.0f,
                                        0.0f);
+    std::cout << "called batch gemm" <<"\n";
 }

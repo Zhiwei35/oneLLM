@@ -1,3 +1,4 @@
+#pragma once
 #include <memory>   // std::make_unique
 #include <sstream>  // std::stringstream
 #include <string>

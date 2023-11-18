@@ -183,6 +183,7 @@ void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
 
     dim3 grid(token_num ,head_num);
     dim3 block((head_size / Vec<float>::size + 32 - 1) / 32 * 32);// apply 2 eles vectorization to match RoPE
+    printf("calling qkvbias and rope\n");
     add_fusedQKV_bias_transpose_kernel<<<grid, block>>>( (float*)q_buf->data,
                                                             (float*)k_buf->data,
                                                             (float*)v_buf->data,
@@ -201,4 +202,6 @@ void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
                                                             params.rotary_embedding_base,
                                                             params.max_position_embeddings,
                                                             params.use_dynamic_ntk);
+    printf("called qkv bias and rope\n");
 }
+

@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-
+#include <cuda_fp16.h>
 enum class WeightType
 {
     FP32_W,

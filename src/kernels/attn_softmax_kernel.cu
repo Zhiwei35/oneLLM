@@ -133,6 +133,7 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
     dim3 grid(q_length, batch_size, head_nums);
 
     dim3 block((k_length + 32 - 1) / 32 * 32);//align with 32x threads
+    printf("calling softmax kernel\n");
     if (block.x > 2048 && block.x <= 4096) {
         constexpr int NUMS_PER_THREAD_PER_ROW = 4;
         block.x /= 4;
@@ -171,4 +172,5 @@ void launchScaleMaskAndSoftmax(Tensor* qk,
                                             k_length,
                                             scale);       
     }
+    printf("called softmax kernel\n");
 }

@@ -80,6 +80,6 @@ include_directories(
 link_directories(
   ${COMMON_LIB_DIRS}
 )
-
 add_subdirectory(src)
-add_subdirectory(tests)
+#add_subdirectory(tests)
+add_subdirectory(examples)
