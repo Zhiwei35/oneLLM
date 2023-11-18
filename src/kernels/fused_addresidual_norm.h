@@ -1,6 +1,6 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
-
+#include <cuda_fp16.h>
 template<typename T>
 void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
                                     T* residual, 

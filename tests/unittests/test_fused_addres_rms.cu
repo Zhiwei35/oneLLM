@@ -31,15 +31,19 @@ void CPUfusedresidandRMSNorm(float* h_residual, float* h_decoder_out, float* h_b
     for(int b = 0; b < num_tokens; b++) {
         float inv_fenmu = 0.0f;
         float mean = 0.0f;
+        float input = 0.0f;
         for (int i = 0; i < hidden_units; i++) {
-            h_decoder_out[b * hidden_units + i] +=
+            input = h_decoder_out[b * hidden_units + i] +
                     h_residual[b * hidden_units + i] + h_bias[i];
         }
+        float sum = 0.0f;
         for (int i = 0; i < hidden_units; i++) {
-            sum += h_decoder_out[b * hidden_units + i] * h_decoder_out[b * hidden_units + i];
+            sum += input * input;
         }
-        mean = sum / hidden_units;
+        
+        mean = (float)(sum / hidden_units);
         inv_fenmu = rsqrt(mean + eps);
+        
         for (int i = 0; i < hidden_units; i++) {
             h_decoder_out[b * hidden_units + i] = h_decoder_out[b * hidden_units + i] * inv_fenmu * h_scale[i];
         }
@@ -72,6 +76,7 @@ int main() {
     }
 
     float* h_decoder_out = (float*) malloc(sizeof(float) * total_size);
+    float* decoder_out = (float*) malloc(sizeof(float) * total_size);
     float* d_decoder_out;
     cudaMalloc((void**)&d_decoder_out, sizeof(float) * total_size);
     for(int i = 0; i < total_size; i++) { 
@@ -111,12 +116,15 @@ int main() {
     // debug info, better to retain: 
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
-    CHECK(cudaMemcpy(h_decoder_out, d_decoder_out, sizeof(float) * total_size, cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(decoder_out, d_decoder_out, sizeof(float) * total_size, cudaMemcpyDeviceToHost));
     //cublasGetVector(hidden_units, sizeof(float), d_out, 1, h_out, 1);
     float* CPUout = (float*) malloc(sizeof(float) * total_size);
-    CPUfusedresidandRMSNorm(h_residual, h_decoder_out, h_bias, 
+    for(int i = 0; i < total_size; i++){
+        CPUout[i] = 1.0f;
+    }
+    CPUfusedresidandRMSNorm(h_residual, CPUout, h_bias, 
                 h_scale, eps, hidden_units, num_tokens);
-    bool is_right = CheckResult(CPUout, h_decoder_out, total_size);
+    bool is_right = CheckResult(CPUout, decoder_out, total_size);
     // debug info, better to retain: 
     std::cout << "before free" << std::endl;
     std::cout << "linear passed" << std::endl;
@@ -125,6 +133,7 @@ int main() {
     free(h_bias);
     free(h_scale);
     free(CPUout);
+    free(decoder_out);
     cudaFree(d_residual);
     cudaFree(d_decoder_out);
     cudaFree(d_bias);
