@@ -88,7 +88,15 @@ target_link_libraries(  # Libs for test_remov_pad
     -lcudadevrt
     fused_transpose_reshape_remv_pad)
      
-
+add_executable(fused_addres_rms
+    test_fused_addres_rms.cu
+)
+target_link_libraries(  # Libs for test_addres_rmsnorm
+    fused_addres_rms PUBLIC
+    -lcudart
+    -lcudadevrt
+    addresandrms) 
+    
 add_executable(attn_softmax
     test_softmax.cu
 )

@@ -44,6 +44,11 @@ set_property(TARGET qkv_linear PROPERTY POSITION_INDEPENDENT_CODE  ON)
 set_property(TARGET qkv_linear PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
 target_link_libraries(qkv_linear PUBLIC -lcudart -lcublas cublasWrapper)
 
+add_library(addresandrms STATIC fused_addresidual_norm.cu)
+set_property(TARGET addresandrms PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
+set_property(TARGET addresandrms PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET addresandrms PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+
 add_library(fused_transpose_reshape_remv_pad STATIC fused_transpose_reshape_remv_pad.cu)
 set_property(TARGET fused_transpose_reshape_remv_pad PROPERTY CUDA_SEPARABLE_COMPILATION   ON)
 set_property(TARGET fused_transpose_reshape_remv_pad PROPERTY POSITION_INDEPENDENT_CODE  ON)
