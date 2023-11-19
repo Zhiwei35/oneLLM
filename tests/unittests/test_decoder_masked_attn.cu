@@ -6,6 +6,22 @@
 #include <vector>      // std::vector
 
 #include "src/kernels/decoder_masked_attn.h"
+// bug1: MUST add CHECK to cudaMemcpy to see if its work well
+#define CHECK(call)                                   \
+do                                                    \
+{                                                     \
+    const cudaError_t error_code = call;              \
+    if (error_code != cudaSuccess)                    \
+    {                                                 \
+        printf("CUDA Error:\n");                      \
+        printf("    File:       %s\n", __FILE__);     \
+        printf("    Line:       %d\n", __LINE__);     \
+        printf("    Error code: %d\n", error_code);   \
+        printf("    Error text: %s\n",                \
+            cudaGetErrorString(error_code));          \
+        exit(1);                                      \
+    }                                                 \
+} while (0)
 
 void CPUMaskedAttn(const float* q,
                     const float* k,
@@ -21,14 +37,14 @@ void CPUMaskedAttn(const float* q,
     int head_stride = head_size;
     int cache_offset = batch_size * batch_stride;
     int block_nums = batch_size * num_heads;
-    int scale = rsqrt(float(head_size));
+    float scale = rsqrt(float(head_size));
 
     const float* q_mem = q;
     const float* k_mem = k;
     const float* v_mem = v;
 
     // tmp buffer
-    float* sqk = (float*)malloc(sizeof(float) * (block_nums * 3 * head_size * step));
+    float* sqk = (float*)malloc(sizeof(float) * (block_nums * (3 * head_size + step)));
     float* sq = sqk;
     float* sk = sq + block_nums * head_size;
     float* logits = sk + block_nums * head_size;
@@ -41,23 +57,24 @@ void CPUMaskedAttn(const float* q,
                 float attn_score = 0.0f;
                 for(int tid = 0; tid < head_size; tid++) {
                     int qkv_offset = batch_id * batch_stride + head_id * head_stride + tid;
-                    
-                    sk[tid]= k_cache[iter * cache_offset + qkv_offset];
+                    // note: sq and sk's offset should be qkv_offset , not tid
+                    sk[qkv_offset]= k_cache[iter * cache_offset + qkv_offset];
                     // when final step, update k cache
                     if (iter == step - 1) {
                         // TODO: update k cache with k with bias add
                         k_cache[iter * cache_offset + qkv_offset] = k_mem[qkv_offset];
-                        sk[tid] = k_mem[qkv_offset];
+                        sk[qkv_offset] = k_mem[qkv_offset];
                     }
                     
-                    sq[tid] = q_mem[qkv_offset];
-                    float qk = sq[tid] * sk[tid] * scale;
+                    sq[qkv_offset] = q_mem[qkv_offset];
+                    float qk = sq[qkv_offset] * sk[qkv_offset] * scale;
                     //block reduce using multi warp reduce
                     //TODO: maybe broadcast the attn score to each thread of the block in blockreducesum
                     attn_score += qk;
                 }
-                printf("every step/seqlen attn score = %f\n", attn_score);
-                logits[batch_id * num_heads * step + head_id * step + iter * head_size] = attn_score;
+                // note: logtis's offset should be as follow, not should mul head size with iter
+                //debug info,printf("every step/seqlen attn score = %f\n", attn_score);
+                logits[batch_id * num_heads * step + head_id * step + iter] = attn_score;
                 //softmax(logits), logits.shape = [bs, num heads, 1, step] 
                 row_max = std::max(attn_score, row_max);
             }
@@ -65,25 +82,28 @@ void CPUMaskedAttn(const float* q,
             float fenzi = 0.0f;
             float fenmu = 0.0f;
             for(int iter = 0; iter < step; iter++) { // row
-                fenzi = expf(logits[batch_id * num_heads * step + head_id * step + iter * head_size] - row_max);
+                fenzi = expf(logits[batch_id * num_heads * step + head_id * step + iter] - row_max);
                 fenmu += fenzi;
             }
             for(int iter = 0; iter < step; iter++) { // row
-                logits[batch_id * num_heads * step + head_id * step + iter * head_size] = fenzi / fenmu;
+                logits[batch_id * num_heads * step + head_id * step + iter] = fenzi / fenmu;
+                printf("logits=%f\n",fenzi/fenmu);
             }
             // logits*V = [bs, num heads, 1, step] * [mx_seq_len or step, bs, num heads, head size]
+            //for(int iter = 0; iter < step; iter++) { 
             for(int tid = 0; tid < head_size; tid++) {
                 float O = 0.0f;
                 int qkv_offset = batch_id * batch_stride + head_id * head_stride + tid;
                 for(int iter = 0; iter < step; iter++) {
-                    sv[tid]= v_cache[iter * cache_offset + qkv_offset];
+                    sv[qkv_offset]= v_cache[iter * cache_offset + qkv_offset];
                     // when final step, update k cache
                     if (iter == step - 1) {
-                        // TODO: update k cache with k with bias add
+                    // TODO: update k cache with k with bias add
                         v_cache[iter * cache_offset + qkv_offset] = v_mem[qkv_offset];
-                        sv[tid] = v_mem[qkv_offset];
+                        sv[qkv_offset] = v_mem[qkv_offset];
                     }
-                    O += sv[tid] * logits[iter];
+                    O += sv[qkv_offset] * logits[batch_id * num_heads * step + head_id * step + iter];
+                    printf("logits[%d]=%f, sv[%d]=%f, O=%f\n",iter,logits[iter],qkv_offset,sv[qkv_offset],O);
                 }
                 mha_output[qkv_offset] = O;
             }
@@ -95,12 +115,10 @@ void CPUMaskedAttn(const float* q,
 
 bool CheckResult(float* CPUoutput, float* GPUoutput, int output_size) {
     for(int i = 0; i < output_size; i++) {
-        if(fabs(CPUoutput[i] - GPUoutput[i]) > 1e-6){
-        
+        if(fabs(CPUoutput[i] - GPUoutput[i]) > 1e-6){    
             printf("the %dth res is wrong, CPUoutput = %f, GPUoutput = %f\n", i, CPUoutput[i], GPUoutput[i]);
-            //return false;
+            return false;
         }
-
     }
     return true;
 }
@@ -146,7 +164,7 @@ int main() {
         h_v[i] = 1.0f;
     }
     // note: prompt phase only generate part of k v cache
-    for(int i = 0; i < (kcache_size * (step - 1)) / max_seq_len; i++) { // initialize host data
+    for(int i = 0; i < (kcache_size * step) / max_seq_len; i++) { // initialize host data
         h_kcache[i] = 1.0f;
         h_vcache[i] = 1.0f;
     }
@@ -164,9 +182,9 @@ int main() {
     cudaMemcpy(d_vcache, h_vcache, sizeof(float) * vcache_size, cudaMemcpyHostToDevice);
   
     launchDecoderMaskedMHA(d_q, d_k, d_v, d_kcache, d_vcache, d_o, batch_size, num_heads, head_size, step);
-    cudaMemcpy(h_o, d_o, sizeof(float) * o_size, cudaMemcpyDeviceToHost);
+    CHECK(cudaMemcpy(h_o, d_o, sizeof(float) * o_size, cudaMemcpyDeviceToHost));
     float* CPU_output = (float*)malloc(sizeof(float) * o_size);
-    CPUMaskedAttn(h_q, h_k, h_v, h_kcache, h_vcache, h_o, batch_size, num_heads, head_size, step);
+    CPUMaskedAttn(h_q, h_k, h_v, h_kcache, h_vcache, CPU_output, batch_size, num_heads, head_size, step);
     bool is_true = CheckResult(CPU_output, h_o, o_size);
     if(is_true){
         printf("test passed");
