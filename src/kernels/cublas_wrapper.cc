@@ -85,7 +85,7 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                 CUBLAS_GEMM_DEFAULT);
 //                CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
     if (status != CUBLAS_STATUS_SUCCESS){
-        std::cout << "kernel exec error!!" << "\n";
+        std::cout << "gemm kernel exec error!!" << "\n";
     }
 }
 
@@ -113,8 +113,8 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
     //const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_beta)) : reinterpret_cast<const void*>(&f_beta);
     const void* alpha = reinterpret_cast<void*>(&f_alpha);
     const void* beta = reinterpret_cast<void*>(&f_beta);
-
-    cublasGemmStridedBatchedEx(cublas_handle_,
+    cublasStatus_t status;
+    status = cublasGemmStridedBatchedEx(cublas_handle_,
                                 transa,
                                 transb,
                                 m,
@@ -137,4 +137,7 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
                                 batchCount,
                                 computeType_,
                                 CUBLAS_GEMM_DEFAULT);
+    if (status != CUBLAS_STATUS_SUCCESS){
+        std::cout << "batched gemm kernel exec error!!" << "\n";
+    }    
 }
