@@ -59,14 +59,15 @@ bool checkResults(float* h_output, float* d_output, const int output_size) {
 }
 
 int main() {
+    const int batch_size = 32;
     const int sequeue_length = 1024;
     const int hidden_size = 4096;
     const int vocab_size = 30000;
     // debug info, better to retain: std::cout <<"batch_size=" << batch_size << " sequeue_lenght=" << sequeue_length << "  vocab_size=" << vocab_size << std::endl;
 
-    const int input_size = sequeue_length;
+    const int input_size = batch_size * sequeue_length;
     const int table_size = vocab_size * hidden_size;
-    const int output_size = sequeue_length * hidden_size;
+    const int output_size = batch_size * sequeue_length * hidden_size;
 
     int* h_input = (int*) malloc(input_size * sizeof(int));
     float* h_table = (float*) malloc(table_size * sizeof(float));
@@ -98,7 +99,12 @@ int main() {
     // debug info, better to retain: 
     std::cout << "copy to device" << std::endl;
 
-    launchInputEmbedding(d_input, d_output, d_table, sequeue_length, hidden_size, vocab_size);
+    DataType type_float = getTensorType<float>();
+    DataType type_int = getTensorType<int>();
+    Tensor input_ids(Device::GPU, type_int, {batch_size, sequeue_length}, d_input);
+    Tensor output(Device::GPU, type_float, {batch_size, sequeue_length, hidden_size}, d_output);
+    Tensor embed_table(Device::GPU, type_float, {vocab_size, hidden_size}, d_table);
+    launchInputEmbedding(&input_ids, &output, &embed_table);
     // debug info, better to retain: 
     std::cout << "running on device" << std::endl;
 
@@ -106,7 +112,7 @@ int main() {
     // debug info, better to retain: 
     std::cout << "running cpu for check" << std::endl;
     
-    if (checkResults(h_output, d_output, output_size)) {
+    if (checkResults(h_output, (float*) output.data, output_size)) {
         std::cout << "Check with CPU succeed!" << std::endl;
     } else {
         std::cout << "Check with CPU fail!!!" << std::endl;
