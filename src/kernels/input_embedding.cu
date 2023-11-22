@@ -5,10 +5,9 @@
 #include "src/kernels/beamsearch_topK.h"
 #include <cub/cub.cuh>
 
-template<typename T>
-__global__ void embedding_functor(T* output, 
-               const T* embed_table, // this->weight["model.embed_tokens.weight"]
-               const int* input_ids,
+__global__ void embeddingFunctor(const int* ipnut_ids,
+               Tensor* output, 
+               const Tensor* embed_table, // this->weight["model.embed_tokens.weight"]
                const int sequeue_length,
                const int hidden_size,
                const int vocab_size) {
@@ -19,3 +18,9 @@ __global__ void embedding_functor(T* output,
     }
 }
 
+
+void launchInputEmbedding(const int* input_ids, Tensor* output, Tensor* embed_table, const int sequeue_length, const int hidden_size, const int vocab_size) {
+    const int blockSize = 256;
+    const int gridSize = (blockSize + outputSize - 1) / blockSize;
+    embeddingFunctor<<<gridSize, blockSize>>>(input_ids, output, embed_table, sequeue_length, hidden_size, vocab_size);
+}
