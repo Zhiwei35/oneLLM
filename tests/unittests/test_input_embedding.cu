@@ -27,18 +27,34 @@ do                                                    \
     }                                                 \
 } while (0)
 
-void cpuEmbedding(const int* input_ids, Tensor* output, Tensor* embed_table, const int sequeue_length, const int hidden_size, const int vocab_size) {
+void cpuEmbedding(const int* input_ids, float* output, float* embed_table, const int sequeue_length, const int hidden_size, const int vocab_size) {
     for (int i = 0; i < sequeue_length; ++i) {
         for (int j = 0; j < hidden_size; ++j) {
-            output[j + i * sequeue_length * hidden_size] = embed_table[j + input_ids[i] * hidden_size];
+            output[j + i * hidden_size] = embed_table[j + input_ids[i] * hidden_size];
         }
     }
 }
 
-bool checkResults(Tensor* r1, Tensor* r2, const int length) {
-    for (int i = 0; i < length; ++i) {
-        if (r1[i] != r2[i]) return false;
+bool checkResults(float* h_output, float* d_output, const int output_size) {
+    float* d_output_cpu = (float*) malloc(output_size * sizeof(float)); // prepare for cpu check
+    CHECK(cudaMemcpy(d_output_cpu, d_output, output_size * sizeof(float), cudaMemcpyDeviceToHost));
+    for (int i = 0; i < output_size; ++i) {
+        if (fabs(d_output_cpu[i] - h_output[i]) > 1e5) {
+            std::cout << "Dev : ";
+            for (int j = max(0, i - 10); j < min(output_size, i + 10); ++j) {
+                std::cout << d_output_cpu[i];
+            }
+            std::cout << std::endl;
+            std::cout << "Cpu : ";
+            for (int j = max(0, i - 10); j < min(output_size, i + 10); ++j) {
+                std::cout << h_output[i];
+            }
+            std::cout << std::endl;
+            free(d_output_cpu);
+            return false;
+        }
     }
+    free(d_output_cpu);
     return true;
 }
 
@@ -55,7 +71,6 @@ int main() {
     int* h_input = (int*) malloc(input_size * sizeof(int));
     float* h_table = (float*) malloc(table_size * sizeof(float));
     float* h_output = (float*) malloc(output_size * sizeof(float));
-    float* output = (float*) malloc(output_size * sizeof(float)); // prepare for cpu check
     // debug info, better to retain: 
     std::cout << "init memory on host" << std::endl;
 
@@ -72,7 +87,7 @@ int main() {
     }
 
     int* d_input;
-    float* d_table, d_output;
+    float *d_table, *d_output;
     cudaMalloc((void**)&d_input, input_size * sizeof(int));
     cudaMalloc((void**)&d_table, table_size * sizeof(float));
     cudaMalloc((void**)&d_output, output_size * sizeof(float));
@@ -80,21 +95,26 @@ int main() {
     std::cout << "init memory on device" << std::endl;
 
     CHECK(cudaMemcpy(d_input, h_input, input_size * sizeof(int), cudaMemcpyHostToDevice));
+    // debug info, better to retain: 
+    std::cout << "copy to device" << std::endl;
 
     launchInputEmbedding(d_input, d_output, d_table, sequeue_length, hidden_size, vocab_size);
     // debug info, better to retain: 
-    std::cout << "running the device" << std::endl;
+    std::cout << "running on device" << std::endl;
 
-    cpuEmbedding(h_input, output, h_table, sequeue_length, hidden_size, vocab_size);
-
-    CHECK(cudaMemcpy(h_output, h_output, output_size * sizeof(output), cudaMemcpyDeviceToHost));
+    cpuEmbedding(h_input, h_output, h_table, sequeue_length, hidden_size, vocab_size);
+    // debug info, better to retain: 
+    std::cout << "running cpu for check" << std::endl;
     
-    std::cout << checkResults(h_output, output, output_size) ? "Check with CPU succeed!" : "CHeck with CPU fail!!!" << std::endl;
+    if (checkResults(h_output, d_output, output_size)) {
+        std::cout << "Check with CPU succeed!" << std::endl;
+    } else {
+        std::cout << "Check with CPU fail!!!" << std::endl;
+    }
 
     cudaFree(d_output);
     cudaFree(d_table);
     cudaFree(d_input);
-    free(output);
     free(h_output);
     free(h_table);
     free(h_input);
