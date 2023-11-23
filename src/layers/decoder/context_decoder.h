@@ -79,5 +79,5 @@ public:
     template<typename T>
     void allocForForward(LLaMAAttentionDynParams& dyn_params);
     void free();
-    void forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight*>* layerWeights, TensorMap& output_tensors);
+    void forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight*>& layerWeights, TensorMap& output_tensors);
 };

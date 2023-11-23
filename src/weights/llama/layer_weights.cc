@@ -55,6 +55,27 @@ LlamaLayerWeight::loadWeights(std::string weight_path, WeightType weight_type)
     }   
 }
 
+template<typename T>
+LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
+                                T* d_ffn_norm_weight,
+                                T* d_qkv_weights,
+                                T* d_qkv_bias,
+                                T* d_output_weights,
+                                T* d_output_bias,
+                                T* d_ffn_down,
+                                T* d_ffn_gate,
+                                T* d_ffn_up)
+{
+    attn_norm_weight.gamma = d_attn_norm_weight;
+    ffn_norm_weight.gamma = d_ffn_norm_weight;
+    (T*)self_attn_weight.qkv.data = d_qkv_weights;
+    (T*)self_attn_weight.qkv.bias = d_qkv_bias;
+    (T*)self_attn_weight.output.data = d_output_weights;
+    (T*)self_attn_weight.output.bias = d_output_bias;
+    (T*)ffn_weight.gate.data = d_ffn_gate;
+    (T*)ffn_weight.up.data = d_ffn_up;
+    (T*)ffn_weight.down.data = d_ffn_down;
+}
 void freeWeights(BaseWeight& weights)
 {
     cudaFree(weights.data);

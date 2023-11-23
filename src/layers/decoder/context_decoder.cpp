@@ -43,8 +43,8 @@ LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<LlamaLa
     allocForForward<float>(params);
     //1.
     Tensor seq_lens = input_tensors["input_length"];
-    Tensor cum_seqlens = input_tensor["cum_seqlens"];
-    Tensor padding_offset = input_tensor["padding_offset"];
+    Tensor cum_seqlens = input_tensors["cum_seqlens"];
+    Tensor padding_offset = input_tensors["padding_offset"];
     LLaMAAttentionDynParams dyn_params;
     dyn_params.batch_size = seq_lens->shape[0];
     dyn_params.max_q_len = padding_offset->shape[1];
