@@ -211,7 +211,7 @@ int main(int argc, char** argv)
                                                             stream,
                                                             cublas_wrapper,
                                                             allocator,
-                                                            is_free_buffer_after_fwd)
+                                                            is_free_buffer_after_fwd);
     ctxDecoder->forward(decoder_inputs, layerWeights, decoder_outputs);
     cudaDeviceSynchronize();
     // gpu buffer can be released in corresponding class
