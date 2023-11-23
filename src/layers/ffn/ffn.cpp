@@ -1,5 +1,6 @@
-#include <math.h>
+#include <iostream>
 #include "src/layers/ffn/ffn.h"
+
 LLaMAFFNLayer::LLaMAFFNLayer(int head_num,
                                int head_size,
                                int inter_size,
@@ -28,7 +29,7 @@ LLaMAFFNLayer::allocForForward(LLaMAAttentionDynParams& params){
     down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * num_tokens * hidden_units);
 }
 
-void LLaMAContextAttentionLayer::free(){
+void LLaMAFFNLayer::free(){
     allocator->free((void**)(&SwiGLU_input->data));
     allocator->free((void**)(&down_proj_input->data));
     allocator->free((void**)(&down_proj_output->data));
