@@ -1,3 +1,4 @@
+#pragma once
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include "src/kernels/cublas_wrapper.h"

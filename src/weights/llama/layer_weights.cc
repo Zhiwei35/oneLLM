@@ -34,29 +34,29 @@ LlamaLayerWeight::LlamaLayerWeight(int     head_num,
     ffn_weight.gate.shape = {hidden_units, inter_size};
     ffn_weight.up.shape = {hidden_units, inter_size};
     ffn_weight.down.shape = {inter_size, hidden_units};
-    GPUMalloc(&self_attn_weight.gate.data, hidden_units * inter_size);
-    GPUMalloc(&self_attn_weight.up.data, hidden_units * inter_size);
-    GPUMalloc(&self_attn_weight.down.data, hidden_units * inter_size);
+    GPUMalloc(&ffn_weight.gate.data, hidden_units * inter_size);
+    GPUMalloc(&ffn_weight.up.data, hidden_units * inter_size);
+    GPUMalloc(&ffn_weight.down.data, hidden_units * inter_size);
 }
 //model file type用来控制loadweightfrombin的第二个模板类型参数T_IN,如果T_IN和第一个模板参数不一致，需要将T_IN的weight使用ptx cast转换为T
-LlamaLayerWeight::loadWeights(std::string weight_path, WeightType weight_type)
+void LlamaLayerWeight::loadWeights(std::string weight_path, WeightType weight_type)
 {
     loadWeightFromBin<float, float>(attn_norm_weight.gamma, {hidden_units}, weight_path + ".attention_norm.weight");
     loadWeightFromBin<float, float>(ffn_norm_weight.gamma, {hidden_units}, weight_path + ".ffn_norm.weight");
 
-    loadWeightFromBin<float, float>(self_attn_weight.qkv.data, {(head_num + 2 * kv_head_num), head_size}, weight_path + ".attention.w_qkv.weight");
-    loadWeightFromBin<float, float>(self_attn_weight.output.data, {head_num, head_size}, weight_path + ".attention.wo.weight");
-    loadWeightFromBin<float, float>(ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w1.weight");
-    loadWeightFromBin<float, float>(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
-    loadWeightFromBin<float, float>(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
+    loadWeightFromBin<float, float>((float*)self_attn_weight.qkv.data, {(head_num + 2 * kv_head_num), head_size}, weight_path + ".attention.w_qkv.weight");
+    loadWeightFromBin<float, float>((float*)self_attn_weight.output.data, {head_num, head_size}, weight_path + ".attention.wo.weight");
+    loadWeightFromBin<float, float>((float*)ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w1.weight");
+    loadWeightFromBin<float, float>((float*)ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
+    loadWeightFromBin<float, float>((float*)ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
     if (attn_bias) {//TODO
-        loadWeightFromBin<float, float>(self_attn_weight.qkv.bias, {(head_num + 2 * kv_head_num), head_size}, weight_path + ".attention.w_qkv.bias");
-        loadWeightFromBin<float, float>(self_attn_weight.output.bias, {head_num, head_size}, weight_path + ".attention.wo.bias");
+        loadWeightFromBin<float, float>((float*)self_attn_weight.qkv.bias, {(head_num + 2 * kv_head_num), head_size}, weight_path + ".attention.w_qkv.bias");
+        loadWeightFromBin<float, float>((float*)self_attn_weight.output.bias, {head_num, head_size}, weight_path + ".attention.wo.bias");
     }   
 }
 
 template<typename T>
-LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
+void LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
                                 T* d_ffn_norm_weight,
                                 T* d_qkv_weights,
                                 T* d_qkv_bias,
@@ -79,7 +79,7 @@ LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
 void freeWeights(BaseWeight& weights)
 {
     cudaFree(weights.data);
-    if(bias != nullptr) {
+    if(weights.bias != nullptr) {
         cudaFree(weights.bias);
     }
 

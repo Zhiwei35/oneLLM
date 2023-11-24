@@ -1,3 +1,4 @@
+#pragma once
 struct LayerNormWeight {
-    const float* gamma;
+    float* gamma;
 };

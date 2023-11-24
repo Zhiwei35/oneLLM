@@ -22,7 +22,7 @@ private:
     //const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
     float scale;
     // this params are only saw in llama and are unchanged 
-    const LLaMAAttentionStaticParams attn_static_params;
+    LLaMAAttentionStaticParams attn_static_params;
     // this params are dynamic
     //const LLaMAAttentionDynParams attn_dyn_params;
 
@@ -63,6 +63,9 @@ public:
                                cublasWrapper* cublas_wrapper,
                                BaseAllocator* allocator,
                                bool is_free_buffer_after_fwd);
+    LLaMAAttentionStaticParams& GetAttnStaticParams(){
+        return attn_static_params;
+    }
     template<typename T>
     void allocForForward(LLaMAAttentionDynParams& params);
     void free();

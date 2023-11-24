@@ -9,7 +9,7 @@ LlamaWeight::LlamaWeight(
     int     vocab_size,
     int     num_layer,
     bool    attn_bias,
-    WeightType weight_type,
+    WeightType weight_type
 ):
     hidden_units(head_num * head_size),
     inter_size(inter_size),
@@ -20,7 +20,7 @@ LlamaWeight::LlamaWeight(
 {
     llama_layer_weight.reserve(num_layer);
     for (int l = 0; l < num_layer; ++l) {
-        llama_layer_weight.push_back(new LlamaLayerWeight<T>(head_num,
+        llama_layer_weight.push_back(new LlamaLayerWeight(head_num,
                                                             kv_head_num,
                                                             head_size,
                                                             inter_size,
@@ -33,7 +33,7 @@ LlamaWeight::LlamaWeight(
     GPUMalloc(&pre_decoder_embedding_weight.emb_table, vocab_size * hidden_units);
 }
 
-LlamaWeight::loadWeights(std::string weight_path) {
+void LlamaWeight::loadWeights(std::string weight_path) {
     //weight_path += '/';
     std::cout << "the weight path is " << weight_path <<"\n";
     loadWeightFromBin<float, float>(out_rmsnorm_weight.gamma, {hidden_units}, weight_path + ".norm.weight");
@@ -45,7 +45,7 @@ LlamaWeight::loadWeights(std::string weight_path) {
     }
 }
 
-LlamaWeight<T>::~LlamaWeight()
+LlamaWeight::~LlamaWeight()
 {
     cudaFree(pre_decoder_embedding_weight.emb_table);
     cudaFree(out_rmsnorm_weight.gamma);

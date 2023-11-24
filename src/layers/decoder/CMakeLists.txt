@@ -6,6 +6,7 @@ set_property(TARGET LlamaCtxdecoder PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
 target_link_libraries(LlamaCtxdecoder PUBLIC
                                         LlamaCtxAttn
                                         Llamaffn 
+                                        llamaweights
                                         cal_paddingoffset
                                         build_casual_mask
                                         addresandrms
