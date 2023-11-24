@@ -19,13 +19,13 @@ LlamaLayerWeight::LlamaLayerWeight(int     head_num,
     GPUMalloc(&ffn_norm_weight.gamma, hidden_units);
     self_attn_weight.qkv.type = weight_type;
     self_attn_weight.qkv.shape = {(head_num + 2 * kv_head_num), head_size};
-    GPUMalloc(&self_attn_weight.qkv.data, (head_num + 2 * kv_head_num)* head_size);
+    GPUMalloc((float**)&self_attn_weight.qkv.data, (head_num + 2 * kv_head_num)* head_size);
     self_attn_weight.output.type = weight_type;
     self_attn_weight.output.shape = {head_num, head_size};
-    GPUMalloc(&self_attn_weight.output.data, head_num * head_size);
+    GPUMalloc((float**)&self_attn_weight.output.data, head_num * head_size);
     if (attn_bias) {
-        GPUMalloc(&self_attn_weight.qkv.bias, (head_num + 2 * kv_head_num)* head_size);
-        GPUMalloc(&self_attn_weight.output.bias, head_num * head_size);
+        GPUMalloc((float**)&self_attn_weight.qkv.bias, (head_num + 2 * kv_head_num)* head_size);
+        GPUMalloc((float**)&self_attn_weight.output.bias, head_num * head_size);
     }
 
     ffn_weight.gate.type = weight_type;
@@ -34,9 +34,9 @@ LlamaLayerWeight::LlamaLayerWeight(int     head_num,
     ffn_weight.gate.shape = {hidden_units, inter_size};
     ffn_weight.up.shape = {hidden_units, inter_size};
     ffn_weight.down.shape = {inter_size, hidden_units};
-    GPUMalloc(&ffn_weight.gate.data, hidden_units * inter_size);
-    GPUMalloc(&ffn_weight.up.data, hidden_units * inter_size);
-    GPUMalloc(&ffn_weight.down.data, hidden_units * inter_size);
+    GPUMalloc((float**)&ffn_weight.gate.data, hidden_units * inter_size);
+    GPUMalloc((float**)&ffn_weight.up.data, hidden_units * inter_size);
+    GPUMalloc((float**)&ffn_weight.down.data, hidden_units * inter_size);
 }
 //model file type用来控制loadweightfrombin的第二个模板类型参数T_IN,如果T_IN和第一个模板参数不一致，需要将T_IN的weight使用ptx cast转换为T
 void LlamaLayerWeight::loadWeights(std::string weight_path, WeightType weight_type)
@@ -66,16 +66,20 @@ void LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
                                 T* d_ffn_gate,
                                 T* d_ffn_up)
 {
+    // before kernel launch, the ptr is always void*, when luanching kernel, ptr type will be cast to float* or T*
     attn_norm_weight.gamma = d_attn_norm_weight;
     ffn_norm_weight.gamma = d_ffn_norm_weight;
-    (T*)self_attn_weight.qkv.data = d_qkv_weights;
-    (T*)self_attn_weight.qkv.bias = d_qkv_bias;
-    (T*)self_attn_weight.output.data = d_output_weights;
-    (T*)self_attn_weight.output.bias = d_output_bias;
-    (T*)ffn_weight.gate.data = d_ffn_gate;
-    (T*)ffn_weight.up.data = d_ffn_up;
-    (T*)ffn_weight.down.data = d_ffn_down;
+    self_attn_weight.qkv.data = (void*)d_qkv_weights;
+    self_attn_weight.qkv.bias = (void*)d_qkv_bias;
+    self_attn_weight.output.data = (void*)d_output_weights;
+    self_attn_weight.output.bias = (void*)d_output_bias;
+    ffn_weight.gate.data = (void*)d_ffn_gate;
+    ffn_weight.up.data = (void*)d_ffn_up;
+    ffn_weight.down.data = (void*)d_ffn_down;
 }
+//required in linking time
+template void LlamaLayerWeight::loadWeights(float*, float*, float*, float*, float*, float*, float*, float*, float*);
+
 void freeWeights(BaseWeight& weights)
 {
     cudaFree(weights.data);
