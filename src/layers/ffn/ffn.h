@@ -7,7 +7,6 @@
 #include "src/models/llama/llama_params.h"
 #include "src/kernels/activation_kernel.h"
 
-template<typename T>
 class LLaMAFFNLayer {
 private:
     // this params are shared across all LLMs
@@ -16,9 +15,9 @@ private:
     const int inter_size;
     const int hidden_units;
     const bool is_free_buffer_after_fwd;
-    const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
+//    const bool is_1st_epoch; // judge if its 1st epoch, if so, we will allocate kv cache
     // this params are dynamic
-    const LLaMAAttentionDynParams attn_dyn_params;
+    //const LLaMAAttentionDynParams attn_dyn_params;
 
     cudaStream_t stream;
     BaseAllocator* allocator;
@@ -38,12 +37,13 @@ private:
 public:
     LLaMAFFNLayer(int head_num,
                     int head_size,
+                    int inter_size,
                     cudaStream_t stream,
                     cublasWrapper* cublas_wrapper,
                     BaseAllocator* allocator,
                     bool is_free_buffer_after_fwd);
     template<typename T>
-    void allocForForward(LLaMAAttentionDynParams params);
+    void allocForForward(LLaMAAttentionDynParams& params);
     void free();
-    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights);
+    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params);
 };

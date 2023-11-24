@@ -18,36 +18,36 @@ LLaMAFFNLayer::LLaMAFFNLayer(int head_num,
     is_free_buffer_after_fwd(is_free_buffer_after_fwd) {}
 
 template<typename T>
-LLaMAFFNLayer::allocForForward(LLaMAAttentionDynParams& params){
+void LLaMAFFNLayer::allocForForward(LLaMAAttentionDynParams& params){
     int num_tokens = params.num_tokens;
     DataType type = getTensorType<T>(); 
     SwiGLU_input = new Tensor(Device::GPU, type, {2, num_tokens, inter_size});
     down_proj_input = new Tensor(Device::GPU, type, {num_tokens, inter_size});
     down_proj_output = new Tensor(Device::GPU, type, {num_tokens, hidden_units});
-    SwiGLU_input->data = allocator->Malloc(SwiGLU_input->data, sizeof(T) * num_tokens * 2 * inter_size);
-    down_proj_input->data = allocator->Malloc(down_proj_input->data, sizeof(T) * num_tokens * inter_size);
-    down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * num_tokens * hidden_units);
+    SwiGLU_input->data = allocator->Malloc(SwiGLU_input->data, sizeof(T) * num_tokens * 2 * inter_size, false);
+    down_proj_input->data = allocator->Malloc(down_proj_input->data, sizeof(T) * num_tokens * inter_size, false);
+    down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * num_tokens * hidden_units, false);
 }
 
 void LLaMAFFNLayer::free(){
-    allocator->free((void**)(&SwiGLU_input->data));
-    allocator->free((void**)(&down_proj_input->data));
-    allocator->free((void**)(&down_proj_output->data));
+    allocator->deviceFree((void**)(&SwiGLU_input->data));
+    allocator->deviceFree((void**)(&down_proj_input->data));
+    allocator->deviceFree((void**)(&down_proj_output->data));
 }
 
-LLaMAFFNLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){
+void LLaMAFFNLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){
     allocForForward<float>(params);
 
     Tensor ffn_input = inputs["ffn_input"];
     Tensor ffn_output = outputs["ffn_output"];
     // gate proj
-    launchLinearGemm(&ffn_input, weights.gate, &SwiGLU_input);
+    launchLinearGemm(&ffn_input, weights.gate, SwiGLU_input);
     // up proj
-    launchLinearGemm(&ffn_input, weights.up, &SwiGLU_input, false, false, true);
+    launchLinearGemm(&ffn_input, weights.up, SwiGLU_input, false, false, true);
 
-    launchAct(&SwiGLU_input, &down_proj_input);// down_proj_input maybe can reuse swiglu_input buf, will validate it later
+    launchAct((float*)SwiGLU_input->data, (float*)down_proj_input->data, params.batch_size, weights.gate.shape[1]);// down_proj_input maybe can reuse swiglu_input buf, will validate it later
     //down proj
-    launchLinearGemm(&down_proj_input, weights.down, &down_proj_output);
+    launchLinearGemm(down_proj_input, weights.down, down_proj_output);
 
     if (is_free_buffer_after_fwd) {
         this->free();

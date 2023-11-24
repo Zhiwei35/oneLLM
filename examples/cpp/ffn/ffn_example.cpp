@@ -4,6 +4,23 @@
 #include <cuda_runtime.h>
 #include "src/layers/ffn/ffn.h"
 #include "src/utils/macro.h"
+
+#define CHECK(call)                                   \
+do                                                    \
+{                                                     \
+    const cudaError_t error_code = call;              \
+    if (error_code != cudaSuccess)                    \
+    {                                                 \
+        printf("CUDA Error:\n");                      \
+        printf("    File:       %s\n", __FILE__);     \
+        printf("    Line:       %d\n", __LINE__);     \
+        printf("    Error code: %d\n", error_code);   \
+        printf("    Error text: %s\n",                \
+            cudaGetErrorString(error_code));          \
+        exit(1);                                      \
+    }                                                 \
+} while (0)
+
 int main(int argc, char** argv)
 {
     int head_num = 4;
@@ -47,7 +64,7 @@ int main(int argc, char** argv)
        h_down[i] = 1.0f;
     }  
     float* d_ffn_output;
-    cudaMalloc((void**)&d_ffn_output, sizeof(float) * attn_dyn_params.num_tokens * q_hidden_units);
+    cudaMalloc((void**)&d_ffn_output, sizeof(float) * attn_dyn_params.num_tokens * hidden_units);
     std::cout << "end malloc/cudamalloc buffer and start memcpyh2d" << "\n";
     CHECK(cudaMemcpy(d_ffn_input, h_ffn_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_gate, h_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice));
@@ -75,7 +92,7 @@ int main(int argc, char** argv)
                                                 stream,
                                                 cublas_wrapper,
                                                 allocator,
-                                                is_free_buffer_after_fwd)
+                                                is_free_buffer_after_fwd);
     std::cout << "start fwd" << "\n";
     ffn_layer->forward(ffn_inputs, ffn_outputs, ffn_weights, attn_dyn_params);
     std::cout << "end fwd" << "\n";
