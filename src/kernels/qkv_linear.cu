@@ -9,7 +9,8 @@ void launchLinearGemm(Tensor* input,
                       BaseWeight& weight, 
                       Tensor* output,
                       bool trans_a,
-                      bool trans_b) {
+                      bool trans_b,
+                      bool shared_out_buf) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
     cudaStream_t stream;
     cublasHandle_t cublas_handle;
@@ -31,6 +32,10 @@ void launchLinearGemm(Tensor* input,
     int k = output->shape[1];
     cublasOperation_t transA = trans_a ? CUBLAS_OP_T: CUBLAS_OP_N;
     cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
+    int offset = 0;
+    if(shared_out_buf) {
+        int offset = input_lda * k; // num tokes * inter size, need to modify activate kernel input shape to [2, num tokens, inter size] and buf shape
+    }
     std::cout << "calling gemm" << "\n";
     cublas_wrapper->Gemm(transA,
                         transB,
@@ -41,7 +46,7 @@ void launchLinearGemm(Tensor* input,
                         input_lda,      //lda
                         (float*)(weight.data),   //B
                         weight_ldb,     //ldb 
-                        (float*)(output->data),  //C
+                        (float*)(output->data) + offset,  //C
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);

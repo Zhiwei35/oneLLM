@@ -9,7 +9,8 @@ void launchLinearGemm(Tensor* input,
                       BaseWeight& weight, 
                       Tensor* output,
                       bool trans_a = false,
-                      bool trans_b = false);
+                      bool trans_b = false,
+                      bool shared_out_buf = false);
 
 void launchLinearStridedBatchGemm(Tensor* input1,
                                   Tensor* input2,

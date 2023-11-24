@@ -24,7 +24,9 @@ template<typename T>
 void launchAct(const T* input, T* out, const int batch_size, const int intermedia_size) {
     dim3 grid(batch_size);
     dim3 block(256);
+    std::cout << "calling silu_and_mul kernel" << "\n";
     silu_and_mul_kernel<T><<<grid, block>>>(out, input, intermedia_size);
+    std::cout << "called silu_and_mul kernel" << "\n";
 }
 // We must instancite the template, if not, will report linking issue
 template void launchAct(const float* input, float* output, const int batch_size, const int intermedia_size);
