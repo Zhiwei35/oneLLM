@@ -1,3 +1,4 @@
+#include <iostream>
 #include "src/layers/decoder/context_decoder.h"
 template<typename T>
 void LlamaContextDecoder::allocForForward(LLaMAAttentionDynParams& params)
@@ -74,10 +75,13 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
     Tensor decoder_input = input_tensors["decoder_input"];
     dyn_params.num_tokens = decoder_input.shape[0];
     // todo: to enhance the (float*)nullptr
-    launchFusedAddBiasResidualRMSNorm((float*)nullptr, //in, [num tokens, hidden_units]
-                                    (float*)decoder_input.data, //in&out, [num tokens, hidden_units]
+    std::cout << "RMSnorm shape: "<< "\n"
+              << "input: "<< decoder_input.shape[0] << "," << decoder_input.shape[1] <<"\n";
+
+    launchFusedAddBiasResidualRMSNorm((float*)nullptr, //in, [num tokens, q_hidden_units]
+                                    (float*)decoder_input.data, //in&out, [num tokens, q_hidden_units]
                                     (float*)nullptr,
-                                    layerWeights[0]->attn_norm_weight.gamma,//rmsnorm weights, [hidden_units]
+                                    layerWeights[0]->attn_norm_weight.gamma,//rmsnorm weights, [q_hidden_units]
                                     rmsnorm_eps,
                                     dyn_params.num_tokens,
                                     hidden_units);

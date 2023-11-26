@@ -42,12 +42,12 @@ void launchLinearGemm(Tensor* input,
               << "k: " << weight_ldb << "\n"
               << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
               << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
-    for (int i = 0; i < 64 * 64; i++){
-        if(i <14*64){
-            std::cout << i << " input: " << ((float*)(input->data))[i] << "\n";
-        }
+//    for (int i = 0; i < 14 * 64; i++){
+//        if(i <14*64){
+//            std::cout << i << " input: " << ((float*)(input->data))[i] << "\n";
+  //      }
  //       std::cout << i << " weight: " << ((float*)(weight.data))[i] << "\n";
-    }
+   // }
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m

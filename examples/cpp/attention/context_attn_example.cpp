@@ -39,10 +39,10 @@ int main(int argc, char** argv)
     for(int i = 0; i < hidden_units * attn_dyn_params.num_tokens; i++) { 
        h_attention_input[i] = 1.0f;
     }
-    float* h_qkv_weights = (float*) malloc(sizeof(float) * hidden_units * hidden_units);
+    float* h_qkv_weights = (float*) malloc(sizeof(float) * q_hidden_units * hidden_units);
     float* d_qkv_weights;
-    cudaMalloc((void**)&d_qkv_weights, sizeof(float) * hidden_units * hidden_units);
-    for(int i = 0; i < hidden_units * hidden_units; i++) { 
+    cudaMalloc((void**)&d_qkv_weights, sizeof(float) * q_hidden_units * hidden_units);
+    for(int i = 0; i < hidden_units * q_hidden_units; i++) { 
        h_qkv_weights[i] = 1.0f;
     }
     float* h_mask = (float*) malloc(sizeof(float) * attn_dyn_params.batch_size * attn_dyn_params.max_q_len * attn_dyn_params.max_k_len);
@@ -52,10 +52,10 @@ int main(int argc, char** argv)
         h_mask[i] = 1.0f;
     }
 
-    float* h_qkv_bias = (float*) malloc(sizeof(float) * head_num  * head_size);
+    float* h_qkv_bias = (float*) malloc(sizeof(float) * hidden_units);
     float* d_qkv_bias;
-    cudaMalloc((void**)&d_qkv_bias, sizeof(float) * head_num  * head_size);// wehn add bias to k, we ensure head_id < kv_head_num
-    for(int i = 0; i < head_num * head_size; i++){
+    cudaMalloc((void**)&d_qkv_bias, sizeof(float) * hidden_units);// wehn add bias to k, we ensure head_id < kv_head_num
+    for(int i = 0; i < hidden_units; i++){
         h_qkv_bias[i] = 2.0f;
     }
     //max_seq_len is the max kv cache len
@@ -106,8 +106,8 @@ int main(int argc, char** argv)
 
     // h2d
     cudaMemcpy(d_attention_input, h_attention_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * hidden_units * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * head_num  * head_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * q_hidden_units * hidden_units, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_all_k_cache, h_all_k_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_all_v_cache, h_all_v_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_padding_offset, h_padding_offset, sizeof(int) * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
     DataType type_int = getTensorType<int>();
     TensorMap ctx_attn_inputs{
         {"attention_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_attention_input)},
-        {"qkv_bias", Tensor(GPU, type, {head_num * head_size}, d_qkv_bias)},
+        {"qkv_bias", Tensor(GPU, type, {hidden_units}, d_qkv_bias)},
         {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
         {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
         {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     LLaMAattentionWeights ctx_attn_weights;
     WeightType wtype = getWeightType<float>();
     ctx_attn_weights.qkv.data = d_qkv_weights;
-    ctx_attn_weights.qkv.shape = {hidden_units, hidden_units};
+    ctx_attn_weights.qkv.shape = {q_hidden_units, hidden_units};
     ctx_attn_weights.qkv.type = wtype;
     ctx_attn_weights.output.data = d_output_weights;
     ctx_attn_weights.output.shape = {q_hidden_units, q_hidden_units};

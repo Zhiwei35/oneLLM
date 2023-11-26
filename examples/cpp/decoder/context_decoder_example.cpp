@@ -35,10 +35,10 @@ int main(int argc, char** argv)
     cublasWrapper* cublas_wrapper = new cublasWrapper(cublas_handle, cublaslt_handle);
     BaseAllocator* allocator = new CudaAllocator;
 
-    float* h_decoder_input = (float*) malloc(sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
+    float* h_decoder_input = (float*) malloc(sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens);
     float* d_decoder_input;
-    cudaMalloc((void**)&d_decoder_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
-    for(int i = 0; i < hidden_units * attn_dyn_params.num_tokens; i++) { 
+    cudaMalloc((void**)&d_decoder_input, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens);
+    for(int i = 0; i < q_hidden_units * attn_dyn_params.num_tokens; i++) { 
        h_decoder_input[i] = 1.0f;
     }
 
@@ -90,10 +90,10 @@ int main(int argc, char** argv)
         h_output_norm_weight[i] = 2.0f;
     }
 
-    float* h_attn_norm_weight = (float*)malloc(sizeof(float) * hidden_units);
+    float* h_attn_norm_weight = (float*)malloc(sizeof(float) * q_hidden_units);
     float* d_attn_norm_weight;
-    cudaMalloc((void**)&d_attn_norm_weight, sizeof(float) * hidden_units);
-    for(int i = 0; i < hidden_units; i++){
+    cudaMalloc((void**)&d_attn_norm_weight, sizeof(float) * q_hidden_units);
+    for(int i = 0; i < q_hidden_units; i++){
         h_attn_norm_weight[i] = 1.0f;
     }
 
@@ -104,17 +104,17 @@ int main(int argc, char** argv)
         h_ffn_norm_weight[i] = 1.0f;
     }
 
-    float* h_qkv_weights = (float*) malloc(sizeof(float) * hidden_units * hidden_units);
+    float* h_qkv_weights = (float*) malloc(sizeof(float) * hidden_units * q_hidden_units);
     float* d_qkv_weights;
-    cudaMalloc((void**)&d_qkv_weights, sizeof(float) * hidden_units * hidden_units);
-    for(int i = 0; i < hidden_units * hidden_units; i++) { 
+    cudaMalloc((void**)&d_qkv_weights, sizeof(float) * hidden_units * q_hidden_units);
+    for(int i = 0; i < hidden_units * q_hidden_units; i++) { 
        h_qkv_weights[i] = 1.0f;
     }
 
-    float* h_qkv_bias = (float*) malloc(sizeof(float) * head_num * head_size);
+    float* h_qkv_bias = (float*) malloc(sizeof(float) * hidden_units);
     float* d_qkv_bias;
-    cudaMalloc((void**)&d_qkv_bias, sizeof(float) * head_num * head_size);// wehn add bias to k, we ensure head_id < kv_head_num
-    for(int i = 0; i < head_num * head_size; i++){
+    cudaMalloc((void**)&d_qkv_bias, sizeof(float) * hidden_units);// wehn add bias to k, we ensure head_id < kv_head_num
+    for(int i = 0; i < hidden_units; i++){
         h_qkv_bias[i] = 2.0f;
     }
 
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
         h_ffn_down[i] = 2.0f;
     }    
     // h2d
-    cudaMemcpy(d_decoder_input, h_decoder_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_decoder_input, h_decoder_input, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
     cudaMemcpy(d_all_k_cache, h_all_k_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_all_v_cache, h_all_v_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_padding_offset, h_padding_offset, sizeof(int) * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
@@ -154,12 +154,12 @@ int main(int argc, char** argv)
     cudaMemcpy(d_mask, h_mask, sizeof(float) * attn_dyn_params.batch_size * attn_dyn_params.max_q_len * attn_dyn_params.max_k_len, cudaMemcpyHostToDevice);
 
     cudaMemcpy(d_output_norm_weight, h_output_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_attn_norm_weight, h_attn_norm_weight, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_attn_norm_weight, h_attn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_norm_weight, h_ffn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * hidden_units * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * head_num * head_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * q_hidden_units * hidden_units, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_output_weights, h_output_weights, sizeof(float) * q_hidden_units * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_out_bias, h_out_bias, sizeof(float) * head_num * head_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_out_bias, h_out_bias, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_down, h_ffn_down, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_gate, h_ffn_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_up, h_ffn_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
@@ -185,7 +185,7 @@ int main(int argc, char** argv)
     }
 
     TensorMap decoder_inputs{
-        {"decoder_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_decoder_input)},
+        {"decoder_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
         //{"qkv_bias", Tensor(GPU, type, {head_num * head_size}, d_qkv_bias)},
         {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
         {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
