@@ -111,7 +111,7 @@ public:
         void* new_buffer = (void*)ptr;
         cudaMalloc(&new_buffer, size);
         std::cout << "allocate a new small block from OS using cudaMalloc, size = "
-                                            << size / 1024 << "KB"
+                                            << size  << "B"
                                             << std::endl;
 
         SmallBlocks.push_back(CudaSmallBlock(new_buffer, size, true));

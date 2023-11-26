@@ -32,7 +32,7 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
     DataType type = getTensorType<T>(); 
     const int qkv_head_num = head_num + 2 * kv_head_num;
     //tensor wrapper
-    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
+    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num * head_size});
     q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
     k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size}); //why here isn't max_k_len?cause the q/k/v is got by {bs, q_len, hiddenunits} * {hiddenunits, hiddenunits}
     v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
@@ -102,12 +102,12 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     launchLinearGemm(&attention_input, weights.qkv, qkv_buf_wo_pad);
     //2.qkv bias and rope and padding
     //[num_tokens, hiddenunits]=>{batch_size, q(kv)head_num, max_q_len, head_size}
-    Tensor qkv_bias = inputs["qkv_bias"];
+//    Tensor qkv_bias = inputs["qkv_bias"];
     Tensor padding_offset = inputs["padding_offset"];
     Tensor history_length = inputs["history_length"];
     Tensor input_length = inputs["input_length"];
     launchAddFusedQKVBiasTransposeAndRoPE(q_buf_w_pad, k_buf_w_pad, v_buf_w_pad, qkv_buf_wo_pad,
-                                        &qkv_bias, &padding_offset, &history_length, &input_length, static_params);
+                                        weights.qkv, &padding_offset, &history_length, &input_length, static_params);
     //3.concat past kv cache
     //max_cache_seq_len = max_seq_len + max_prefix_prompt_length
     //{batch_size, kv_head_num, max_q_len, head_size}=>(num_layer ,batchxbeam ,max_cache_seq_len, hidden_units_};
