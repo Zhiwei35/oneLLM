@@ -43,7 +43,7 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
     allocForForward<float>(dyn_params);
     //1.
     Tensor seq_lens = input_tensors["input_length"];
-    Tensor cum_seqlens = input_tensors["cum_seqlens"];
+//    Tensor cum_seqlens = input_tensors["cum_seqlens"];
     Tensor padding_offset = input_tensors["padding_offset"];
 //    LLaMAAttentionDynParams dyn_params;
 //    dyn_params.batch_size = seq_lens->shape[0];
@@ -56,7 +56,7 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
     launchCalPaddingoffset(h_pinned_token_num_ptr, //pinned host mem alloced in h file
                            &h_token_num, //out
                            (int*)padding_offset.data, //out
-                           (int*)cum_seqlens.data, //out
+                           (int*)cum_seqlens->data, //out
                            (int*)seq_lens.data, // in
                            dyn_params.batch_size,
                            dyn_params.max_q_len);
@@ -86,13 +86,16 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
     Tensor decoder_output = output_tensors["decoder_output"];
     Tensor all_k_cache = output_tensors["all_k_cache"];
     Tensor all_v_cache = output_tensors["all_v_cache"];
+    DataType type_int = getTensorType<int>();
+    int layer_id = 0;//TODO: enhance the layer_id update method
     TensorMap ctx_attn_inputs{
         {"attention_input", decoder_input},
         {"padding_offset", padding_offset},
         {"history_length", history_length},
         {"input_length", seq_lens},
         {"context_length", context_length},
-        {"attention_mask", attention_mask}
+        {"attention_mask", attention_mask},
+        {"layer_id", Tensor(Device::GPU, type_int, {1}, &layer_id)}
     };
     TensorMap ctx_attn_outputs{
         {"attention_output", decoder_output},
@@ -100,10 +103,11 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
         {"all_v_cache", all_v_cache}
     };
 
-    DataType type_int = getTensorType<int>();
     // same buffer between layers, reuse
     for(int layer_id = 0; layer_id < num_layer; layer_id++) {
-        ctx_attn_inputs["layer_id"] = Tensor(Device::GPU, type_int, {1}, &layer_id);
+        if (layer_id > 0){
+            ctx_attn_inputs["layer_id"] = Tensor(Device::GPU, type_int, {1}, &layer_id);
+        }
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         ctxAttn->forward(ctx_attn_inputs, ctx_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params, ctxAttn->GetAttnStaticParams());
         //decoder_output += decoder_input
