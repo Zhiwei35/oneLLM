@@ -26,7 +26,7 @@ void launchLinearGemm(Tensor* input,
                        // , stream);
     cublas_wrapper->setFP32GemmConfig();
     int input_lda = input->shape[0];
-    int weight_ldb = input->shape[1];
+    int weight_ldb = input->shape.size() > 2 ? input->shape[1] * input->shape[2] : input->shape[1];
     // TODO:check 2nd dim of input = 1st dim of weight
     int output_ldc = input_lda;         
     int k = output->shape[1];
@@ -37,6 +37,17 @@ void launchLinearGemm(Tensor* input,
         int offset = input_lda * k; // num tokes * inter size, need to modify activate kernel input shape to [2, num tokens, inter size] and buf shape
     }
     std::cout << "calling gemm" << "\n";
+    std::cout << "m: " << input_lda
+              << "n: " << k
+              << "k: " << weight_ldb << "\n"
+              << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
+              << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
+//    for (int i = 0; i < 14 * 64; i++){
+//        if(i <14*64){
+//            std::cout << i << " input: " << ((float*)(input->data))[i] << "\n";
+  //      }
+ //       std::cout << i << " weight: " << ((float*)(weight.data))[i] << "\n";
+   // }
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m
@@ -70,16 +81,17 @@ void launchLinearStridedBatchGemm(Tensor* input1,
                         new cublasWrapper(cublas_handle, cublaslt_handle);
                        // , stream);
     cublas_wrapper->setFP32GemmConfig();
-
-    int m = input1->shape[2];
-    int k = input1->shape[3];
-    int n = input2->shape[2];
-    int lda = m;
-    int ldb = k;
-    int ldc = m;
-    int64_t strideA = m * k;
-    int64_t strideB = k * n;
-    int64_t strideC = m * n;
+    // TODO:currently only consider trans_b
+    int Am = input1->shape[2];
+    int Ak = input1->shape[3];
+    int Bk = input2->shape[2];
+    int Bn = input2->shape[3];
+    int lda = Am;
+    int ldb = Bk;
+    int ldc = Am;
+    int64_t strideA = Am * Ak;
+    int64_t strideB = Bk * Bn;
+    int64_t strideC = Am * Bn;
     // TODO:check 4nd dim of input = 3rd dim of weight
     // TODO:check batchCount of two matrix is equal
     int batchCount = input1->shape[0] * input1->shape[1];
@@ -89,9 +101,9 @@ void launchLinearStridedBatchGemm(Tensor* input1,
     cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
     cublas_wrapper->stridedBatchedGemm(transA,
                                        transB,
-                                       m,
-                                       n,
-                                       k,
+                                       Am,
+                                       trans_b ? Bk : Bn,
+                                       Ak,
                                        (float*)(input1->data), //A
                                        lda,
                                        strideA,
