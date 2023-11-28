@@ -36,6 +36,7 @@ public:
                      T* d_output_weights,
                      T* d_out_bias,
                      T* d_ffn_down,
+                     T* d_ffn_down_bias,
                      T* d_ffn_gate,
                      T* d_ffn_up);
 

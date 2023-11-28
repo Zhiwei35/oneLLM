@@ -1,6 +1,9 @@
 #include <iostream>
 #include "src/utils/macro.h"
 #include "src/layers/decoder/context_decoder.h"
+//TODO: 1.more elegantly call DeviceSyncAndCheckCudaError();
+//2.ffn down proj dont have bias, but we cant pass void* to the fusedrmsnorm, here adopt a workaround that allocate 0.0f to bias,  which must be enhanced
+//3.line128 update the decoder input of next iter, I think this is right
 template<typename T>
 void LlamaContextDecoder::allocForForward(LLaMAAttentionDynParams& params)
 {
@@ -19,37 +22,19 @@ void LlamaContextDecoder::allocForForward(LLaMAAttentionDynParams& params)
 }
 void LlamaContextDecoder::free()
 {
-    allocator->deviceFree((void**)(&attention_mask->data));
-    allocator->deviceFree((void**)(&padding_offset->data));
-    allocator->deviceFree((void**)(&cum_seqlens->data));
+    allocator->deviceFree(attention_mask->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(padding_offset->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(cum_seqlens->data);
+    DeviceSyncAndCheckCudaError();
 }
 void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
 {
-//     TensorMap context_decoder_inputs{
-//         {"decoder_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_attention_input)},
-//          {"output_norm_weight", {MEMORY_GPU, dtype, {hidden_units_}, llamaweights->output_norm_weight}},
-        // weight {"qkv_bias", Tensor(GPU, type, {head_num * head_size}, d_qkv_bias)},
-        // {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
-//         {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
-//         {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
-        // {"layer_id", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_layer_id)},
-//         {"context_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
-//         {"attention_mask", Tensor(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)}
-//     };
-//     TensorMap context_decoder_outputs{
-//         {"decoder_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_output)},
-//         {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-//         {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
-//     };
-    
     allocForForward<float>(dyn_params);
     //1.
     Tensor seq_lens = input_tensors["input_length"];
-//    Tensor cum_seqlens = input_tensors["cum_seqlens"];
     Tensor padding_offset = input_tensors["padding_offset"];
-//    LLaMAAttentionDynParams dyn_params;
-//    dyn_params.batch_size = seq_lens->shape[0];
-//    dyn_params.max_q_len = padding_offset->shape[1];
     // shape:
         //seq_lengths:[batch size]
         //output cum_seqlens:[batch size + 1], first ele is 0
@@ -115,10 +100,10 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         ctxAttn->forward(ctx_attn_inputs, ctx_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params, ctxAttn->GetAttnStaticParams());
         //decoder_output += decoder_input
-        launchFusedAddBiasResidualRMSNorm((float*)decoder_input.data, //in residual, [num tokens, hidden_units]
-                                        (float*)decoder_output.data, //in&out, [num tokens, hidden_units]
-                                        (float*)layerWeights[layer_id]->self_attn_weight.output.bias, //bias
-                                        (float*)layerWeights[layer_id]->ffn_norm_weight.gamma,//rmsnorm weights, [hidden_units]
+        launchFusedAddBiasResidualRMSNorm((float*)(decoder_input.data), //in residual, [num tokens, hidden_units]
+                                        (float*)(decoder_output.data), //in&out, [num tokens, hidden_units]
+                                        (float*)(layerWeights[layer_id]->self_attn_weight.output.bias), //bias
+                                        (float*)(layerWeights[layer_id]->ffn_norm_weight.gamma),//rmsnorm weights, [hidden_units]
                                         rmsnorm_eps,
                                         dyn_params.num_tokens,
                                         hidden_units);
@@ -140,9 +125,10 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
                                         dyn_params.num_tokens,
                                         hidden_units);
         DeviceSyncAndCheckCudaError();
-        //decoder_input = decoder_output; // for next iter
+        decoder_input = decoder_output; // for next iter
     }
     if (is_free_buffer_after_forward) {
         free();
     }
+    DeviceSyncAndCheckCudaError();
 }

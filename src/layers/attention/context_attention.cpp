@@ -61,7 +61,7 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
     // store qk*v
     qkv_buf_w_pad->data = allocator->Malloc(
         qkv_buf_w_pad->data, sizeof(T) * batch_size * max_q_len * head_num * head_size, false);
-    qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad->data, sizeof(T) * num_tokens * head_num * head_size, false);
+    qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad_1->data, sizeof(T) * num_tokens * head_num * head_size, false);
 
     // directly pointer
     // qkv_buf_wo_pad = allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_tokens * qkv_head_num * head_size);
@@ -83,13 +83,19 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
 }
     
 void LLaMAContextAttentionLayer::free(){
-    allocator->deviceFree((void**)(&qkv_buf_wo_pad->data));
-    allocator->deviceFree((void**)(&q_buf_w_pad->data));
-    allocator->deviceFree((void**)(&k_cache_buf->data));
-    allocator->deviceFree((void**)(&v_cache_buf->data));
-    allocator->deviceFree((void**)(&qk_buf->data));
-    allocator->deviceFree((void**)(&qkv_buf_w_pad->data));
-    allocator->deviceFree((void**)(&qkv_buf_wo_pad->data));
+    allocator->deviceFree(qkv_buf_wo_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(q_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(k_cache_buf->data);
+    DeviceSyncAndCheckCudaError();
+//    allocator->deviceFree(v_cache_buf->data);
+//    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qk_buf->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qkv_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qkv_buf_wo_pad_1->data);
 }
 
 void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params)
@@ -148,4 +154,5 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     if (is_free_buffer_after_fwd) {
         this->free();
     }
+    DeviceSyncAndCheckCudaError();
 }

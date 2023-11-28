@@ -117,7 +117,7 @@ int main() {
     const int token_num = batch_size * seq_len;
     const int head_num = 2;
     const int kv_head_num = 1;
-    const int head_size = 128;
+    const int head_size = 8;
     const int rotary_embedding_dim = 128;
     const int rotary_embedding_base = 10000;
     const int max_position_embeddings = 2048;

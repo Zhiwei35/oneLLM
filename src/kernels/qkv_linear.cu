@@ -26,7 +26,7 @@ void launchLinearGemm(Tensor* input,
                        // , stream);
     cublas_wrapper->setFP32GemmConfig();
     int input_lda = input->shape[0];
-    int weight_ldb = input->shape[1];
+    int weight_ldb = input->shape.size() > 2 ? input->shape[1] * input->shape[2] : input->shape[1];
     // TODO:check 2nd dim of input = 1st dim of weight
     int output_ldc = input_lda;         
     int k = output->shape[1];

@@ -63,6 +63,7 @@ void LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
                                 T* d_output_weights,
                                 T* d_output_bias,
                                 T* d_ffn_down,
+                                T* d_ffn_down_bias,
                                 T* d_ffn_gate,
                                 T* d_ffn_up)
 {
@@ -76,9 +77,10 @@ void LlamaLayerWeight::loadWeights(T* d_attn_norm_weight,
     ffn_weight.gate.data = (void*)d_ffn_gate;
     ffn_weight.up.data = (void*)d_ffn_up;
     ffn_weight.down.data = (void*)d_ffn_down;
+    ffn_weight.down.bias = (void*)d_ffn_down_bias;
 }
 //required in linking time
-template void LlamaLayerWeight::loadWeights(float*, float*, float*, float*, float*, float*, float*, float*, float*);
+template void LlamaLayerWeight::loadWeights(float*, float*, float*, float*, float*, float*, float*, float*, float*, float*);
 
 void freeWeights(BaseWeight& weights)
 {

@@ -3,7 +3,13 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include "src/layers/decoder/context_decoder.h"
-
+#include "src/utils/macro.h"
+//TODO: enhance the gpu memory deallocation so that we dont need to mannually cudaFree
+//bugs summary
+//1.rmsnorm kernel replace fusedrmsnorm, because cant pass nullptr to initialize  float*
+//2.biasandrope, I forgot to define the bias ptr in example
+//3.batchgemm, k is transpose, so the lda ldb m n k must consider the trans_b=true
+//4.ctxattn and ffn, the device free function, must pass right params type
 int main(int argc, char** argv)
 {
     int head_num = 4;
@@ -134,17 +140,22 @@ int main(int argc, char** argv)
     for(int i = 0; i < head_num * head_size; i++){
         h_out_bias[i] = 2.0f;
     }
-    float* d_ffn_gate, *d_ffn_up, *d_ffn_down;
+    float* d_ffn_gate, *d_ffn_up, *d_ffn_down, *d_ffn_down_bias;
     float* h_ffn_gate = (float*) malloc(sizeof(float) * hidden_units * inter_size);
     float* h_ffn_up = (float*) malloc(sizeof(float) * hidden_units * inter_size);
     float* h_ffn_down = (float*) malloc(sizeof(float) * hidden_units * inter_size);
+    float* h_ffn_down_bias = (float*) malloc(sizeof(float) * hidden_units);
     cudaMalloc((void**)&d_ffn_gate, sizeof(float) * hidden_units * inter_size);
     cudaMalloc((void**)&d_ffn_up, sizeof(float) * hidden_units * inter_size);
     cudaMalloc((void**)&d_ffn_down, sizeof(float) * hidden_units * inter_size);
+    cudaMalloc((void**)&d_ffn_down_bias, sizeof(float) * hidden_units);
     for(int i = 0; i < hidden_units * inter_size; i++){
         h_ffn_gate[i] = 2.0f;
         h_ffn_up[i] = 1.0f;
         h_ffn_down[i] = 2.0f;
+        if (i < hidden_units){
+            h_ffn_down_bias[i] = 0.0f;
+        }
     }    
     // h2d
     cudaMemcpy(d_decoder_input, h_decoder_input, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
@@ -164,6 +175,7 @@ int main(int argc, char** argv)
     cudaMemcpy(d_output_weights, h_output_weights, sizeof(float) * q_hidden_units * q_hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_out_bias, h_out_bias, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_down, h_ffn_down, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_ffn_down_bias, h_ffn_down_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_gate, h_ffn_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_up, h_ffn_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
 
@@ -183,13 +195,13 @@ int main(int argc, char** argv)
                                             d_output_weights,
                                             d_out_bias,
                                             d_ffn_down,
+                                            d_ffn_down_bias,
                                             d_ffn_gate,
                                             d_ffn_up);
     }
 
     TensorMap decoder_inputs{
         {"decoder_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
-        //{"qkv_bias", Tensor(GPU, type, {head_num * head_size}, d_qkv_bias)},
         {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
         {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
         {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
@@ -221,24 +233,31 @@ int main(int argc, char** argv)
     // gpu buffer can be released in corresponding class
     free(h_decoder_input);
     cudaFree(d_decoder_input);
+    DeviceSyncAndCheckCudaError();
     free(h_all_k_cache);
     cudaFree(d_all_k_cache);
+    DeviceSyncAndCheckCudaError();
     free(h_all_v_cache);
     cudaFree(d_all_v_cache);
+    DeviceSyncAndCheckCudaError();
     free(h_padding_offset);
     cudaFree(d_padding_offset);
+    DeviceSyncAndCheckCudaError();
     free(h_history_len);
     cudaFree(d_history_len);
+    DeviceSyncAndCheckCudaError();
     free(h_ctx_len);
     cudaFree(d_ctx_len);
+    DeviceSyncAndCheckCudaError();
     free(h_input_len);
     cudaFree(d_input_len);
-    free(h_decoder_input);
-    cudaFree(d_decoder_input);
+    DeviceSyncAndCheckCudaError();
     free(h_mask);
     cudaFree(d_mask); 
+    DeviceSyncAndCheckCudaError();
     free(h_output_norm_weight);
     cudaFree(d_output_norm_weight);
+    DeviceSyncAndCheckCudaError();
     free(h_attn_norm_weight);
     free(h_ffn_norm_weight);
     free(h_qkv_weights);
@@ -246,6 +265,7 @@ int main(int argc, char** argv)
     free(h_output_weights);
     free(h_out_bias);
     free(h_ffn_down);
+    free(h_ffn_down_bias);
     free(h_ffn_up);    
     free(h_ffn_gate);
 }
