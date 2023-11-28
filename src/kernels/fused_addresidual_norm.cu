@@ -63,7 +63,7 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
     int tid = threadIdx.x;
     Vec_t *rsd, *bia, *s;
     Vec_t dout, tmp;
-    
+   // printf("in kernel\n");    
     T thread_accm = static_cast<T>(0);
     if (residual != nullptr && bias != nullptr){
         rsd = reinterpret_cast<Vec_t*>(residual + batch_id * hidden_units);//note the offset     should divide vec size
@@ -82,7 +82,7 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
         thread_accm += tmp.x * tmp.x + tmp.y * tmp.y + 
                        tmp.z * tmp.z + tmp.w * tmp.w;
     } // addresidual
-    
+  //  printf("in kernel 1\n");
     // mean(x^2)
     T blocksum = blockReduceSum<T>(thread_accm);
     __shared__ float inv_fenmu;
@@ -102,7 +102,8 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
         out[i].y = s[i].y * out[i].y * inv_fenmu;
         out[i].z = s[i].z * out[i].z * inv_fenmu;
         out[i].w = s[i].w * out[i].w * inv_fenmu;
-    }    
+    } 
+//    printf("in kernel 2\n");
 }
 
 template<typename T>

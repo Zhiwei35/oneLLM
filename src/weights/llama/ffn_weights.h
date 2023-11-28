@@ -1,3 +1,4 @@
+#pragma once
 #include "src/weights/base_weights.h"
 
 struct LLaMAFFNWeights {

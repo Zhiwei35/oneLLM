@@ -1,5 +1,6 @@
 #include <iostream>
 #include "src/layers/ffn/ffn.h"
+#include "src/utils/macro.h"
 
 LLaMAFFNLayer::LLaMAFFNLayer(int head_num,
                                int head_size,
@@ -30,9 +31,12 @@ void LLaMAFFNLayer::allocForForward(LLaMAAttentionDynParams& params){
 }
 
 void LLaMAFFNLayer::free(){
-    allocator->deviceFree((void**)(&SwiGLU_input->data));
-    allocator->deviceFree((void**)(&down_proj_input->data));
-    allocator->deviceFree((void**)(&down_proj_output->data));
+    allocator->deviceFree(SwiGLU_input->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(down_proj_input->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(down_proj_output->data);
+    DeviceSyncAndCheckCudaError();
 }
 
 void LLaMAFFNLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){

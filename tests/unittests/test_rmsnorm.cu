@@ -6,7 +6,7 @@
 #include <vector>      // std::vector
 
 #include <iostream>
-#include "src/kernels/fused_addresidual_norm.h"
+#include "src/kernels/rmsnorm_kernel.h"
 
 #include <stdio.h>
 
@@ -102,15 +102,14 @@ int main() {
     CHECK(cudaMemcpy(d_bias, h_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_scale, h_scale, sizeof(float) * hidden_units, cudaMemcpyHostToDevice));
 
+    DataType type_float = getTensorType<float>();
+    DataType type_int = getTensorType<int>();
+    Tensor decoder_out_tensor(Device::GPU, type_float, {num_tokens, hidden_units}, d_decoder_out);
+    LayerNormWeight scale;
+    scale.gamma = d_scale;
     // debug info, better to retain: 
     std::cout << "before launch kernel" << std::endl;
-    launchFusedAddBiasResidualRMSNorm(d_residual, 
-                                    d_decoder_out, 
-                                    d_bias,
-                                    d_scale,
-                                    eps,
-                                    num_tokens,
-                                    hidden_units);
+    launchRMSNorm(&decoder_out_tensor, scale, eps);
     // debug info, better to retain: 
     std::cout << "after launch kernel" << std::endl;
     // debug info, better to retain: 
@@ -127,7 +126,7 @@ int main() {
     bool is_right = CheckResult(CPUout, decoder_out, total_size);
     // debug info, better to retain: 
     std::cout << "before free" << std::endl;
-    std::cout << "linear passed" << std::endl;
+    std::cout << "rmsnorm passed" << std::endl;
     free(h_residual);
     free(h_decoder_out);
     free(h_bias);
@@ -139,3 +138,4 @@ int main() {
     cudaFree(d_bias);
     cudaFree(d_scale);
 }
+
