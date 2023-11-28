@@ -9,5 +9,6 @@ target_link_libraries(LlamaCtxdecoder PUBLIC
                                         llamaweights
                                         cal_paddingoffset
                                         build_casual_mask
+                                        rmsnorm
                                         addresandrms
 )

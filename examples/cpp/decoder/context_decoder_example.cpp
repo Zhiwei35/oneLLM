@@ -41,6 +41,9 @@ int main(int argc, char** argv)
     for(int i = 0; i < q_hidden_units * attn_dyn_params.num_tokens; i++) { 
        h_decoder_input[i] = 1.0f;
     }
+    
+    float* d_decoder_output;
+    cudaMalloc((void**)&d_decoder_output, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens);
 
     float* h_mask = (float*) malloc(sizeof(float) * attn_dyn_params.batch_size * attn_dyn_params.max_q_len * attn_dyn_params.max_k_len);
     float* d_mask;
@@ -192,12 +195,12 @@ int main(int argc, char** argv)
         {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
         {"context_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
         {"attention_mask", Tensor(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)},
-        {"output_norm_weight", Tensor(GPU, type, {hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
+        {"output_norm_weight", Tensor(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
     };
     //output buffer and input buffer are shared to reuse buffer between layers
     //I dont rewrite Tensor's copy constructor, default shallow copy, that can share buffer, which is I want
     TensorMap decoder_outputs{
-        {"decoder_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
+        {"decoder_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_output)},
         {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
         {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
     };

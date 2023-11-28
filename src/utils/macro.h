@@ -19,6 +19,11 @@ do                                                    \
     }                                                 \
 } while (0)
 
+static const char* _cudaGetErrorEnum(cudaError_t error)
+{
+    return cudaGetErrorString(error);
+}
+
 static const char* _cudaGetErrorEnum(cublasStatus_t error)
 {
     switch (error) {
@@ -65,6 +70,18 @@ void check(T result, char const* const func, const char* const file, int const l
 }
 
 #define CHECK_CUBLAS(val) check((val), #val, __FILE__, __LINE__)
+
+inline void syncAndCheck(const char* const file, int const line)
+{
+    cudaDeviceSynchronize();
+    cudaError_t result = cudaGetLastError();
+    if (result) {
+        throw std::runtime_error(std::string("[TM][ERROR] CUDA runtime error: ") + (_cudaGetErrorEnum(result)) + " "
+                                 + file + ":" + std::to_string(line) + " \n");
+    }
+}
+
+#define DeviceSyncAndCheckCudaError() syncAndCheck(__FILE__, __LINE__)
 
 [[noreturn]] inline void throwRuntimeError(const char* const file, int const line, std::string const& info = "")
 {

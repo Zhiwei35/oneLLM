@@ -1,4 +1,5 @@
 #include <iostream>
+#include "src/utils/macro.h"
 #include "src/layers/decoder/context_decoder.h"
 template<typename T>
 void LlamaContextDecoder::allocForForward(LLaMAAttentionDynParams& params)
@@ -61,6 +62,7 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
                            (int*)seq_lens.data, // in
                            dyn_params.batch_size,
                            dyn_params.max_q_len);
+    DeviceSyncAndCheckCudaError();
     //2.
     Tensor attention_mask = input_tensors["attention_mask"];
     Tensor context_length = input_tensors["context_length"];
@@ -71,6 +73,7 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
                             dyn_params.max_q_len, 
                             dyn_params.max_k_len, 
                             dyn_params.batch_size);
+    DeviceSyncAndCheckCudaError();
     // 3. RMSnorm
     Tensor decoder_input = input_tensors["decoder_input"];
     dyn_params.num_tokens = decoder_input.shape[0];
@@ -78,13 +81,10 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
     std::cout << "RMSnorm shape: "<< "\n"
               << "input: "<< decoder_input.shape[0] << "," << decoder_input.shape[1] <<"\n";
 
-    launchFusedAddBiasResidualRMSNorm((float*)nullptr, //in, [num tokens, q_hidden_units]
-                                    (float*)decoder_input.data, //in&out, [num tokens, q_hidden_units]
-                                    (float*)nullptr,
-                                    layerWeights[0]->attn_norm_weight.gamma,//rmsnorm weights, [q_hidden_units]
-                                    rmsnorm_eps,
-                                    dyn_params.num_tokens,
-                                    hidden_units);
+    launchRMSNorm(&decoder_input, //in&out, [num tokens, q_hidden_units]
+                  layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
+                  rmsnorm_eps);
+    DeviceSyncAndCheckCudaError();
     // 4. context attn
     Tensor history_length = input_tensors["history_length"];
     Tensor decoder_output = output_tensors["decoder_output"];
@@ -122,6 +122,7 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
                                         rmsnorm_eps,
                                         dyn_params.num_tokens,
                                         hidden_units);
+        DeviceSyncAndCheckCudaError();
         TensorMap ffn_inputs{
             {"ffn_input", decoder_output}
         };
@@ -138,7 +139,8 @@ void LlamaContextDecoder::forward(TensorMap& input_tensors, const std::vector<Ll
                                         rmsnorm_eps,
                                         dyn_params.num_tokens,
                                         hidden_units);
-        decoder_input = decoder_output; // for next iter
+        DeviceSyncAndCheckCudaError();
+        //decoder_input = decoder_output; // for next iter
     }
     if (is_free_buffer_after_forward) {
         free();

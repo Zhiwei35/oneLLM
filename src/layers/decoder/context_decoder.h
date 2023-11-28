@@ -1,6 +1,7 @@
 #include "src/kernels/build_casual_mask.h"
 #include "src/kernels/cal_paddingoffset.h"
 #include "src/kernels/fused_addresidual_norm.h"
+#include "src/kernels/rmsnorm_kernel.h"
 #include "src/layers/attention/context_attention.h"
 #include "src/layers/ffn/ffn.h"
 #include "src/weights/llama/llama_weights.h"

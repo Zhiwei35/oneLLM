@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include "src/kernels/qkv_bias_and_RoPE.h"
-
+#include "src/weights/llama/attention_weights.h"
 #define CHECK(call)                                   \
 do                                                    \
 {                                                     \
@@ -170,7 +170,9 @@ int main() {
     Tensor k_buf(Device::GPU, type, {batch_size, kv_head_num, seq_len, head_size}, dk);
     Tensor v_buf(Device::GPU, type, {batch_size, kv_head_num, seq_len, head_size}, dv);
     Tensor QKV_buf(Device::GPU, type, {token_num, head_num + 2 * kv_head_num, head_size}, dQKV);
-    Tensor qkv_bias_buf(Device::GPU, type, {(head_num + 2 * kv_head_num), head_size}, dqkv_bias);
+//    Tensor qkv_bias_buf(Device::GPU, type, {(head_num + 2 * kv_head_num), head_size}, dqkv_bias);
+    LLaMAattentionWeights attn_weights;
+    attn_weights.qkv.bias = dqkv_bias;
     Tensor input_length_buf(Device::GPU, type, {batch_size}, dinput_length);
     Tensor history_length_buf(Device::GPU, type, {batch_size}, dhistory_length);
     Tensor padding_offset_buf(Device::GPU, type, {batch_size, seq_len}, dpadding_offset);
@@ -185,7 +187,7 @@ int main() {
                                           &k_buf,
                                           &v_buf,
                                           &QKV_buf,
-                                          &qkv_bias_buf,
+                                          attn_weights.qkv,
                                           &padding_offset_buf,
                                           &history_length_buf,
                                           &input_length_buf,
