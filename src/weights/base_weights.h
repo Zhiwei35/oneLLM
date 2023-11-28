@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <cstdint>
 #include <cuda_fp16.h>
 enum class WeightType
 {

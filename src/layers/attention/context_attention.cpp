@@ -1,4 +1,5 @@
 #include <math.h>
+#include "src/utils/macro.h"
 #include "src/layers/attention/context_attention.h"
 
 LLaMAContextAttentionLayer::LLaMAContextAttentionLayer(
@@ -32,7 +33,7 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
     DataType type = getTensorType<T>(); 
     const int qkv_head_num = head_num + 2 * kv_head_num;
     //tensor wrapper
-    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num, head_size});
+    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num,  head_size});
     q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
     k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size}); //why here isn't max_k_len?cause the q/k/v is got by {bs, q_len, hiddenunits} * {hiddenunits, hiddenunits}
     v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
@@ -60,7 +61,7 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
     // store qk*v
     qkv_buf_w_pad->data = allocator->Malloc(
         qkv_buf_w_pad->data, sizeof(T) * batch_size * max_q_len * head_num * head_size, false);
-    qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad->data, sizeof(T) * num_tokens * head_num * head_size, false);
+    qkv_buf_wo_pad_1->data= allocator->Malloc(qkv_buf_wo_pad_1->data, sizeof(T) * num_tokens * head_num * head_size, false);
 
     // directly pointer
     // qkv_buf_wo_pad = allocator->Malloc(qkv_buf_wo_pad, sizeof(T) * num_tokens * qkv_head_num * head_size);
@@ -82,13 +83,19 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
 }
     
 void LLaMAContextAttentionLayer::free(){
-    allocator->deviceFree((void**)(&qkv_buf_wo_pad->data));
-    allocator->deviceFree((void**)(&q_buf_w_pad->data));
-    allocator->deviceFree((void**)(&k_cache_buf->data));
-    allocator->deviceFree((void**)(&v_cache_buf->data));
-    allocator->deviceFree((void**)(&qk_buf->data));
-    allocator->deviceFree((void**)(&qkv_buf_w_pad->data));
-    allocator->deviceFree((void**)(&qkv_buf_wo_pad->data));
+    allocator->deviceFree(qkv_buf_wo_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(q_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(k_cache_buf->data);
+    DeviceSyncAndCheckCudaError();
+//    allocator->deviceFree(v_cache_buf->data);
+//    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qk_buf->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qkv_buf_w_pad->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(qkv_buf_wo_pad_1->data);
 }
 
 void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params)
@@ -100,14 +107,16 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     //[num_tokens, hiddenunits] * [hiddenunits, hiddenunits]
     Tensor attention_input = inputs["attention_input"];
     launchLinearGemm(&attention_input, weights.qkv, qkv_buf_wo_pad);
+//    DeviceSyncAndCheckCudaError();
     //2.qkv bias and rope and padding
     //[num_tokens, hiddenunits]=>{batch_size, q(kv)head_num, max_q_len, head_size}
-    Tensor qkv_bias = inputs["qkv_bias"];
+//    Tensor qkv_bias = inputs["qkv_bias"];
     Tensor padding_offset = inputs["padding_offset"];
     Tensor history_length = inputs["history_length"];
     Tensor input_length = inputs["input_length"];
     launchAddFusedQKVBiasTransposeAndRoPE(q_buf_w_pad, k_buf_w_pad, v_buf_w_pad, qkv_buf_wo_pad,
-                                        &qkv_bias, &padding_offset, &history_length, &input_length, static_params);
+                                        weights.qkv, &padding_offset, &history_length, &input_length, static_params);
+    DeviceSyncAndCheckCudaError();
     //3.concat past kv cache
     //max_cache_seq_len = max_seq_len + max_prefix_prompt_length
     //{batch_size, kv_head_num, max_q_len, head_size}=>(num_layer ,batchxbeam ,max_cache_seq_len, hidden_units_};
@@ -117,26 +126,27 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     Tensor all_v_cache = outputs["all_v_cache"];
     launchAppendKVCache(k_buf_w_pad, v_buf_w_pad, &input_length, &history_length, 
                                 &layer_id, &all_k_cache, &all_v_cache);
+    DeviceSyncAndCheckCudaError();
     //4.MHA/MQA/GQA part, reduce kv cache size to [num_layer, bs, kv head num, max_seq_len, head size]
     //0.kv repeat/broadcast to adapt batchgemm shape requirement([bs, head num, seqlen, head size]) if need
     //[num_layer, bs, kv head num, max_seq_len, head size]=>[bs, q head num, max_k_len, head size]
     Tensor context_length = inputs["context_length"];
     launchTransposeKVCache(&all_k_cache, &all_v_cache, &context_length, 
                                 &layer_id, k_cache_buf, v_cache_buf);
-
+    DeviceSyncAndCheckCudaError();
     //1.qk [bs,qhead,qlen,headsize]*[bs,qhead,klen,headsize](N*T)=>[bs,head,qlen,klen]
     launchLinearStridedBatchGemm(q_buf_w_pad, k_cache_buf, qk_buf, false, true);
 
     //2.scale+mask+softmax
     Tensor attention_mask = inputs["attention_mask"];
     launchScaleMaskAndSoftmax(qk_buf, &attention_mask, qk_buf, scale);
-
+    DeviceSyncAndCheckCudaError();
     //3.qk*v [bs,head,qlen,klen]=>[bs,head,qlen,headsize]
     launchLinearStridedBatchGemm(qk_buf, v_cache_buf, qkv_buf_w_pad, false, false);
 
     //4.transpose+reshape([bs,head,seqlen,headsize]=>[bs,seqlen,head,headsize]=>[numtokens,hiddenunits])+remove padding
     launchTransposeOutRemovePadding(qkv_buf_w_pad, &padding_offset, qkv_buf_wo_pad_1);
-
+    DeviceSyncAndCheckCudaError();
     // 5.output linear [numtokens,hiddenunits]=>[numtokens,hiddenunits]
     Tensor attention_output = outputs["attention_output"];
     launchLinearGemm(qkv_buf_wo_pad_1, weights.output, &attention_output);
@@ -144,4 +154,5 @@ void LLaMAContextAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, 
     if (is_free_buffer_after_fwd) {
         this->free();
     }
+    DeviceSyncAndCheckCudaError();
 }

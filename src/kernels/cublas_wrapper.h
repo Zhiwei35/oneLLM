@@ -4,7 +4,7 @@
 #include <cuda_runtime.h>
 #include <map>
 #include <string>
-
+#include "src/utils/macro.h"
 //1.cublas API: must allocate the required matrices in the GPU memory space, 
 // fill them with data, call the sequence of desired cuBLAS functions, and then upload the results back to the host.
 //2.cublasXt API: have the data on the Host
