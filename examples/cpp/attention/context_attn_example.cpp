@@ -143,6 +143,7 @@ int main(int argc, char** argv)
     ctx_attn_weights.qkv.data = d_qkv_weights;
     ctx_attn_weights.qkv.shape = {q_hidden_units, hidden_units};
     ctx_attn_weights.qkv.type = wtype;
+    ctx_attn_weights.qkv.bias = d_qkv_bias;
     ctx_attn_weights.output.data = d_output_weights;
     ctx_attn_weights.output.shape = {q_hidden_units, q_hidden_units};
     ctx_attn_weights.output.type = wtype;

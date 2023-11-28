@@ -63,8 +63,9 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
     //const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
     const void* alpha = reinterpret_cast<void*>(&f_alpha);
     const void* beta = reinterpret_cast<void*>(&f_beta);
-    //cublasStatus_t status;
-    CHECK_CUBLAS(cublasGemmEx(cublas_handle_,
+    cublasStatus_t status;
+    //CHECK_CUBLAS(
+    status = cublasGemmEx(cublas_handle_,
                 transa,
                 transb,
                 m,
@@ -82,11 +83,11 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                 Ctype_,
                 ldc,
                 computeType_,
-                CUBLAS_GEMM_DEFAULT));
+                CUBLAS_GEMM_DEFAULT);
 //                CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
-    //if (status != CUBLAS_STATUS_SUCCESS){
-    //    std::cout << "gemm kernel exec error!!" << "\n";
-   // }
+    if (status != CUBLAS_STATUS_SUCCESS){
+        std::cout << "gemm kernel exec error!!" << "\n";
+    }
 }
 
 void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
@@ -113,8 +114,12 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
     //const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_beta)) : reinterpret_cast<const void*>(&f_beta);
     const void* alpha = reinterpret_cast<void*>(&f_alpha);
     const void* beta = reinterpret_cast<void*>(&f_beta);
-    cublasStatus_t status;
-    status = cublasGemmStridedBatchedEx(cublas_handle_,
+    std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"
+              << "lda,ldb,ldc=" << lda << "," << ldb << "," << ldc << "\n"
+              << "strideA,strideB,strideC=" << strideA << "," << strideB << "," << strideB << "\n"
+              << "batchcount=" << batchCount << "\n";
+//    cublasStatus_t status;
+    CHECK_CUBLAS(cublasGemmStridedBatchedEx(cublas_handle_,
                                 transa,
                                 transb,
                                 m,
@@ -136,8 +141,8 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
                                 strideC,
                                 batchCount,
                                 computeType_,
-                                CUBLAS_GEMM_DEFAULT);
-    if (status != CUBLAS_STATUS_SUCCESS){
-        std::cout << "batched gemm kernel exec error!!" << "\n";
-    }    
+                                CUBLAS_GEMM_DEFAULT));
+   // if (status != CUBLAS_STATUS_SUCCESS){
+   //     std::cout << "batched gemm kernel exec error!!" << "\n";
+   // }    
 }
