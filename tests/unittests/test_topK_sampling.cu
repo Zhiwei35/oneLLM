@@ -1,5 +1,5 @@
 #include <iostream>
-#include "topK_sampling.h"
+#include "src/kernels/topK_sampling.h"
 #include "src/utils/macro.h"
 
 int main() {
@@ -58,9 +58,9 @@ int main() {
     intParams.insert({"step", step});
     intParams.insert({"vocab_size", vocab_size});
     intParams.insert({"end_id", end_id});
-    std::cout << "before launch softmax kernel" << std::endl;
-    launchScaleMaskAndSoftmax(&topk_id, &topk_val, &cuseqlen, &finished, &output_id, intParams);
-    std::cout << "after launch softmax kernel" << std::endl;
+    std::cout << "before launch sampling kernel" << std::endl;
+    launchSampling(&topk_id, &topk_val, &cuseqlen, &finished, &output_id, intParams);
+    std::cout << "after launch sampling kernel" << std::endl;
     std::cout << "cuda memcpy device to host" << std::endl;
     // Note: remember to memcpy from device to host and define the correct copy size(mul the sizeof(dtype)), or will cause segment fault
     CHECK(cudaMemcpy(h_outid, output_id.data, sizeof(int) * batch_size, cudaMemcpyDeviceToHost));
