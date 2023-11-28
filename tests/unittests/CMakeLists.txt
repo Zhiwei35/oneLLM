@@ -116,6 +116,15 @@ target_link_libraries(  # Libs for test_softmax
     -lcudadevrt
     softmax) 
 
+add_executable(sample_test
+    test_topK_sampling.cu
+)
+target_link_libraries(  # Libs for test_softmax
+    sample_test PUBLIC
+    -lcudart
+    -lcudadevrt
+    sample) 
+
 add_executable(embedding
     test_input_embedding.cu
 )
