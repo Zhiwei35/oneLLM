@@ -33,10 +33,10 @@ int main(int argc, char** argv)
     cublasWrapper* cublas_wrapper = new cublasWrapper(cublas_handle, cublaslt_handle);
     BaseAllocator* allocator = new CudaAllocator;
     // prepare input、weight and output data
-    float* h_attention_input = (float*) malloc(sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
+    float* h_attention_input = (float*) malloc(sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens);
     float* d_attention_input;
-    cudaMalloc((void**)&d_attention_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens);
-    for(int i = 0; i < hidden_units * attn_dyn_params.num_tokens; i++) { 
+    cudaMalloc((void**)&d_attention_input, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens);
+    for(int i = 0; i < q_hidden_units * attn_dyn_params.num_tokens; i++) { 
        h_attention_input[i] = 1.0f;
     }
     float* h_qkv_weights = (float*) malloc(sizeof(float) * q_hidden_units * hidden_units);
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
     cudaMalloc((void**)&d_output_weights, sizeof(float) * q_hidden_units * q_hidden_units);
 
     // h2d
-    cudaMemcpy(d_attention_input, h_attention_input, sizeof(float) * hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_attention_input, h_attention_input, sizeof(float) * q_hidden_units * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
     cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * q_hidden_units * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_all_k_cache, h_all_k_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
     TensorMap ctx_attn_inputs{
-        {"attention_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_attention_input)},
+        {"attention_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_input)},
         {"qkv_bias", Tensor(GPU, type, {hidden_units}, d_qkv_bias)},
         {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
         {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},

@@ -33,7 +33,7 @@ void LLaMAContextAttentionLayer::allocForForward(LLaMAAttentionDynParams& params
     DataType type = getTensorType<T>(); 
     const int qkv_head_num = head_num + 2 * kv_head_num;
     //tensor wrapper
-    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num * head_size});
+    qkv_buf_wo_pad = new Tensor(Device::GPU, type, {num_tokens, qkv_head_num,  head_size});
     q_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, head_num, max_q_len, head_size});
     k_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size}); //why here isn't max_k_len?cause the q/k/v is got by {bs, q_len, hiddenunits} * {hiddenunits, hiddenunits}
     v_buf_w_pad = new Tensor(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
