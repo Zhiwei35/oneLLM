@@ -1,12 +1,8 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
-void launchDecoderMaskedMHA(float* q,
-                            float* k,
-                            float* v,
-                            float* k_cache,
-                            float* v_cache,
-                            float* mha_output,
-                            const int batch_size,
-                            const int num_heads,
-                            const int head_size,
-                            const int step);
+void launchDecoderMaskedMHA(Tensor* qkv_buf,
+                            Tensor* k_cache,
+                            Tensor* v_cache,
+                            Tensor* finished,
+                            Tensor* step,
+                            Tensor* mha_output);

@@ -42,8 +42,10 @@ void LLaMASelfAttentionLayer::allocForForward(LLaMAAttentionDynParams& params) {
 }
 
 void LLaMASelfAttentionLayer::free(){
-    allocator->deviceFree((void**)(&qkv_buf->data));
-    allocator->deviceFree((void**)(&mha_output->data));
+    allocator->deviceFree(qkv_buf->data);
+    DeviceSyncAndCheckCudaError();
+    allocator->deviceFree(mha_output->data);
+    DeviceSyncAndCheckCudaError();
 }
 
 void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params)
@@ -52,22 +54,29 @@ void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLa
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
     allocForForward<float>(params);//intermediat buf
     //1. qkv linear
+    //[bs,1,q_hidden_units] * [q_hidden_units, hidden_units] = [bs,1,hidden_units]
     Tensor attention_input = inputs["attention_input"];
     launchLinearGemm(&attention_input, weights.qkv, qkv_buf);
 
-    //2. masked mha
+    //2. biasrope + masked mha
+    //目前和FT lmdeploy相比少了total_padding_len(用在rope，timestep-=padlen（合理，不用对pad求rope），在llamabatch::initializeGenerate函数里面得到) sequence_lengths（每个句子所有轮的总长度，用在求tlength dynamic_ntk下的rotary_embedding_base）
     Tensor attention_output = outputs["attention_output"];
-    Tensor key_cache       = outputs["key_cache"];
+    //[step, bs, kv head num, head size],貌似少了一个layerid这样一个shape，后面看看添到哪维
+    Tensor key_cache       = outputs["key_cache"]; // prepared in llamacachemgr and llamabatch::initialize
     Tensor value_cache     = outputs["value_cache"];
     Tensor finished = inputs["finished"];
-    Tensor sequence_lengths = inputs["sequence_lengths"]; // length_per_sample, 贯穿全kernel，to get tlength, to decide kv cache seqlen, that is kv cache's step/seqlen
-    Tensor total_padding_len = inputs["total_padding_len"]; //[bs], for rope
+    // Tensor total_padding_len = inputs["total_padding_len"]; //[bs], for rope
     Tensor step = inputs["step"];//[1]
     Tensor layer_id = inputs["layer_id"];//[1]
+
     launchDecoderMaskedMHA(qkv_buf, &key_cache, &value_cache, &finished, &step, mha_output);
+    DeviceSyncAndCheckCudaError();
 
     launchLinearGemm(mha_output, weights.output, &attention_output);
     if (is_free_buffer_after_fwd) {
         this->free();
+        DeviceSyncAndCheckCudaError();
     }
+    //seqlen将在sampling更新
+    //Tensor sequence_lengths = inputs["sequence_lengths"]; //[bs] length_per_sample, 贯穿全kernel，to get tlength, to decide kv cache seqlen, that is kv cache's step/seqlen
 }

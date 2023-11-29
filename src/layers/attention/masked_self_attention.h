@@ -7,6 +7,7 @@
 #include "src/utils/tensor.h"
 #include "src/kernels/cublas_wrapper.h"
 #include "src/models/llama/llama_params.h"
+#include "src/utils/macro.h"
 //template<typename T>
 // 这里面的数据成员都是只存在于attention layer，而不像finished，seqlengths这种贯穿整个过程
 class LLaMASelfAttentionLayer {

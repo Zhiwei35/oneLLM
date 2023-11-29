@@ -10,7 +10,7 @@ __global__ void SamplingKernel(int* topk_id,
                                bool* is_finished, //[bs]
                                int K,
                                int rand_num, // that is step
-                               int end_id,
+                               int end_id, // when initialize llama model, we will init it, and this is a fixed val
                                int vocab_size)
 {
     int batch_id = blockIdx.x;
