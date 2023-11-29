@@ -29,13 +29,13 @@ void LlamaSelfDecoder::forward(TensorMap& input_tensors, const std::vector<Llama
     Tensor all_v_cache = output_tensors["all_v_cache"];
     DataType type_int = getTensorType<int>();
     int layer_id = 0;//TODO: enhance the layer_id update method
-    TensorMap ctx_attn_inputs{
+    TensorMap self_attn_inputs{
         {"attention_input", decoder_input},
         {"layer_id", Tensor(Device::CPU, type_int, {1}, &layer_id)},
         {"step", step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
         {"finished", finished}
     };
-    TensorMap ctx_attn_outputs{
+    TensorMap self_attn_outputs{
         {"attention_output", decoder_output},
         {"all_k_cache", all_k_cache},
         {"all_v_cache", all_v_cache}
@@ -45,7 +45,7 @@ void LlamaSelfDecoder::forward(TensorMap& input_tensors, const std::vector<Llama
             self_attn_inputs["layer_id"] = Tensor(Device::CPU, type_int, {1}, &layer_id);
         }
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
-        selfAttn->forward(ctx_attn_inputs, ctx_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params, ctxAttn->GetAttnStaticParams());
+        selfAttn->forward(self_attn_inputs, self_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params);//, selfAttn->GetAttnStaticParams());
         //decoder_output += decoder_input
         launchFusedAddBiasResidualRMSNorm((float*)(decoder_input.data), //in residual, [bs, q hidden_units]
                                           (float*)(decoder_output.data), //in&out, [bs, q hidden_units]

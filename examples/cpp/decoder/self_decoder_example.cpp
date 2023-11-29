@@ -60,7 +60,7 @@ int main(){
     bool* h_finished = (bool*) malloc(sizeof(bool) * attn_dyn_params.batch_size);
     bool* d_finished;
     for(int i = 0; i < attn_dyn_params.batch_size; i++){
-        h_finished = static_cast<bool>(0);
+        h_finished[i] = static_cast<bool>(0);
     }
 
     // weight
@@ -150,6 +150,7 @@ int main(){
 
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
+    DataType type_bool = getTensorType<bool>();
     std::vector<LlamaLayerWeight*> layerWeights;
     WeightType wtype = getWeightType<float>();
     layerWeights.reserve(num_layers);
@@ -170,7 +171,7 @@ int main(){
     }
 
     TensorMap decoder_inputs{
-        {"attention_input", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_input)},
+        {"attention_input", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_input)},
         // {"sequence_lengths", Tensor(GPU, type, {hidden_units}, )},
         // {"total_padding_len", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, )},
         {"step", Tensor(CPU, type_int, {1}, &h_step)},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
@@ -179,7 +180,7 @@ int main(){
         {"output_norm_weight", Tensor(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
     };
     TensorMap decoder_outputs{
-        {"attention_output", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_output)},
+        {"attention_output", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_output)},
         {"key_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
         {"value_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
     };
