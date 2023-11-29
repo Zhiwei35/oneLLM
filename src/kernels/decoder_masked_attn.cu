@@ -145,7 +145,9 @@ __global__ void masked_MHA_kernel(const float* q,
                     //const int num_heads,
                     const int head_size,
                     const int step,
-                    float scale){// rsqrt(dh)
+                    float scale,
+                    int   rotary_embedding_dim,
+                    float rotary_embedding_base){// rsqrt(dh)
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     int q_head_id = bid % head_num;
@@ -153,7 +155,7 @@ __global__ void masked_MHA_kernel(const float* q,
     int kv_head_id = bid % kv_head_num;
     int kv_batch_id = bid / kv_head_num;
 
-    int batch_stride = num_heads * head_size;
+    int batch_stride = head_num * head_size;
     int head_stride = head_size;
     int q_offset = q_batch_id * batch_stride + q_head_id * head_stride + tid;
     int k_offset = kv_batch_id * batch_stride + kv_head_id * head_stride + tid;
@@ -161,7 +163,7 @@ __global__ void masked_MHA_kernel(const float* q,
 
     int vec_size = Vec<float>::size;
     int q_offset_vec = q_batch_id * batch_stride + q_head_id * head_stride + tid * vec_size;
-    int k_offset_vec = k_batch_id * batch_stride + kv_head_id * head_stride + tid * vec_size;
+    int k_offset_vec = kv_batch_id * batch_stride + kv_head_id * head_stride + tid * vec_size;
 
     using Vec_t = typename Vec<float>::Type;
     Vec_t qvec, kvec;
@@ -170,9 +172,9 @@ __global__ void masked_MHA_kernel(const float* q,
     const float* k_mem = k;
     const float* v_mem = v;
     if (tid * vec_size < head_size) {
-        qvec = *reinterpret_cast<Vec_t*>(&q_mem[q_offset_vec]);
-        kvec = *reinterpret_cast<Vec_t*>(&k_mem[k_offset_vec]);
-        apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, timestep);
+        qvec = *reinterpret_cast<Vec_t*>(const_cast<float*>(&q_mem[q_offset_vec]));
+        kvec = *reinterpret_cast<Vec_t*>(const_cast<float*>(&k_mem[k_offset_vec]));
+        apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
     extern __shared__ float sqk[];
@@ -271,7 +273,9 @@ void launchDecoderMaskedMHA(Tensor* qkv_buf,
                             Tensor* v_cache,
                             Tensor* finished,
                             Tensor* step,
-                            Tensor* mha_output){
+                            Tensor* mha_output,
+                            LLaMAAttentionStaticParams& static_params
+                            ){
     const int batch_size = qkv_buf->shape[0];
     const int qkv_head_num = qkv_buf->shape[1];
     const int kv_head_num = k_cache->shape[2]; 
@@ -286,10 +290,14 @@ void launchDecoderMaskedMHA(Tensor* qkv_buf,
 
     float scale = rsqrt(float(head_size));
 
+    int   rotary_embedding_dim = static_params.rotary_embedding_dim;
+    float rotary_embedding_base = static_params.rotary_embedding_base;
+    int   max_position_embeddings = static_params.max_position_embeddings;
+    bool  use_dynamic_ntk = static_params.use_dynamic_ntk;
     dim3 grid(batch_size * head_num);//这里的block分配可以匹配得上lmdeploy
     dim3 block(head_size); //vec size = 4 for fp32
     printf("calling fused masked self attn kernel\n");
-    masked_MHA_kernel<<<grid, block, (3 * head_size + step) * sizeof(float)>>>(q,
+    masked_MHA_kernel<<<grid, block, (3 * head_size + cur_step) * sizeof(float)>>>(q,
                                                                                 k,
                                                                                 v,
                                                                                 (float*)k_cache->data,
@@ -301,7 +309,9 @@ void launchDecoderMaskedMHA(Tensor* qkv_buf,
                                                                                 //num_heads,
                                                                                 head_size,
                                                                                 cur_step,
-                                                                                scale);
+                                                                                scale,
+                                                                                rotary_embedding_base,
+                                                                                rotary_embedding_dim);
     printf("called fused masked self attn kernel\n");
 }
 

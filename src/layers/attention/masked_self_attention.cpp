@@ -48,7 +48,7 @@ void LLaMASelfAttentionLayer::free(){
     DeviceSyncAndCheckCudaError();
 }
 
-void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params)
+void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params)
 {   
     //maybe we can create a method to arrange the input tensor and pointer to a struct
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
@@ -69,7 +69,7 @@ void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLa
     Tensor step = inputs["step"];//[1]
     Tensor layer_id = inputs["layer_id"];//[1]
 
-    launchDecoderMaskedMHA(qkv_buf, &key_cache, &value_cache, &finished, &step, mha_output);
+    launchDecoderMaskedMHA(qkv_buf, &key_cache, &value_cache, &finished, &step, mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
 
     launchLinearGemm(mha_output, weights.output, &attention_output);
