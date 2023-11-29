@@ -13,3 +13,13 @@ target_link_libraries(LlamaCtxAttn PUBLIC
                              fused_transpose_reshape_remv_pad
                              transpose
                              softmax)
+
+                             add_library(LlamaCtxAttn STATIC context_attention.cpp)
+
+set_property(TARGET LlamaselfAttn PROPERTY POSITION_INDEPENDENT_CODE  ON)
+set_property(TARGET LlamaselfAttn PROPERTY CUDA_RESOLVE_DEVICE_SYMBOLS  ON)
+target_link_libraries(LlamaselfAttn PUBLIC
+#                             -lcudart
+                             -lcudadevrt
+                             decoder_masked_attn
+)
