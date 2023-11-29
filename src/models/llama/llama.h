@@ -5,18 +5,20 @@
 #include "src/kernels/beamsearch_topK.h" //topK
 #include "src/kernels/topK_sampling.h" //sampling
 
-class Llama {
+class Llama: public baseModel{
 private:
     const int head_num;
+    const int kv_head_num;
     const int head_size;
     const int inter_size;
-    const int num_layer;
+    const int num_layers;
     const int vocab_size;
     int vocab_size_padded;
     float rmsnorm_eps = 1e-6f;   
-    const int start_id;
-    const int end_id;
+    const int start_id = 0; // from hf modeling_config
+    const int end_id = 2;// from hf modeling_config
     const int hidden_units; 
+    const int max_seq_len;
 
     LlamaWeight* weights;
     LlamaSelfDecoder* decoder;
@@ -29,25 +31,59 @@ public:
         int                       kv_head_num,
         int                       head_size,
         int                       inter_size,
-        int                       num_layer,
+        int                       num_layers,
         int                       vocab_size,
-        const LLaMAAttentionStaticParams&  attn_params,
-        float                        norm_eps,
-        int                          max_batch_size,
-        int                          max_context_token_num,
+        const LLaMAAttentionStaticParams&  attn_static_params,
+        // int                          max_batch_size,
+        // int                          max_context_token_num,
         int                          max_seq_len,//session_len
         int                          step,
-        int                          start_id,
-        int                          end_id,
+        // int                          start_id,
+        // int                          end_id,
         //for base model
         cudaStream_t                 stream,
         cublasMMWrapper*             cublas_wrapper,
         BaseAllocator*               allocator,
         bool                         is_free_buffer_after_forward,
-        cudaDeviceProp*              cuda_device_prop);
+        cudaDeviceProp*              cuda_device_prop):
+    BaseModel(stream, cublas_wrapper, allocator, is_free_buffer_after_forward, cuda_device_prop),
+    head_num(head_num),
+    kv_head_num(kv_head_num),
+    head_size(head_size),
+    inter_size(inter_size),
+    num_layers(num_layers),
+    vocab_size(vocab_size),
+    vocab_size_padded(vocab_size),
+    step(step),
+    hidden_units(head_num * head_size),
+    max_seq_len(max_seq_len) {
+        decoder = new LlamaSelfDecoder(head_num,
+                                        kv_head_num,
+                                        head_size,
+                                        inter_size,
+                                        num_layers,
+                                        attn_static_params,
+                                        rmsnorm_eps,
+                                        stream,
+                                        cublas_wrapper,
+                                        allocator,
+                                        is_free_buffer_after_forward);
+
+        context_decoder = new LlamaContextDecoder(head_num,
+                                                    kv_head_num,
+                                                    head_size,
+                                                    inter_size,
+                                                    num_layers,
+                                                    attn_static_params,
+                                                    rmsnorm_eps,
+                                                    stream,
+                                                    cublas_wrapper,
+                                                    allocator,
+                                                    is_free_buffer_after_forward);
+    }
 
     ~Llama();
-    
+
     void loadWeights(std::string file);
 
     std::string MakeInput(const std::string &history, int round, const std::string &input); // 根据历史信息和当前输入生成prompt
@@ -85,4 +121,8 @@ public:
                     int        ite,
                     size_t     session_len,
                     size_t     batch_size);
+
+    void LMHeadAndTopKSample(){
+        
+    };
 };

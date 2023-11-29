@@ -49,4 +49,27 @@
 //     tie_word_embeddings=False,
 //     **kwargs,
 // ):
+#include "src/models/llama/llama.h"
+#include "src/models/tokenizer.h"
+void Llama::loadWeights(std::string file)
+{
 
+}
+
+std::string Llama::MakeInput(const std::string &history, int round, const std::string &input) {
+    return (round == 0 ? pre_prompt : history) + user_role + input + bot_role;
+}
+
+std::string Llama::MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output) {
+    return (round == 0 ? pre_prompt : history) + user_role + input + bot_role + output + history_sep;
+}
+
+int Llama::forward(TensorMap& inputs, TensorMap& outputs, Weight& weight, DynParams& dparams, StaticParams& sparams){
+
+}
+
+std::string Llama::Response(const std::string &input, CallBack PrintRes) {
+    Tokenizer tokenizer;
+    // this input already include self-defined pre prompt
+    Tensor input_ids = tokenizer.Encode(input);
+}
