@@ -6,22 +6,9 @@
 #include <vector>      // std::vector
 
 #include "src/kernels/decoder_masked_attn.h"
+#include "src/utils/macro.h"
+
 // bug1: MUST add CHECK to cudaMemcpy to see if its work well
-#define CHECK(call)                                   \
-do                                                    \
-{                                                     \
-    const cudaError_t error_code = call;              \
-    if (error_code != cudaSuccess)                    \
-    {                                                 \
-        printf("CUDA Error:\n");                      \
-        printf("    File:       %s\n", __FILE__);     \
-        printf("    Line:       %d\n", __LINE__);     \
-        printf("    Error code: %d\n", error_code);   \
-        printf("    Error text: %s\n",                \
-            cudaGetErrorString(error_code));          \
-        exit(1);                                      \
-    }                                                 \
-} while (0)
 
 void CPUMaskedAttn(const float* q,
                     const float* k,
@@ -126,42 +113,42 @@ int main() {
     constexpr int batch_size = 1;
     constexpr int head_size = 16;
     constexpr int num_heads = 2;
+    constexpr int kv_num_heads = 1;
     constexpr int step = 4;
     constexpr int max_seq_len = 32;
-    float* h_q;
-    float* d_q;
-    int q_size = batch_size * num_heads * head_size;
-    h_q = (float*)malloc(sizeof(float) * q_size);
-    cudaMalloc((void**)&d_q, sizeof(float) * q_size);
+    float* h_qkv;
+    float* d_qkv;
+    int qkv_size = batch_size * (2 * kv_num_heads + num_heads) * head_size;
+    h_qkv = (float*)malloc(sizeof(float) * qkv_size);
+    cudaMalloc((void**)&d_qkv, sizeof(float) * qkv_size);
 
-    float* h_k;
-    float* d_k;
-    int k_size = batch_size * num_heads * head_size;
-    h_k = (float*)malloc(sizeof(float) * k_size);
-    cudaMalloc((void**)&d_k, sizeof(float) * k_size);
+    // float* h_k;
+    // float* d_k;
+    // int k_size = batch_size * num_heads * head_size;
+    // h_k = (float*)malloc(sizeof(float) * k_size);
+    // cudaMalloc((void**)&d_k, sizeof(float) * k_size);
 
-    float* h_v;
-    float* d_v;
-    int v_size = batch_size * num_heads * head_size;
-    h_v = (float*)malloc(sizeof(float) * v_size);
-    cudaMalloc((void**)&d_v, sizeof(float) * v_size);  
+    // float* h_v;
+    // float* d_v;
+    // int v_size = batch_size * num_heads * head_size;
+    // h_v = (float*)malloc(sizeof(float) * v_size);
+    // cudaMalloc((void**)&d_v, sizeof(float) * v_size);  
 
     float* h_kcache;
     float* d_kcache;
-    int kcache_size = max_seq_len * batch_size * num_heads * head_size;
+    int kcache_size = max_seq_len * batch_size * kv_num_heads * head_size;
     h_kcache = (float*)malloc(sizeof(float) * kcache_size);
     cudaMalloc((void**)&d_kcache, sizeof(float) * kcache_size);  
 
     float* h_vcache;
     float* d_vcache;
-    int vcache_size = max_seq_len * batch_size * num_heads * head_size;
+    int vcache_size = max_seq_len * batch_size * kv_num_heads * head_size;
     h_vcache = (float*)malloc(sizeof(float) * vcache_size);
     cudaMalloc((void**)&d_vcache, sizeof(float) * vcache_size);  
 
-    for(int i = 0; i < q_size; i++) { // initialize host data
-        h_q[i] = 1.0f;
-        h_k[i] = 1.0f;
-        h_v[i] = 1.0f;
+    for(int i = 0; i < qkv_size; i++) { // initialize host data
+        h_qkv[i] = 1.0f;
+
     }
     // note: prompt phase only generate part of k v cache
     for(int i = 0; i < (kcache_size * step) / max_seq_len; i++) { // initialize host data
@@ -175,13 +162,38 @@ int main() {
     h_o = (float*)malloc(sizeof(float) * o_size);
     cudaMalloc((void**)&d_o, sizeof(float) * o_size); 
 
-    cudaMemcpy(d_q, h_q, sizeof(float) * q_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_k, h_k, sizeof(float) * k_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_v, h_v, sizeof(float) * v_size, cudaMemcpyHostToDevice);
+    //int layer_id = 0;
+    bool* h_finished = (bool*) malloc(sizeof(bool) * batch_size);
+    bool* d_finished;
+    for(int i = 0; i < batch_size; i++){
+        h_finished = static_cast<bool>(0);
+    }
+    float* h_qkv_bias = (float*) malloc(sizeof(float) * (2 * kv_num_heads + num_heads) * head_size);
+    float* d_qkv_bias;
+    cudaMalloc((void**)&d_qkv_bias, sizeof(float) * (2 * kv_num_heads + num_heads) * head_size);// wehn add bias to k, we ensure head_id < kv_head_num
+    for(int i = 0; i < (2 * kv_num_heads + num_heads) * head_size; i++){
+        h_qkv_bias[i] = 2.0f;
+    }
+
+    // cudaMemcpy(d_q, h_q, sizeof(float) * q_size, cudaMemcpyHostToDevice);
+    // cudaMemcpy(d_k, h_k, sizeof(float) * k_size, cudaMemcpyHostToDevice);
+    // cudaMemcpy(d_v, h_v, sizeof(float) * v_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv, h_qkv, sizeof(float) * batch_size * (2 * kv_num_heads + num_heads) * head_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * (2 * kv_num_heads + num_heads) * head_size, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_finished, h_finished, sizeof(bool) * batch_size, cudaMemcpyHostToDevice);
+
     cudaMemcpy(d_kcache, h_kcache, sizeof(float) * kcache_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_vcache, h_vcache, sizeof(float) * vcache_size, cudaMemcpyHostToDevice);
-  
-    launchDecoderMaskedMHA(d_q, d_k, d_v, d_kcache, d_vcache, d_o, batch_size, num_heads, head_size, step);
+    DataType type = getTensorType<float>(); 
+    DataType type_bool = getTensorType<bool>(); 
+    Tensor qkv(GPU, type, {batch_size ,num_heads + 2 * kv_num_heads, head_size}, d_qkv);
+    Tensor kcache(GPU, type, {max_seq_len, batch_size, kv_num_heads, head_size}, d_kcache);
+    Tensor vcache(GPU, type, {max_seq_len, batch_size, kv_num_heads, head_size}, d_vcache);
+    Tensor finished(GPU, type_bool, {batch_size}, d_finished);
+    Tensor step(CPU, type_int, {1}, &step);
+    Tensor mha_output(GPU, type, {batch_size, num_heads, head_size}, d_o);
+
+    launchDecoderMaskedMHA(&qkv, &kcache, &vcache, &finished, &step, &mha_output);
     CHECK(cudaMemcpy(h_o, d_o, sizeof(float) * o_size, cudaMemcpyDeviceToHost));
     float* CPU_output = (float*)malloc(sizeof(float) * o_size);
     CPUMaskedAttn(h_q, h_k, h_v, h_kcache, h_vcache, CPU_output, batch_size, num_heads, head_size, step);
@@ -192,16 +204,14 @@ int main() {
         printf("test failed");
     }
 
-    free(h_q);
-    free(h_k);
-    free(h_v);
+    free(h_qkv);
     free(h_kcache);
     free(h_vcache);
     free(h_o);
     free(CPU_output);
-    cudaFree(d_q);
-    cudaFree(d_k);
-    cudaFree(d_v);
+    free(h_finished);
+    cudaFree(d_finished);
+    cudaFree(d_qkv);
     cudaFree(d_o);
     cudaFree(d_kcache);
     cudaFree(d_vcache);

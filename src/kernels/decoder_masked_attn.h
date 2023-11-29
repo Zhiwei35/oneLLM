@@ -1,5 +1,7 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
+#include "src/utils/tensor.h"
+
 void launchDecoderMaskedMHA(Tensor* qkv_buf,
                             Tensor* k_cache,
                             Tensor* v_cache,
