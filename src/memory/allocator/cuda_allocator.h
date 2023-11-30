@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include "src/memory/allocator/base_allocator.h"
-
+// I use Bytes to printf buffer size msg, because sometime I allocate <1KB buffer, which causes that display 0KB
 struct CudaBigBlock {
     void *data;
     size_t size;
@@ -79,8 +79,8 @@ public:
             if (blockID != -1) {
                 BigBlocks[blockID].is_allocated = true;
                 std::cout << "allocate a existed big block, id = " << blockID 
-                                                <<", size = "<< size / 1024 << "KB"
-                                                <<", block size = "<< BigBlocks[blockID].size / 1024 << "KB"
+                                                <<", size = "<< size << "B"
+                                                <<", block size = "<< BigBlocks[blockID].size << "B"
                                                 << std::endl;
                                                 
                 return BigBlocks[blockID].data;
@@ -89,7 +89,7 @@ public:
             void* new_buffer;
             cudaMalloc(&new_buffer, size);
             std::cout << "allocate a new big block from OS using cudaMalloc, size = "
-                                                << size / 1024 << "KB"
+                                                << size << "B"
                                                 << std::endl;
             BigBlocks.push_back(CudaBigBlock(new_buffer, size, true));
             return new_buffer;
@@ -101,8 +101,8 @@ public:
                 SmallBlocks[i].is_allocated = true;
                 FreeSize[i] += SmallBlocks[i].size;//小buf size
                 std::cout << "allocate a existed small block, id = " << i 
-                                <<", size = "<< size / 1024 << "KB"
-                                <<", block size = "<< SmallBlocks[i].size / 1024 << "KB"
+                                <<", size = "<< size << "B"
+                                <<", block size = "<< SmallBlocks[i].size << "B"
                                 << std::endl;
                 return SmallBlocks[i].data;
             }
@@ -137,7 +137,7 @@ public:
                         std::cout << "free a small block to OS using cudaFree, block id = "
                                                             << i
                                                             << ",size = "
-                                                            << cudaBlocks[i].size / 1024 << "KB"
+                                                            << cudaBlocks[i].size << "B"
                                                             << std::endl;
                         cudaFree(cudaBlocks[i].data);
                     } else {
@@ -159,7 +159,7 @@ public:
                     std::cout << "free a small block but not to OS, block id = "
                                                         << i
                                                         << ",size = "
-                                                        << cudaBlocks[i].size / 1024 << "KB"
+                                                        << cudaBlocks[i].size << "B"
                                                         << std::endl;
                     return;
                 }
@@ -171,7 +171,7 @@ public:
                     std::cout << "free a big block but not to OS, block id = "
                                                         << i
                                                         << ",size = "
-                                                        << cudaBlocks[i].size / 1024 << "KB"
+                                                        << cudaBlocks[i].size << "B"
                                                         << std::endl;
                     bigBlocks[i].is_allocated = false;
                     return;
