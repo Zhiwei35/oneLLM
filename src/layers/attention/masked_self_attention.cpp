@@ -62,8 +62,8 @@ void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLa
     //目前和FT lmdeploy相比少了total_padding_len(用在rope，timestep-=padlen（合理，不用对pad求rope），在llamabatch::initializeGenerate函数里面得到) sequence_lengths（每个句子所有轮的总长度，用在求tlength dynamic_ntk下的rotary_embedding_base）
     Tensor attention_output = outputs["attention_output"];
     //[step, bs, kv head num, head size],貌似少了一个layerid这样一个shape，后面看看添到哪维
-    Tensor key_cache       = outputs["key_cache"]; // prepared in llamacachemgr and llamabatch::initialize
-    Tensor value_cache     = outputs["value_cache"];
+    Tensor key_cache       = outputs["all_k_cache"]; // prepared in llamacachemgr and llamabatch::initialize
+    Tensor value_cache     = outputs["all_v_cache"];
     Tensor finished = inputs["finished"];
     // Tensor total_padding_len = inputs["total_padding_len"]; //[bs], for rope
     Tensor step = inputs["step"];//[1]
