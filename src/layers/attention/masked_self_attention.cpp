@@ -69,7 +69,7 @@ void LLaMASelfAttentionLayer::forward(TensorMap& inputs, TensorMap& outputs, LLa
     Tensor step = inputs["step"];//[1]
     Tensor layer_id = inputs["layer_id"];//[1]
 
-    launchDecoderMaskedMHA(qkv_buf, &key_cache, &value_cache, &finished, &step, mha_output, attn_static_params);
+    launchDecoderMaskedMHA(qkv_buf, weights.qkv, &key_cache, &value_cache, &finished, &step, mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
 
     launchLinearGemm(mha_output, weights.output, &attention_output);

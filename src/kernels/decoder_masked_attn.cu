@@ -136,6 +136,7 @@ inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_d
 __global__ void masked_MHA_kernel(const float* q,
                     const float* k,
                     const float* v,
+                    float* qkv_bias,
                     float* k_cache,
                     float* v_cache,
                     float* mha_output,
@@ -173,7 +174,15 @@ __global__ void masked_MHA_kernel(const float* q,
     const float* v_mem = v;
     if (tid * vec_size < head_size) {
         qvec = *reinterpret_cast<Vec_t*>(const_cast<float*>(&q_mem[q_offset_vec]));
+        Vec_t q_bias = *reinterpret_cast<Vec_t*>(&qkv_bias[q_head_id * head_size + tid * vec_size]);
+        for(int i = 0; i < vec_size; i++) {
+            reinterpret_cast<float*>(&qvec)[i] += reinterpret_cast<float*>(&q_bias)[i];
+        }
         kvec = *reinterpret_cast<Vec_t*>(const_cast<float*>(&k_mem[k_offset_vec]));
+        Vec_t k_bias =*reinterpret_cast<Vec_t*>(&qkv_bias[kv_head_id * head_size + tid * vec_size + head_num * head_size]);
+        for(int i = 0; i < vec_size; i++) {
+            reinterpret_cast<float*>(&kvec)[i] += reinterpret_cast<float*>(&k_bias)[i];
+        }
         apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
@@ -269,6 +278,7 @@ __global__ void masked_MHA_kernel(const float* q,
 //                             const int head_size,
 //                             const int step){
 void launchDecoderMaskedMHA(Tensor* qkv_buf,
+                            BaseWeight& qkv,
                             Tensor* k_cache,
                             Tensor* v_cache,
                             Tensor* finished,
@@ -300,6 +310,7 @@ void launchDecoderMaskedMHA(Tensor* qkv_buf,
     masked_MHA_kernel<<<grid, block, (3 * head_size + cur_step) * sizeof(float)>>>(q,
                                                                                 k,
                                                                                 v,
+                                                                                (float*)qkv.bias,
                                                                                 (float*)k_cache->data,
                                                                                 (float*)v_cache->data,
                                                                                 (float*)mha_output->data,
