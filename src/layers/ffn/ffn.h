@@ -44,6 +44,8 @@ public:
                     bool is_free_buffer_after_fwd);
     template<typename T>
     void allocForForward(LLaMAAttentionDynParams& params);
+    template<typename T>
+    void allocForForward(int batch_size);
     void free();
     void forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params);
 };

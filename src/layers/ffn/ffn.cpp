@@ -30,6 +30,17 @@ void LLaMAFFNLayer::allocForForward(LLaMAAttentionDynParams& params){
     down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * num_tokens * hidden_units, false);
 }
 
+template<typename T>
+void LLaMAFFNLayer::allocForForward(int batch_size){
+    DataType type = getTensorType<T>(); 
+    SwiGLU_input = new Tensor(Device::GPU, type, {2, batch_size, inter_size});
+    down_proj_input = new Tensor(Device::GPU, type, {batch_size, inter_size});
+    down_proj_output = new Tensor(Device::GPU, type, {batch_size, hidden_units});
+    SwiGLU_input->data = allocator->Malloc(SwiGLU_input->data, sizeof(T) * batch_size * 2 * inter_size, false);
+    down_proj_input->data = allocator->Malloc(down_proj_input->data, sizeof(T) * batch_size * inter_size, false);
+    down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * batch_size * hidden_units, false);
+}
+
 void LLaMAFFNLayer::free(){
     allocator->deviceFree(SwiGLU_input->data);
     DeviceSyncAndCheckCudaError();
@@ -40,8 +51,11 @@ void LLaMAFFNLayer::free(){
 }
 
 void LLaMAFFNLayer::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){
-    allocForForward<float>(params);
-
+    if (params.num_tokens > 0) {
+        allocForForward<float>(params);
+    } else {
+        allocForForward<float>(params.batch_size);
+    }
     Tensor ffn_input = inputs["ffn_input"];
     Tensor ffn_output = outputs["ffn_output"];
     // gate proj
