@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include "src/memory/allocator/base_allocator.h"
-
+// I use Bytes to printf buffer size msg, because sometime I allocate <1KB buffer, which causes that display 0KB
 struct CudaBigBlock {
     void *data;
     size_t size;
