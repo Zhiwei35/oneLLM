@@ -3,20 +3,7 @@
 //bugs1: 2nd warpreducesum returns 0, because blockDim.x < 32, blockDim.x / 32=0
 //bugs2: output buffer valuse is the same as ones before call, thats because we didn't successfully write into the output address
 //bugs3: output buffer's 1st 32 values are right, the latter is wrong, because when we use vec, the ele nums of a row is hiddenunits/vecsize, we should note the row stride to move the ptr carefully
-template<typename T>
-struct Vec {};
 
-template<>
-struct Vec<half> {
-   using Type = half2;
-   static constexpr int size = 2;
-};
-
-template<>
-struct Vec<float> {
-    using Type = float4;
-    static constexpr int size = 4;
-};
 template<typename T>
 __device__ T warpReduceSum(T val){
     for(int i = 32 / 2; i > 0; i >>= 1){
@@ -38,7 +25,7 @@ __device__ T blockReduceSum(T val){
     }
     __syncthreads();
 
-    T sum = tid < warpnum ? warpsum[tid] : 0;
+    T sum = tid < warpnum ? warpsum[tid] : (T)0.0f;
 //    printf("tid=%d, blocksize=%d, warpnum=%d,sum=%f\n",tid, blockDim.x, warpnum, sum);
     sum = warpReduceSum<T>(sum); //though 0th own the sum, but dont need to shfl sync
 //    if(tid == 0){
@@ -115,8 +102,8 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
                                     float eps, //RMSNorm eps
                                     int num_tokens, 
                                     int hidden_units){
-    int vec_size = Vec<T>::size;
-    using Vec_t = typename Vec<T>::Type;
+    int vec_size = Vec<half>::size;
+    using Vec_t = typename Vec<half>::Type;
     int batch_id = blockIdx.x;
     int tid = threadIdx.x;
     Vec_t *rsd, *bia, *s;
@@ -138,7 +125,7 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
     __shared__ Vec_t inv_fenmu;
     if(tid == 0){
         //debug info printf("blocksum on GPU is %f\n", blocksum);
-        inv_fenmu = statci_cast<Vec_t>(__float2half(rsqrt(blocksum / hidden_units + eps)));
+        inv_fenmu = scalar_cast_vec<Vec_t>(__float2half(rsqrt(blocksum / hidden_units + eps)));
         //debug info printf("inv_fenmu on GPU is %f\n", inv_fenmu);
     }
     // rmsnorm
@@ -167,15 +154,15 @@ void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_
     T* gamma = scale.gamma;
     int vec_size = Vec<T>::size;
     int num_threads = hidden_units / vec_size; // assume head size can be divided by 4 and 2
-    dim3 grid(num_tokens);
+    dim3 grid(batch_size);
     dim3 block(num_threads);
     printf("calling fusedAddBiasResidualAndRMSNorm\n");
-    FusedAddBiasResidualRMSNorm<T><<<grid, block>>>(residual, 
-                                                decoder_out,
+    FusedAddBiasResidualRMSNorm<T><<<grid, block>>>(residual->data, 
+                                                decoder_out->data,
                                                 bias,
                                                 gamma,
                                                 eps,
-                                                num_tokens,
+                                                batch_size,
                                                 hidden_units);
     printf("called fusedAddBiasResidualAndRMSNorm\n");
 }

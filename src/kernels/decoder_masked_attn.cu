@@ -192,6 +192,7 @@ __global__ void masked_MHA_kernel(const T* q,
         apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
+    // define smem type is char type!! not T
     extern __shared__ char sqk[];
     T* sq = reinterpret_cast<T*>(sqk);
     T* sk = sq + head_size;
@@ -333,7 +334,7 @@ __global__ void masked_MHA_kernel(const half* q,
     }
     // q k smem for block reduce
     extern __shared__ char sqk[];
-    half* sq = reinterpret_cast<T*>(sqk);
+    half* sq = reinterpret_cast<half*>(sqk);
     half* sk = sq + head_size;
     float* logits = reinterpret_cast<float*>(sk + head_size);
     half* sv = reinterpret_cast<half*>(logits + step);

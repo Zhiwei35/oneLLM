@@ -59,8 +59,8 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
     half h_alpha = (half)(f_alpha);
     half h_beta  = (half)(f_beta);
     int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
-    const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_alpha)) : reinterpret_cast<void*>(&f_alpha);
-    const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
+    const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&(h_alpha)) : reinterpret_cast<void*>(&f_alpha);
+    const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&(h_beta)) : reinterpret_cast<void*>(&f_beta);
     // const void* alpha = reinterpret_cast<void*>(&f_alpha);
     // const void* beta = reinterpret_cast<void*>(&f_beta);
     CHECK_CUBLAS(cublasGemmEx(cublas_handle_,
@@ -104,8 +104,8 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
 {
     int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
     const void* alpha =
-       is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_alpha)) : reinterpret_cast<const void*>(&f_alpha);
-    const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_beta)) : reinterpret_cast<const void*>(&f_beta);
+       is_fp16_computeType ? reinterpret_cast<void*>(&(f_alpha)) : reinterpret_cast<const void*>(&f_alpha);
+    const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&(f_beta)) : reinterpret_cast<const void*>(&f_beta);
     // const void* alpha = reinterpret_cast<void*>(&f_alpha);
     // const void* beta = reinterpret_cast<void*>(&f_beta);
     std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"

@@ -203,7 +203,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(half*           q_buf,
     Vec_t q, k, v;
     if(is_data){
         q = *reinterpret_cast<Vec_t*>(&QKV[q_id]);
-        Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size]));
+        Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<half*>(&qkv_bias[head_id * head_size + tid * vec_size]));
         q = __hadd2(q, q_bias);
     }
     // note: kv judge condition is add a item that head_id<kv_head_id in case of GQA and MQA
