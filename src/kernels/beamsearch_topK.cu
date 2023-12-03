@@ -113,7 +113,7 @@ void launchTopKforBeamSearch(TensorWrapper<T>* probs,
     dim3 block_round2(256);
     // debug info, better to retain: std::cout << "in cu file, before launch" << std::endl;
     topK_kernel_round1<T, beamwidth, 256, BlockPerBeam>
-                        <<<grid_round1, block_round1>>>(probs, vocab_size, topK_ids, topK_vals);
+                        <<<grid_round1, block_round1>>>(probs->data, vocab_size, topK_ids, topK_vals);
     topK_kernel_round2<T, beamwidth, 256, BlockPerBeam>
                         <<<grid_round2, block_round2>>>(topK_ids, topK_vals, final_topK_ids, final_topK_vals);
     // debug info, better to retain: std::cout << "in cu file, after launch" << std::endl;

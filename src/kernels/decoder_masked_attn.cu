@@ -142,7 +142,7 @@ __global__ void masked_MHA_kernel(const T* q,
                     T* qkv_bias,
                     T* k_cache,
                     T* v_cache,
-                    T* mha_output,
+                    float* mha_output,
                     const int batch_size,
                     const int head_num,
                     const int kv_head_num,
@@ -445,14 +445,14 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
     const int kv_head_num = k_cache->shape[2]; 
     int head_num = qkv_head_num - 2 * kv_head_num;
     const int head_size = qkv_buf->shape[2];
-    const int cur_step = *(int*)step->data;
+    const int cur_step = step->getVal<int>();
     T* qkv_data = qkv_buf->data;
     //[bs,1,qkv_head_num,head_size]
-    TIME_UTC* q = qkv_data;
+    T* q = qkv_data;
     T* k = qkv_data + head_num * head_size;
     T* v = qkv_data + (head_num + kv_head_num) * head_size;
     bool is_half = sizeof(T) == 2;
-    T scale = is_half? __float2half(rsqrt(float(head_size))) : rsqrt(float(head_size));
+    T scale = is_half ? __float2half(rsqrt(float(head_size))) : rsqrt(float(head_size));
 
     int   rotary_embedding_dim = static_params.rotary_embedding_dim;
     float rotary_embedding_base = static_params.rotary_embedding_base;

@@ -95,6 +95,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
     int token_padding_offset = padding_offset[token_id];
     // 0. filter the redundant part, we'd better to allocate more threads than data to ensure all data can be vectorized
     bool is_data = tid * vec_size < head_size;
+    bool is_half = sizeof(T) == 2;
     // 1. prapare rebuilding , do rebuild padding and transpose when store
     int dst_token_id = token_id + token_padding_offset; // token id after rebuild padding
 
