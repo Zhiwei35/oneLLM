@@ -38,13 +38,14 @@ inline __device__ half2 GetRoPEres(const half2 v, const float2 coef)
     return __float22half2_rn(rot_fv);
 }
 
-inline __device__ void apply_RoPE(half2& q, int tid, int rot_embed_dim, float base, float t_step)
+inline __device__ void apply_RoPE(half2& q, half2& k, int tid, int rot_embed_dim, float base, float t_step)
 {
     if (2 * tid >= rot_embed_dim) {
         return;
     }
     const auto coef = GetRoPEfreq(2 * tid, rot_embed_dim, base, t_step);
     q               = GetRoPEres(q, coef);
+    k               = GetRoPEres(k, coef);
 }
 
 inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_dim, float base, float t_step){
@@ -209,10 +210,10 @@ __global__ void add_fusedQKV_bias_transpose_kernel(half*           q_buf,
     if(is_data && head_id < kv_head_num){
         k = *reinterpret_cast<Vec_t*>(&QKV[k_id]);
         // note: I missed a vec_size about the bias offset causing memcpyd2h misaligned address
-        Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size]));
+        Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<half*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size]));
         k = __hadd2(k, k_bias);
         v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
-        Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
+        Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<half*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
         v = __hadd2(v, v_bias);
     }
 

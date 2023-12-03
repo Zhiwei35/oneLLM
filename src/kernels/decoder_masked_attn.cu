@@ -192,8 +192,8 @@ __global__ void masked_MHA_kernel(const T* q,
         apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
-    extern __shared__ T sqk[];
-    T* sq = sqk;
+    extern __shared__ char sqk[];
+    T* sq = reinterpret_cast<T*>(sqk);
     T* sk = sq + head_size;
     float* logits = reinterpret_cast<float*>(sk + head_size);
     T* sv = reinterpret_cast<T*>(logits + step);
@@ -332,8 +332,8 @@ __global__ void masked_MHA_kernel(const half* q,
         apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
-    extern __shared__ half sqk[];
-    half* sq = sqk;
+    extern __shared__ char sqk[];
+    half* sq = reinterpret_cast<T*>(sqk);
     half* sk = sq + head_size;
     float* logits = reinterpret_cast<float*>(sk + head_size);
     half* sv = reinterpret_cast<half*>(logits + step);
@@ -463,7 +463,7 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
     dim3 grid(batch_size * head_num);//这里的block分配可以匹配得上lmdeploy
     dim3 block(head_size); //vec size = 4 for fp32
     printf("calling fused masked self attn kernel\n");
-    masked_MHA_kernel<T><<<grid, block, (3 * head_size * sizeof(float) + cur_step * sizeof(float))>>>(
+    masked_MHA_kernel<T><<<grid, block, (3 * head_size * sizeof(T) + cur_step * sizeof(float))>>>(
                                                                                 q,
                                                                                 k,
                                                                                 v,
