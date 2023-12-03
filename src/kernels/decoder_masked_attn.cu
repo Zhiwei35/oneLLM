@@ -94,14 +94,14 @@ inline __device__ float2 GetRoPEres(const float2 v, const float2 coef)
     return rot_v;
 }
 
-inline __device__ uint32_t GetRoPEres(const uint32_t v, const float2 coef)
+inline __device__ uint32_t GetRoPEres(const half2 v, const float2 coef)
 {
     float2 fv     = half2_to_float2(v);
     float2 rot_fv = GetRoPEres(fv, coef);
     return float2_to_half2(rot_fv);
 }
 
-inline __device__ void apply_RoPE(uint32_t& q, int tid, int rot_embed_dim, float base, float t_step)
+inline __device__ void apply_RoPE(half2& q, int tid, int rot_embed_dim, float base, float t_step)
 {
     if (2 * tid >= rot_embed_dim) {
         return;
@@ -309,7 +309,7 @@ __global__ void masked_MHA_kernel(const half* q,
 
     using Vec_t = typename Vec<half>::Type;
     Vec_t qvec, kvec;
-    Vec_t scale_vec = static_cast<Vec_t>(scale);
+    Vec_t scale_vec = scalar_cast_vec<Vec_t>(scale);
     //reuse q k v reg from rope
     const half* q_mem = q;
     const half* k_mem = k;
@@ -326,22 +326,25 @@ __global__ void masked_MHA_kernel(const half* q,
         // for(int i = 0; i < vec_size; i++) {
         //     reinterpret_cast<float*>(&kvec)[i] += reinterpret_cast<float*>(&k_bias)[i];
         // }
-        vvec = *reinterpret_cast<Vec_t*>(const_cast<half*>(&v_mem[k_offset_vec]));
+        Vec_t vvec = *reinterpret_cast<Vec_t*>(const_cast<half*>(&v_mem[k_offset_vec]));
         kvec = __hadd2(kvec, k_bias);
         //uint32_t应该等价于half2，uint16_t应该等价于half，统一用一个就行了
         //对于half，进入rope的是uint16_t，vec_t是uint32_t/uint2
         apply_RoPE(qvec, kvec, tid, rotary_embedding_dim, rotary_embedding_base, step);
     }
     // q k smem for block reduce
-    extern __shared__ Vec_t sqk[];
-    Vec_t* sq = sqk;
-    Vec_t* sk = sq + head_size / vec_size;
-    float* logits = reinterpret_cast<float*>(sk + head_size / vec_size);
-    Vec_t* sv = reinterpret_cast<Vec_t*>(logits + step);
+    extern __shared__ half sqk[];
+    half* sq = sqk;
+    half* sk = sq + head_size;
+    float* logits = reinterpret_cast<float*>(sk + head_size);
+    half* sv = reinterpret_cast<half*>(logits + step);
     //sq[tid] = q_mem[qkv_offset];
+    Vec_t* sq_vec = reinterpret_cast<Vec_t*>(sq);
+    Vec_t* sk_vec = reinterpret_cast<Vec_t*>(sk);
+    Vec_t* sv_vec = reinterpret_cast<Vec_t*>(sv);
     if (tid * vec_size < head_size) {
         // *reinterpret_cast<Vec_t*>(&sq[tid * vec_size]) = qvec;
-        sq[tid] = qvec;
+        sq_vec[tid] = qvec;
     }
     __syncthreads();
     // FT 2.1的写法里面，kv cache是在prompt阶段已经填充，iter=0为token gen的起始iter
@@ -350,7 +353,7 @@ __global__ void masked_MHA_kernel(const half* q,
         // reuse k cache
         // float k = k_cache[iter * cache_offset + qkv_offset];
         //或许可以在每个step省略掉前step-1的qk dot
-        sk[tid]= *reinterpret_cast<Vec_t*>(&k_cache[iter * cache_offset + k_offset_vec]);
+        sk_vec[tid]= *reinterpret_cast<Vec_t*>(&k_cache[iter * cache_offset + k_offset_vec]);
         __syncthreads();
         // when final step, update k cache
         if (iter == step - 1 && tid * vec_size < head_size) {
@@ -358,12 +361,12 @@ __global__ void masked_MHA_kernel(const half* q,
             //k_cache[iter * cache_offset + qkv_offset] = k_mem[qkv_offset];
             //sk[tid] = k_mem[qkv_offset];
             *reinterpret_cast<Vec_t*>(&k_cache[iter * cache_offset + k_offset_vec]) = kvec;
-            sk[tid] = kvec;         
+            sk_vec[tid] = kvec;         
         }
 
         // sq[tid] = q_mem[qkv_offset];
         __syncthreads();
-        Vec_t qk = (tid * vec_size < head_size) ? __hmul2(__hmul2(sq[tid], sk[tid]), scale_vec) : static_cast<Vec_t>(0);
+        Vec_t qk = (tid * vec_size < head_size) ? __hmul2(__hmul2(sq_vec[tid], sk_vec[tid]), scale_vec) : scalar_cast_vec<Vec_t>(0.0f);
         //block reduce using multi warp reduce
         float qk_fp32 = __half2float(qk.x) + __half2float(qk.y);
         float attn_score = blockReduceSum<float>(qk_fp32);
@@ -395,11 +398,11 @@ __global__ void masked_MHA_kernel(const half* q,
     if (tid * vec_size < head_size) {
         // note: here is head size ,not step, because step by step, we have to use [1, step/seqlen] from logits * [1, head size] from v
         // so here we use acc O to acc the one ele logits * one ele v every step iter
-        float2 O = static_cast<float2>(0.0f);
+        float2 O = scalar_cast_vec<float2>(0.0f);
         //O.x = 0.0f;
         //O.y = 0.0f;
         for(int iter = 0; iter < step; iter++) {
-            sv[tid]= *reinterpret_cast<Vec_t*>(&v_cache[iter * cache_offset + k_offset_vec]);
+            sv_vec[tid]= *reinterpret_cast<Vec_t*>(&v_cache[iter * cache_offset + k_offset_vec]);
             //sv[tid]= v_cache[iter * cache_offset + k_offset];
             __syncthreads();
             // when final step, update k cache
@@ -408,12 +411,12 @@ __global__ void masked_MHA_kernel(const half* q,
                 // v_cache[iter * cache_offset + k_offset] = v_mem[k_offset];
                 // sv[tid] = v_mem[k_offset];
                 *reinterpret_cast<Vec_t*>(&v_cache[iter * cache_offset + k_offset_vec]) = vvec;
-                sv[tid] = vvec;  
+                sv_vec[tid] = vvec;  
             }
             //if(bid==0 && tid == 0){
             //printf("when tid=0, v cache = %f\n", sv[tid]);
-            O.x += logits[iter] * sv[tid].x;
-            O.y += logits[iter] * sv[tid].y;
+            O.x += (logits[iter] * sv_vec[tid].x);
+            O.y += (logits[iter] * sv_vec[tid].y);
             //O += sv[tid] * logits[iter];
             __syncthreads();
         }

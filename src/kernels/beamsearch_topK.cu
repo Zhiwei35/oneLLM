@@ -122,4 +122,4 @@ void launchTopKforBeamSearch(TensorWrapper<T>* probs,
 template void launchTopKforBeamSearch(TensorWrapper<float>* probs, 
                             TensorWrapper<float>* topk_workspace);
 template void launchTopKforBeamSearch(TensorWrapper<half>* probs, 
-                            TensorWrapper<half>* topk_workspace)
+                            TensorWrapper<half>* topk_workspace);
