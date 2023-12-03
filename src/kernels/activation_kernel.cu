@@ -36,8 +36,8 @@ __global__ void silu_and_mul_kernel<half>(
   using Vec_t = typename Vec<half>::Type;
   // Vec_t x_vec; 
   for (int idx = threadIdx.x * vec_size; idx < intermedia_size; idx += blockDim.x) {
-    const Vec_t x = *reinterpret_cast<Vec_t*>(&input[batch_idx * 2 * intermedia_size + idx]);
-    const Vec_t y = *reinterpret_cast<Vec_t*>(&input[batch_idx * 2 * intermedia_size + intermedia_size + idx]);
+    const Vec_t x = *reinterpret_cast<Vec_t*>(const_cast<half*>(&input[batch_idx * 2 * intermedia_size + idx]));
+    const Vec_t y = *reinterpret_cast<Vec_t*>(const_cast<half*>(&input[batch_idx * 2 * intermedia_size + intermedia_size + idx]));
     *reinterpret_cast<Vec_t*>(&out[batch_idx * intermedia_size + idx]) = __hmul2(silu<Vec_t>(x), y);
   }
 }

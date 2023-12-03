@@ -4,6 +4,8 @@
 #include "src/models/llama/llama_params.h"
 #include "src/utils/tensor.h"
 #include "src/weights/base_weights.h"
+#include "src/utils/vectorize_utils.h"
+
 template<typename T>
 void launchAddFusedQKVBiasTransposeAndRoPE(TensorWrapper<T>* q_buf,
                                            TensorWrapper<T>* k_buf,

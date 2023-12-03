@@ -16,50 +16,6 @@
 
 #include "src/kernels/qkv_bias_and_RoPE.h"
 
-template<typename T>
-struct Vec {
-    using Type = T;
-    static constexpr int size = 0;
-};
-
-template<>
-struct Vec<half> {
-    using Type = half2;
-    static constexpr int size = 2;
-};
-
-template<>
-struct Vec<float> {
-    using Type = float4;
-    static constexpr int size = 4;
-};
-
-struct TwoFloat2{
-    float2 x;
-    float2 y;
-};
-
-inline __device__ uint32_t float2_to_half2(float2 f)
-{
-    union {
-        uint32_t u32;
-        uint16_t u16[2];
-    } tmp;
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
-    asm volatile("cvt.rn.f16x2.f32 %0, %1, %2;\n" : "=r"(tmp.u32) : "f"(f.y), "f"(f.x));
-#else
-    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[0]) : "f"(f.x));
-    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[1]) : "f"(f.y));
-#endif
-    return tmp.u32;
-}
-inline __device__ float2 half2_to_float2(uint32_t v)
-{
-    uint16_t lo, hi;
-    asm volatile("mov.b32 {%0, %1}, %2;\n" : "=h"(lo), "=h"(hi) : "r"(v));
-    return make_float2(half_to_float(lo), half_to_float(hi));
-}
-
 inline __device__ float2 GetRoPEfreq(int zid, int rot_embed_dim, float base, float t_step)
 {
     const float inv_freq = t_step / powf(base, zid / (float)rot_embed_dim);

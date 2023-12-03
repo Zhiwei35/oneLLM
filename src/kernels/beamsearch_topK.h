@@ -2,7 +2,7 @@
 #include <float.h>
 #include <cuda.h>
 #include <cuda_fp16.h>
-
+#include "src/utils/tensor.h"
 template<typename T, int K>
 struct topK
 {

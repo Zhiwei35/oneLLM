@@ -3,20 +3,7 @@
 //bugs1: 2nd warpreducesum returns 0, because blockDim.x < 32, blockDim.x / 32=0
 //bugs2: output buffer valuse is the same as ones before call, thats because we didn't successfully write into the output address
 //bugs3: output buffer's 1st 32 values are right, the latter is wrong, because when we use vec, the ele nums of a row is hiddenunits/vecsize, we should note the row stride to move the ptr carefully
-template<typename T>
-struct Vec {};
 
-template<>
-struct Vec<half> {
-   using Type = half2;
-   static constexpr int size = 2;
-};
-
-template<>
-struct Vec<float> {
-    using Type = float4;
-    static constexpr int size = 4;
-};
 template<typename T>
 __device__ T warpReduceSum(T val){
     for(int i = 32 / 2; i > 0; i >>= 1){
