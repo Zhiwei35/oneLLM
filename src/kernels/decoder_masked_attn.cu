@@ -96,9 +96,9 @@ inline __device__ float2 GetRoPEres(const float2 v, const float2 coef)
 
 inline __device__ half2 GetRoPEres(const half2 v, const float2 coef)
 {
-    float2 fv     = half2_to_float2(v);
+    float2 fv     = __half22float2(v);
     float2 rot_fv = GetRoPEres(fv, coef);
-    return float2_to_half2(rot_fv);
+    return __float22half2_rn(rot_fv);
 }
 
 inline __device__ void apply_RoPE(half2& q, half2& k, int tid, int rot_embed_dim, float base, float t_step)
@@ -108,6 +108,7 @@ inline __device__ void apply_RoPE(half2& q, half2& k, int tid, int rot_embed_dim
     }
     const auto coef = GetRoPEfreq(2 * tid, rot_embed_dim, base, t_step);
     q               = GetRoPEres(q, coef);
+    k               = GetRoPEres(k, coef);
 }
 
 inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_dim, float base, float t_step){
@@ -167,7 +168,7 @@ __global__ void masked_MHA_kernel(const T* q,
     int vec_size = Vec<T>::size;
     int q_offset_vec = q_batch_id * batch_stride + q_head_id * head_stride + tid * vec_size;
     int k_offset_vec = kv_batch_id * batch_stride + kv_head_id * head_stride + tid * vec_size;
-    float scale = rsqrt(float(head_size))
+    float scale = rsqrt(float(head_size));
     using Vec_t = typename Vec<T>::Type;
     Vec_t qvec, kvec;
     //Vec_t scale_vec = static_cast<Vec_t>(scale);
@@ -194,8 +195,8 @@ __global__ void masked_MHA_kernel(const T* q,
     extern __shared__ T sqk[];
     T* sq = sqk;
     T* sk = sq + head_size;
-    float* logits = sk + head_size;
-    T* sv = logits + step;
+    float* logits = reinterpret_cast<float*>(sk + head_size);
+    T* sv = reinterpret_cast<T*>(logits + step);
     //sq[tid] = q_mem[qkv_offset];
     if (tid * vec_size < head_size) {
         *reinterpret_cast<Vec_t*>(&sq[tid * vec_size]) = qvec;

@@ -25,33 +25,33 @@ inline __device__ half2 scalar_cast_vec<half2, half>(half val)
     return __half2half2(val);
 }
 
-inline __device__ float half_to_float(uint16_t h)
-{
-    float f;
-    asm volatile("cvt.f32.f16 %0, %1;\n" : "=f"(f) : "h"(h));
-    return f;
-}
+// inline __device__ float half_to_float(uint16_t h)
+// {
+//     float f;
+//     asm volatile("cvt.f32.f16 %0, %1;\n" : "=f"(f) : "h"(h));
+//     return f;
+// }
 
-inline __device__ uint32_t float2_to_half2(float2 f)
-{
-    union {
-        uint32_t u32;
-        uint16_t u16[2];
-    } tmp;
-#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
-    asm volatile("cvt.rn.f16x2.f32 %0, %1, %2;\n" : "=r"(tmp.u32) : "f"(f.y), "f"(f.x));
-#else
-    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[0]) : "f"(f.x));
-    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[1]) : "f"(f.y));
-#endif
-    return tmp.u32;
-}
-inline __device__ float2 half2_to_float2(uint32_t v)
-{
-    uint16_t lo, hi;
-    asm volatile("mov.b32 {%0, %1}, %2;\n" : "=h"(lo), "=h"(hi) : "r"(v));
-    return make_float2(half_to_float(lo), half_to_float(hi));
-}
+// inline __device__ uint32_t float2_to_half2(float2 f)
+// {
+//     union {
+//         uint32_t u32;
+//         uint16_t u16[2];
+//     } tmp;
+// #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+//     asm volatile("cvt.rn.f16x2.f32 %0, %1, %2;\n" : "=r"(tmp.u32) : "f"(f.y), "f"(f.x));
+// #else
+//     asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[0]) : "f"(f.x));
+//     asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[1]) : "f"(f.y));
+// #endif
+//     return tmp.u32;
+// }
+// inline __device__ float2 half2_to_float2(uint32_t v)
+// {
+//     uint16_t lo, hi;
+//     asm volatile("mov.b32 {%0, %1}, %2;\n" : "=h"(lo), "=h"(hi) : "r"(v));
+//     return make_float2(half_to_float(lo), half_to_float(hi));
+// }
 
 template<typename T>
 struct Vec {
