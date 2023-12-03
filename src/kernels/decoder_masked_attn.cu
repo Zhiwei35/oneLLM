@@ -463,7 +463,7 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
     dim3 grid(batch_size * head_num);//这里的block分配可以匹配得上lmdeploy
     dim3 block(head_size); //vec size = 4 for fp32
     printf("calling fused masked self attn kernel\n");
-    masked_MHA_kernel<T><<<grid, block, (3 * head_size * sizeof(T) + cur_step * sizeof(float))>>>(
+    masked_MHA_kernel<T><<<grid, block, (3 * head_size * sizeof(float) + cur_step * sizeof(float))>>>(
                                                                                 q,
                                                                                 k,
                                                                                 v,

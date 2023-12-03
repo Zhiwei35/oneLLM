@@ -54,7 +54,7 @@ void launchBuildCausalMasks(TensorWrapper<T>* mask,
     int batch_size = mask->shape[0];
     int max_q_len = mask->shape[1];
     int max_k_len = mask->shape[2];
-    BuildCausalMasksConsideringContextPastKV<T><<<batch_size, 256>>>(mask, q_lens, k_lens, max_q_len, max_k_len);
+    BuildCausalMasksConsideringContextPastKV<T><<<batch_size, 256>>>(mask->data, q_lens->data, k_lens->data, max_q_len, max_k_len);
 }
 
 template void launchBuildCausalMasks(TensorWrapper<float>* mask, 
