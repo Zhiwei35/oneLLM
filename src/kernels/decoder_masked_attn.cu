@@ -94,14 +94,14 @@ inline __device__ float2 GetRoPEres(const float2 v, const float2 coef)
     return rot_v;
 }
 
-inline __device__ uint32_t GetRoPEres(const half2 v, const float2 coef)
+inline __device__ half2 GetRoPEres(const half2 v, const float2 coef)
 {
     float2 fv     = half2_to_float2(v);
     float2 rot_fv = GetRoPEres(fv, coef);
     return float2_to_half2(rot_fv);
 }
 
-inline __device__ void apply_RoPE(half2& q, int tid, int rot_embed_dim, float base, float t_step)
+inline __device__ void apply_RoPE(half2& q, half2& k, int tid, int rot_embed_dim, float base, float t_step)
 {
     if (2 * tid >= rot_embed_dim) {
         return;
@@ -149,7 +149,6 @@ __global__ void masked_MHA_kernel(const T* q,
                     //const int num_heads,
                     const int head_size,
                     const int step,
-                    T scale,
                     int   rotary_embedding_dim,
                     float rotary_embedding_base){// rsqrt(dh)
     int tid = threadIdx.x;
@@ -168,7 +167,7 @@ __global__ void masked_MHA_kernel(const T* q,
     int vec_size = Vec<T>::size;
     int q_offset_vec = q_batch_id * batch_stride + q_head_id * head_stride + tid * vec_size;
     int k_offset_vec = kv_batch_id * batch_stride + kv_head_id * head_stride + tid * vec_size;
-
+    float scale = rsqrt(float(head_size))
     using Vec_t = typename Vec<T>::Type;
     Vec_t qvec, kvec;
     //Vec_t scale_vec = static_cast<Vec_t>(scale);
@@ -306,9 +305,9 @@ __global__ void masked_MHA_kernel(const half* q,
     int vec_size = Vec<half>::size;
     int q_offset_vec = q_batch_id * batch_stride + q_head_id * head_stride + tid * vec_size;
     int k_offset_vec = kv_batch_id * batch_stride + kv_head_id * head_stride + tid * vec_size;
-
+    half scale = __float2half(rsqrt(float(head_size)));
     using Vec_t = typename Vec<half>::Type;
-    Vec_t qvec, kvec;
+    Vec_t qvec, kvec, vvec;
     Vec_t scale_vec = scalar_cast_vec<Vec_t>(scale);
     //reuse q k v reg from rope
     const half* q_mem = q;
@@ -326,7 +325,7 @@ __global__ void masked_MHA_kernel(const half* q,
         // for(int i = 0; i < vec_size; i++) {
         //     reinterpret_cast<float*>(&kvec)[i] += reinterpret_cast<float*>(&k_bias)[i];
         // }
-        Vec_t vvec = *reinterpret_cast<Vec_t*>(const_cast<half*>(&v_mem[k_offset_vec]));
+        vvec = *reinterpret_cast<Vec_t*>(const_cast<half*>(&v_mem[k_offset_vec]));
         kvec = __hadd2(kvec, k_bias);
         //uint32_t应该等价于half2，uint16_t应该等价于half，统一用一个就行了
         //对于half，进入rope的是uint16_t，vec_t是uint32_t/uint2
@@ -415,8 +414,8 @@ __global__ void masked_MHA_kernel(const half* q,
             }
             //if(bid==0 && tid == 0){
             //printf("when tid=0, v cache = %f\n", sv[tid]);
-            O.x += (logits[iter] * sv_vec[tid].x);
-            O.y += (logits[iter] * sv_vec[tid].y);
+            O.x += (logits[iter] * __half2float(sv_vec[tid].x));
+            O.y += (logits[iter] * __half2float(sv_vec[tid].y));
             //O += sv[tid] * logits[iter];
             __syncthreads();
         }
@@ -448,14 +447,14 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
     const int kv_head_num = k_cache->shape[2]; 
     int head_num = qkv_head_num - 2 * kv_head_num;
     const int head_size = qkv_buf->shape[2];
-    const int cur_step = step->getVal<int>();
+    const int cur_step = step->getVal();
     T* qkv_data = qkv_buf->data;
     //[bs,1,qkv_head_num,head_size]
     T* q = qkv_data;
     T* k = qkv_data + head_num * head_size;
     T* v = qkv_data + (head_num + kv_head_num) * head_size;
-    bool is_half = sizeof(T) == 2;
-    T scale = is_half ? __float2half(rsqrt(float(head_size))) : rsqrt(float(head_size));
+    // bool is_half = sizeof(T) == 2;
+    // T scale = is_half ? __float2half(rsqrt(float(head_size))) : rsqrt(float(head_size));
 
     int   rotary_embedding_dim = static_params.rotary_embedding_dim;
     float rotary_embedding_base = static_params.rotary_embedding_base;
@@ -478,7 +477,6 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                                                                                 //num_heads,
                                                                                 head_size,
                                                                                 cur_step,
-                                                                                scale,
                                                                                 rotary_embedding_base,
                                                                                 rotary_embedding_dim);
     printf("called fused masked self attn kernel\n");

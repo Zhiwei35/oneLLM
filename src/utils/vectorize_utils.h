@@ -7,6 +7,24 @@ inline __device__ T_OUT scalar_cast_vec(T_IN val)
     return val;
 }
 
+template<>
+inline __device__ half2 scalar_cast_vec<half2, float>(float val)
+{
+    return __float2half2_rn(val);
+}
+
+template<>
+inline __device__ float2 scalar_cast_vec<float2, float>(float val)
+{
+    return make_float2(val, val);
+}
+
+template<>
+inline __device__ half2 scalar_cast_vec<half2, half>(half val)
+{
+    return __half2half2(val);
+}
+
 inline __device__ float half_to_float(uint16_t h)
 {
     float f;
