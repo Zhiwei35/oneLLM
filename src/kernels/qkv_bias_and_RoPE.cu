@@ -23,6 +23,12 @@ struct Vec {
 };
 
 template<>
+struct Vec<half> {
+    using Type = half2;
+    static constexpr int size = 2;
+};
+
+template<>
 struct Vec<float> {
     using Type = float4;
     static constexpr int size = 4;
@@ -32,6 +38,27 @@ struct TwoFloat2{
     float2 x;
     float2 y;
 };
+
+inline __device__ uint32_t float2_to_half2(float2 f)
+{
+    union {
+        uint32_t u32;
+        uint16_t u16[2];
+    } tmp;
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 800
+    asm volatile("cvt.rn.f16x2.f32 %0, %1, %2;\n" : "=r"(tmp.u32) : "f"(f.y), "f"(f.x));
+#else
+    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[0]) : "f"(f.x));
+    asm volatile("cvt.rn.f16.f32 %0, %1;\n" : "=h"(tmp.u16[1]) : "f"(f.y));
+#endif
+    return tmp.u32;
+}
+inline __device__ float2 half2_to_float2(uint32_t v)
+{
+    uint16_t lo, hi;
+    asm volatile("mov.b32 {%0, %1}, %2;\n" : "=h"(lo), "=h"(hi) : "r"(v));
+    return make_float2(half_to_float(lo), half_to_float(hi));
+}
 
 inline __device__ float2 GetRoPEfreq(int zid, int rot_embed_dim, float base, float t_step)
 {
@@ -48,6 +75,21 @@ inline __device__ float2 GetRoPEres(const float2 v, const float2 coef)
     return rot_v;
 }
 
+inline __device__ uint32_t GetRoPEres(const uint32_t v, const float2 coef)
+{
+    float2 fv     = half2_to_float2(v);
+    float2 rot_fv = GetRoPEres(fv, coef);
+    return float2_to_half2(rot_fv);
+}
+
+inline __device__ void apply_RoPE(uint32_t& q, int tid, int rot_embed_dim, float base, float t_step)
+{
+    if (2 * tid >= rot_embed_dim) {
+        return;
+    }
+    const auto coef = GetRoPEfreq(2 * tid, rot_embed_dim, base, t_step);
+    q               = GetRoPEres(q, coef);
+}
 
 inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_dim, float base, float t_step){
     if(4 * tid >= rot_embed_dim){
@@ -70,12 +112,12 @@ inline __device__ void apply_RoPE(float4& q, float4& k, int tid, int rot_embed_d
     k_.x = GetRoPEres(k_.x ,coef0);
     k_.y = GetRoPEres(k_.y ,coef1);
 }
-
-__global__ void add_fusedQKV_bias_transpose_kernel(float*           q_buf,
-                                                    float*           k_buf,
-                                                    float*           v_buf,
-                                                    float*           QKV,
-                                                    const float*     qkv_bias,
+template<typename T>
+__global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
+                                                    T*           k_buf,
+                                                    T*           v_buf,
+                                                    T*           QKV,
+                                                    const T*     qkv_bias,
                                                     const int*   padding_offset, // created before qkv linear
                                                     const int*   history_length,
                                                     const int*   input_length, //actual length of each seq
@@ -89,8 +131,8 @@ __global__ void add_fusedQKV_bias_transpose_kernel(float*           q_buf,
                                                     float        rotary_embedding_base, // default 10000 in llama
                                                     int          max_position_embeddings,/*default 2048 in llama, placeholder for ntk RoPE*/
                                                     bool         use_dynamic_ntk/*placeholder for ntk RoPE*/){
-    int vec_size = Vec<float>::size;
-    using Vec_t = typename Vec<float>::Type;
+    int vec_size = Vec<T>::size;
+    using Vec_t = typename Vec<T>::Type;
     int token_id = blockIdx.x;
     int head_id = blockIdx.y;
     int tid = threadIdx.x;
@@ -113,24 +155,35 @@ __global__ void add_fusedQKV_bias_transpose_kernel(float*           q_buf,
     Vec_t q, k, v;
     if(is_data){
         q = *reinterpret_cast<Vec_t*>(&QKV[q_id]);
-        Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<float*>(&qkv_bias[head_id * head_size + tid * vec_size]));
-        for(int i = 0; i < vec_size; i++) {
-            reinterpret_cast<float*>(&q)[i] += reinterpret_cast<float*>(&q_bias)[i];
+        Vec_t q_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size]));
+        if(is_half) {
+            q = __hadd2(q, q_bias);
+        } else {
+            for(int i = 0; i < vec_size; i++) {
+                reinterpret_cast<float*>(&q)[i] += reinterpret_cast<float*>(&q_bias)[i];
+            }
         }
     }
     // note: kv judge condition is add a item that head_id<kv_head_id in case of GQA and MQA
     if(is_data && head_id < kv_head_num){
         k = *reinterpret_cast<Vec_t*>(&QKV[k_id]);
         // note: I missed a vec_size about the bias offset causing memcpyd2h misaligned address
-        Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<float*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size]));
-        for(int i = 0; i < vec_size; i++) {
-            reinterpret_cast<float*>(&k)[i] += reinterpret_cast<float*>(&k_bias)[i];
+        Vec_t k_bias =*reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size]));
+        if(is_half) {
+            k = __hadd2(k, k_bias);
+        } else {
+            for(int i = 0; i < vec_size; i++) {
+                reinterpret_cast<float*>(&k)[i] += reinterpret_cast<float*>(&k_bias)[i];
+            }
         }
-
         v = *reinterpret_cast<Vec_t*>(&QKV[v_id]);
-        Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<float*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
-        for(int i = 0; i < vec_size; i++) {
-            reinterpret_cast<float*>(&v)[i] += reinterpret_cast<float*>(&v_bias)[i];
+        Vec_t v_bias = *reinterpret_cast<Vec_t*>(const_cast<T*>(&qkv_bias[head_id * head_size + tid * vec_size + head_num * head_size + kv_head_num * head_size]));
+        if(is_half) {
+            v = __hadd2(v, v_bias);
+        } else {
+            for(int i = 0; i < vec_size; i++) {
+                reinterpret_cast<float*>(&v)[i] += reinterpret_cast<float*>(&v_bias)[i];
+            }
         }
     }
 
@@ -164,15 +217,16 @@ __global__ void add_fusedQKV_bias_transpose_kernel(float*           q_buf,
         // shape = [num_tokens, qkv_head_num, head_size], 因为各句子长度不一，所以不用bs * seqlen表示
 // output: q shape = [bs, head num, seqlen, head size], if k v is this shape, maybe need tranpose in successor steps, ep in cublas
 //         k/v shape = [bs, kv head num, seqlen, head size], 这里的seqlen应该是max_q_len
-void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
-                                           Tensor* k_buf,
-                                           Tensor* v_buf,
-                                           Tensor* QKV,
-                                           BaseWeight& qkv,
+template<typename T>
+void launchAddFusedQKVBiasTransposeAndRoPE(TensorWrapper<T>* q_buf,
+                                           TensorWrapper<T>* k_buf,
+                                           TensorWrapper<T>* v_buf,
+                                           TensorWrapper<T>* QKV,
+                                           BaseWeight<T>& qkv,
                                            //Tensor* qkv_bias,
-                                           Tensor* padding_offset,
-                                           Tensor* history_length,
-                                           Tensor* input_length,
+                                           TensorWrapper<int>* padding_offset,
+                                           TensorWrapper<int>* history_length,
+                                           TensorWrapper<int>* input_length,
                                            LLaMAAttentionStaticParams& params){
     int token_num = QKV->shape[0];
     int qkv_head_num = QKV->shape[1];
@@ -185,14 +239,14 @@ void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
     dim3 grid(token_num ,head_num);
     dim3 block((head_size / Vec<float>::size + 32 - 1) / 32 * 32);// apply 2 eles vectorization to match RoPE
     printf("calling qkvbias and rope\n");
-    add_fusedQKV_bias_transpose_kernel<<<grid, block>>>( (float*)q_buf->data,
-                                                            (float*)k_buf->data,
-                                                            (float*)v_buf->data,
-                                                            (float*)QKV->data,
-                                                            (float*)qkv.bias,
-                                                            (int*)padding_offset->data,
-                                                            (int*)history_length->data,
-                                                            (int*)input_length->data,
+    add_fusedQKV_bias_transpose_kernel<T><<<grid, block>>>( q_buf->data,
+                                                            k_buf->data,
+                                                            v_buf->data,
+                                                            QKV->data,
+                                                            qkv.bias,
+                                                            padding_offset->data,
+                                                            history_length->data,
+                                                            input_length->data,
                                                             batch_size,
                                                             seq_len,
                                                             token_num,
@@ -206,3 +260,23 @@ void launchAddFusedQKVBiasTransposeAndRoPE(Tensor* q_buf,
     printf("called qkv bias and rope\n");
 }
 
+template void launchAddFusedQKVBiasTransposeAndRoPE(TensorWrapper<float>* q_buf,
+                                           TensorWrapper<float>* k_buf,
+                                           TensorWrapper<float>* v_buf,
+                                           TensorWrapper<float>* QKV,
+                                           BaseWeight<float>& qkv,
+                                           //Tensor* qkv_bias,
+                                           TensorWrapper<int>* padding_offset,
+                                           TensorWrapper<int>* history_length,
+                                           TensorWrapper<int>* input_length,
+                                           LLaMAAttentionStaticParams& params);
+template void launchAddFusedQKVBiasTransposeAndRoPE(TensorWrapper<half>* q_buf,
+                                           TensorWrapper<half>* k_buf,
+                                           TensorWrapper<half>* v_buf,
+                                           TensorWrapper<half>* QKV,
+                                           BaseWeight<half>& qkv,
+                                           //Tensor* qkv_bias,
+                                           TensorWrapper<int>* padding_offset,
+                                           TensorWrapper<int>* history_length,
+                                           TensorWrapper<int>* input_length,
+                                           LLaMAAttentionStaticParams& params);

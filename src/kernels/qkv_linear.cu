@@ -4,27 +4,28 @@
 //weight * input
 //weight shape = [hidden_units, hidden_units]
 //input shape = [hidden_units, seqlen]
-
-void launchLinearGemm(Tensor* input,
-                      BaseWeight& weight, 
-                      Tensor* output,
+template<typename T>
+void launchLinearGemm(TensorWrapper<T>* input,
+                      BaseWeight<T>& weight, 
+                      TensorWrapper<T>* output,
+                      cublasWrapper* cublas_wrapper,
                       bool trans_a,
                       bool trans_b,
                       bool shared_out_buf) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
-    cudaStream_t stream;
-    cublasHandle_t cublas_handle;
-    cublasLtHandle_t cublaslt_handle;
-    std::cout << "creating stream" << "\n";
-    //cudaStreamCreate(&stream);
-    // !!!remember to call cublasCreate to create cublas handle!fxxk nvidia, that spent me 1 day to check
-    cublasCreate(&cublas_handle);
-    cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
-    std::cout << "creating cublaswrapper" << "\n";
-    cublasWrapper* cublas_wrapper = 
-                        new cublasWrapper(cublas_handle, cublaslt_handle);
-                       // , stream);
-    cublas_wrapper->setFP32GemmConfig();
+    // cudaStream_t stream;
+    // cublasHandle_t cublas_handle;
+    // cublasLtHandle_t cublaslt_handle;
+    // std::cout << "creating stream" << "\n";
+    // //cudaStreamCreate(&stream);
+    // // !!!remember to call cublasCreate to create cublas handle!fxxk nvidia, that spent me 1 day to check
+    // cublasCreate(&cublas_handle);
+    // cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
+    // std::cout << "creating cublaswrapper" << "\n";
+    // cublasWrapper* cublas_wrapper = 
+    //                     new cublasWrapper(cublas_handle, cublaslt_handle);
+    //                    // , stream);
+    // cublas_wrapper->setFP32GemmConfig();
     int input_lda = input->shape[0];
     int weight_ldb = input->shape.size() > 2 ? input->shape[1] * input->shape[2] : input->shape[1];
     // TODO:check 2nd dim of input = 1st dim of weight
@@ -42,45 +43,41 @@ void launchLinearGemm(Tensor* input,
               << "k: " << weight_ldb << "\n"
               << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
               << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
-//    for (int i = 0; i < 14 * 64; i++){
-//        if(i <14*64){
-//            std::cout << i << " input: " << ((float*)(input->data))[i] << "\n";
-  //      }
- //       std::cout << i << " weight: " << ((float*)(weight.data))[i] << "\n";
-   // }
+
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m
                         k,              //n
                         weight_ldb,     //k
-                        (float*)(input->data),   //A
+                        input->data,   //A
                         input_lda,      //lda
-                        (float*)(weight.data),   //B
+                        weight.data,   //B
                         weight_ldb,     //ldb 
-                        (float*)(output->data) + offset,  //C
+                        output->data + offset,  //C
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);
     std::cout << "called gemm" << "\n";
 }
-
-void launchLinearStridedBatchGemm(Tensor* input1,
-                                  Tensor* input2,
-                                  Tensor* output,
+template<typename T>
+void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
+                                  TensorWrapper<T>* input2,
+                                  TensorWrapper<T>* output,
+                                  cublasWrapper* cublas_wrapper,
                                   bool trans_a,
                                   bool trans_b)
 {
-    cudaStream_t stream;
-    cublasHandle_t cublas_handle;
-    cublasLtHandle_t cublaslt_handle;
-    std::cout << "creating stream" << "\n";
-    cublasCreate(&cublas_handle);
-    cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
-    std::cout << "creating cublaswrapper" << "\n";
-    cublasWrapper* cublas_wrapper = 
-                        new cublasWrapper(cublas_handle, cublaslt_handle);
-                       // , stream);
-    cublas_wrapper->setFP32GemmConfig();
+    // cudaStream_t stream;
+    // cublasHandle_t cublas_handle;
+    // cublasLtHandle_t cublaslt_handle;
+    // std::cout << "creating stream" << "\n";
+    // cublasCreate(&cublas_handle);
+    // cublasSetMathMode(cublas_handle, CUBLAS_DEFAULT_MATH);
+    // std::cout << "creating cublaswrapper" << "\n";
+    // cublasWrapper* cublas_wrapper = 
+    //                     new cublasWrapper(cublas_handle, cublaslt_handle);
+    //                    // , stream);
+    // cublas_wrapper->setFP32GemmConfig();
     // TODO:currently only consider trans_b
     int Am = input1->shape[2];
     int Ak = input1->shape[3];
@@ -104,13 +101,13 @@ void launchLinearStridedBatchGemm(Tensor* input1,
                                        Am,
                                        trans_b ? Bk : Bn,
                                        Ak,
-                                       (float*)(input1->data), //A
+                                       input1->data, //A
                                        lda,
                                        strideA,
-                                       (float*)(input2->data), //B
+                                       input2->data, //B
                                        ldb,
                                        strideB,
-                                       (float*)(output->data), //C
+                                       output->data, //C
                                        ldc,
                                        strideC,
                                        batchCount,

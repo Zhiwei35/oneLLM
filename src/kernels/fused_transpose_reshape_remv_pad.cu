@@ -2,8 +2,9 @@
 #include "src/kernels/fused_transpose_reshape_remv_pad.h"
 // [b,h,s,d]=>[b,s,h,d]=>[num tokens,h,d]
 // padding_offset.shape = [num_tokens]
-__global__ void fused_transpose_reshape_remv_pad(float*           src,
-                                                float*           dst,
+template<typename T>
+__global__ void fused_transpose_reshape_remv_pad(T*           src,
+                                                T*           dst,
                                                 const int    num_tokens,
                                                 const int    batch_size,
                                                 const int    seq_len,
@@ -25,10 +26,10 @@ __global__ void fused_transpose_reshape_remv_pad(float*           src,
         dst[dst_offset + i] = src[src_offset + head_id * seq_len * head_size + head_size_id];
     }
 }
-
-void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad, 
-                                    Tensor* padding_offset,
-                                    Tensor* qkv_buf_wo_pad_1)
+template<typename T>
+void launchTransposeOutRemovePadding(TensorWrapper<T>* qkv_buf_w_pad, 
+                                     TensorWrapper<int>* padding_offset,
+                                     TensorWrapper<T>* qkv_buf_wo_pad_1)
 {
     int batch_size = qkv_buf_w_pad->shape[0];
     int head_num = qkv_buf_w_pad->shape[1];
@@ -38,15 +39,22 @@ void launchTransposeOutRemovePadding(Tensor* qkv_buf_w_pad,
     dim3 grid(num_tokens);
     dim3 block(std::min(head_num * head_size, 1024));
     std::cout << "calling remove pad kernel" << "\n";
-    fused_transpose_reshape_remv_pad<<<grid, block>>>((float*)qkv_buf_w_pad->data,
-                                                         (float*)qkv_buf_wo_pad_1->data,
-                                                         num_tokens,
-                                                         batch_size,
-                                                         seq_len,
-                                                         head_num,
-                                                         head_size,
-                                                         (int*)padding_offset->data);
+    fused_transpose_reshape_remv_pad<T><<<grid, block>>>(qkv_buf_w_pad->data,
+                                                      qkv_buf_wo_pad_1->data,
+                                                      num_tokens,
+                                                      batch_size,
+                                                      seq_len,
+                                                      head_num,
+                                                      head_size,
+                                                      padding_offset->data);
     std::cout << "called remove pad kernel" << "\n";
 
 }
+
+template void launchTransposeOutRemovePadding(TensorWrapper<float>* qkv_buf_w_pad, 
+                                              TensorWrapper<int>* padding_offset,
+                                              TensorWrapper<float>* qkv_buf_wo_pad_1);
+template void launchTransposeOutRemovePadding(TensorWrapper<half>* qkv_buf_w_pad, 
+                                              TensorWrapper<int>* padding_offset,
+                                              TensorWrapper<half>* qkv_buf_wo_pad_1);
 

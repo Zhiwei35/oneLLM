@@ -106,36 +106,88 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
 //    printf("in kernel 2\n");
 }
 
-template<typename T>
-void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
-                                    T* residual, 
-                                    T* decoder_out, // [num tokens, hidden_units]
-                                    const T* bias,
-                                    const T* scale, //RMSNorm weights
+template<>
+__global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
+                                    half* residual, 
+                                    half* decoder_out, // [num tokens, hidden_units]
+                                    const half* bias, //[hidden_units]
+                                    const half* scale, //[hidden_units], RMSNorm weights
                                     float eps, //RMSNorm eps
                                     int num_tokens, 
-                                    int hidden_units)
+                                    int hidden_units){
+    int vec_size = Vec<T>::size;
+    using Vec_t = typename Vec<T>::Type;
+    int batch_id = blockIdx.x;
+    int tid = threadIdx.x;
+    Vec_t *rsd, *bia, *s;
+    Vec_t dout, tmp;
+   // printf("in kernel\n");    
+    float thread_accm = 0.0f;
+    if (residual != nullptr && bias != nullptr){
+        rsd = reinterpret_cast<Vec_t*>(residual + batch_id * hidden_units);//note the offset     should divide vec size
+        bia = reinterpret_cast<Vec_t*>(const_cast<half*>(bias));
+    }
+    for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
+        dout = reinterpret_cast<Vec_t*>(decoder_out)[batch_id * hidden_units / vec_size + i];// note the offset should divide vec size
+        tmp = __hadd2(__hadd2(dout, rsd[i]), bia[i]);
+        thread_accm += __half2float(tmp.x) * __half2float(tmp.x) + __half2float(tmp.y) * __half2float(tmp.y);
+    } // addresidual
+  //  printf("in kernel 1\n");
+    // mean(x^2)
+    float blocksum = blockReduceSum<float>(thread_accm);
+    __shared__ Vec_t inv_fenmu;
+    if(tid == 0){
+        //debug info printf("blocksum on GPU is %f\n", blocksum);
+        inv_fenmu = statci_cast<Vec_t>(__float2half(rsqrt(blocksum / hidden_units + eps)));
+        //debug info printf("inv_fenmu on GPU is %f\n", inv_fenmu);
+    }
+    // rmsnorm
+    Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
+    if (scale != nullptr){
+        s = reinterpret_cast<Vec_t*>(const_cast<half*>(scale));
+    }
+    for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
+        //s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];
+        out[i] = __hmul2(__hmul2(s[i], out[i]), inv_fenmu);
+    } 
+//    printf("in kernel 2\n");
+}
+
+template<typename T>
+void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
+                                    TensorWrapper<T>* residual, 
+                                    TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
+                                    BaseWeight<T>& norm,
+                                    LayerNormWeight<T>& scale, //RMSNorm weights
+                                    float eps) //RMSNorm eps
 {
+    int batch_size = decoder_out->shape[0];
+    int hidden_units = decoder_out->shape[1];
+    T* bias = norm.bias;
+    T* gamma = scale.gamma;
     int vec_size = Vec<T>::size;
     int num_threads = hidden_units / vec_size; // assume head size can be divided by 4 and 2
     dim3 grid(num_tokens);
     dim3 block(num_threads);
     printf("calling fusedAddBiasResidualAndRMSNorm\n");
-    FusedAddBiasResidualRMSNorm<<<grid, block>>>(residual, 
+    FusedAddBiasResidualRMSNorm<T><<<grid, block>>>(residual, 
                                                 decoder_out,
                                                 bias,
-                                                scale,
+                                                gamma,
                                                 eps,
                                                 num_tokens,
                                                 hidden_units);
     printf("called fusedAddBiasResidualAndRMSNorm\n");
 }
-
 template void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
-                                    float* residual, 
-                                    float* decoder_out, // [num tokens, hidden_units]
-                                    const float* bias,
-                                    const float* scale, //RMSNorm weights
-                                    float eps, //RMSNorm eps
-                                    int num_tokens, 
-                                    int hidden_units);
+                                    TensorWrapper<float>* residual, 
+                                    TensorWrapper<float>* decoder_out, // [num tokens, hidden_units]
+                                    BaseWeight<float>& norm,
+                                    LayerNormWeight<float>& scale, //RMSNorm weights
+                                    float eps);
+template void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
+                                    TensorWrapper<half>* residual, 
+                                    TensorWrapper<half>* decoder_out, // [num tokens, hidden_units]
+                                    BaseWeight<half>& norm,
+                                    LayerNormWeight<half>& scale, //RMSNorm weights
+                                    float eps);

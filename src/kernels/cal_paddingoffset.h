@@ -1,5 +1,6 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
+#include <cuda_fp16.h>
 
 
 void launchCalPaddingoffset(int*      h_pinned_token_num,

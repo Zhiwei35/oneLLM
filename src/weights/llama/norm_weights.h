@@ -1,4 +1,5 @@
 #pragma once
+template<typename T>
 struct LayerNormWeight {
-    float* gamma;
+    T* gamma;
 };

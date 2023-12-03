@@ -4,7 +4,7 @@
 #include "src/weights/base_weights.h"
 #include "src/weights/llama/embedding_weights.h"
 #include "src/weights/llama/layer_weights.h"
-
+template<typename T>
 struct LlamaWeight : public Weight {
 private: 
     int     hidden_units;
@@ -13,10 +13,10 @@ private:
     int     vocab_size_padded;
     int     num_layer;
     WeightType weight_type;
-    std::vector<LlamaLayerWeight*> llama_layer_weight;
-    LayerNormWeight out_rmsnorm_weight;
-    EmbeddingWeight post_decoder_embedding_weight;
-    EmbeddingWeight pre_decoder_embedding_weight;
+    std::vector<LlamaLayerWeight<T>*> llama_layer_weight;
+    LayerNormWeight<T> out_rmsnorm_weight;
+    EmbeddingWeight<T> post_decoder_embedding_weight;
+    EmbeddingWeight<T> pre_decoder_embedding_weight;
 
 public:    
     LlamaWeight() = default;

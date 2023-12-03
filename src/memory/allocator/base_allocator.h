@@ -13,5 +13,9 @@ public:
         return deviceMalloc((void*)ptr, size, is_host);
     }
     virtual void* deviceMalloc(void* ptr, size_t size, bool is_host = false) = 0;
+    template<typename T>
+    void* Free(T* ptr, bool is_host = false){
+        return deviceFree((void*)ptr, is_host);
+    }
     virtual void deviceFree(void* ptr, bool is_host = false) = 0;
 };

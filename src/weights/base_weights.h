@@ -38,12 +38,12 @@ inline WeightType getWeightType()
         return WeightType::UNSUPPORTED_W;
     }
 }
-
+template<typename T>
 struct BaseWeight {
 //    BaseWeight(std::vector<int> shape_, void* data_, WeightType wtype, void* bias_):
 //            shape(shape_), data(data_), type(wtype), bias(bias_){};
     std::vector<int> shape;
-    void*   data;
+    T*   data;
     WeightType type;
-    void*   bias;
+    T*   bias;
 };

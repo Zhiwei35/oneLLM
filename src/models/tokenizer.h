@@ -91,7 +91,7 @@ struct Tokenizer {
         q.push(SymbolPairs(now->score, l, r, symbols[l].len + symbols[r].len));
     } // 插入备选symbol
 
-    Data Encode(const std::string &s){
+    Tensor Encode(const std::string &ori){
         std::string blank = "";
         blank += 226, blank += 150, blank += 129;
         std::string s = blank;
@@ -195,7 +195,7 @@ struct Tokenizer {
                 }
             }
         }
-        return Tensor(DataType::FLOAT32, {1, (int)v.size()}, v);
+        return Tensor(Device::GPU, DataType::FP32, {1, (int)v.size()}, v.data());
     }
 
     // 这里的data可以换成模型的输出

@@ -22,8 +22,8 @@ private:
     BaseAllocator* allocator;
     bool is_free_buffer_after_forward;
 
-    LLaMASelfAttentionLayer* selfAttn;
-    LLaMAFFNLayer* ffn;
+    LLaMASelfAttentionLayer<T>* selfAttn;
+    LLaMAFFNLayer<T>* ffn;
     DataType data_type;
     // all layers' weight没必要作为成员，只需从forward里面传进去就完了，初始化是完成在model.loadweights阶段
     //const std::vector<LlamaLayerWeight*> weights;
@@ -50,7 +50,7 @@ public:
         cublas_wrapper(cublas_wrapper),
         allocator(allocator),
         is_free_buffer_after_forward(is_free_buffer_after_forward){
-            selfAttn = new LLaMASelfAttentionLayer(head_num,
+            selfAttn = new LLaMASelfAttentionLayer<T>(head_num,
                                                         kv_head_num,
                                                         head_size,
                                                         attn_params,
@@ -59,7 +59,7 @@ public:
                                                         allocator,
                                                         is_free_buffer_after_forward);
 
-            ffn = new LLaMAFFNLayer(head_num,
+            ffn = new LLaMAFFNLayer<T>(head_num,
                                     head_size,
                                     inter_size,
                                     stream,
@@ -67,8 +67,7 @@ public:
                                     allocator,
                                     is_free_buffer_after_forward);
         };
-    template<typename T>
     void allocForForward(LLaMAAttentionDynParams& dyn_params);
     void free();
-    void forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params);
+    void forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params);
 };

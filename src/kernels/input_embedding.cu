@@ -4,9 +4,10 @@
 //#include <utils/gpu_config.h>
 #include "src/kernels/input_embedding.h"
 
+template<typename T>
 __global__ void embeddingFunctor(const int* input_ids,
-               float* output, 
-               const float* embed_table,
+               T* output, 
+               const T* embed_table,
                const int batch_size,
                const int sequeue_length,
                const int hidden_size,
@@ -19,10 +20,10 @@ __global__ void embeddingFunctor(const int* input_ids,
     }
 }
 
-
-void launchInputEmbedding(Tensor* input_ids,    // INT [batch_size, sequenue_length]
-                          Tensor* output,       // FP32 [batch_size, sequeue_length, hidden_size]
-                          Tensor* embed_table)  // FP32 [vocal_size, hidden_size]
+template<typename T>
+void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, sequenue_length]
+                          TensorWrapper<T>* output,       // FP32 [batch_size, sequeue_length, hidden_size]
+                          EmbeddingWeight<T>* embed_table)  // FP32 [vocal_size, hidden_size]
 {
     const int blockSize = 256;
     const int batch_size = output->shape[0];
@@ -30,11 +31,18 @@ void launchInputEmbedding(Tensor* input_ids,    // INT [batch_size, sequenue_len
     const int hidden_size = output->shape[2];
     const int vocab_size = embed_table->shape[0];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
-    embeddingFunctor<<<gridSize, blockSize>>>((int*) input_ids->data,
-                                              (float*) output->data,
-                                              (float*) embed_table->data,
-                                              batch_size,
-                                              sequeue_length,
-                                              hidden_size,
-                                              vocab_size);
+    embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
+                                                 output->data,
+                                                 embed_table->data,
+                                                 batch_size,
+                                                 sequeue_length,
+                                                 hidden_size,
+                                                 vocab_size);
 }
+
+template void launchInputEmbedding(TensorWrapper<int>* input_ids,    
+                                   TensorWrapper<float>* output,       
+                                   EmbeddingWeight<float>* embed_table);
+template void launchInputEmbedding(TensorWrapper<int>* input_ids,    
+                                   TensorWrapper<half>* output,       
+                                   EmbeddingWeight<half>* embed_table);

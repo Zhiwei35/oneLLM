@@ -1,3 +1,4 @@
+template<typename T>
 struct EmbeddingWeight {
-    float* emb_table;
+    T* emb_table;
 };

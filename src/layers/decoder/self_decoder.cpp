@@ -2,36 +2,37 @@
 #include "src/utils/macro.h"
 #include "src/layers/decoder/self_decoder.h"
 
-template<typename T>
-void LlamaSelfDecoder::allocForForward(LLaMAAttentionDynParams& params)
+void LlamaSelfDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
 {
     // do nothing, no intermedia buffer
 }
-void LlamaSelfDecoder::free()
+void LlamaSelfDecoder<T>::free()
 {
     // do nothing, no intermedia buffer
 }
 
-void LlamaSelfDecoder::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
+void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
 {
     //1. RMSNorm
-    Tensor decoder_input = input_tensors["decoder_input"];
+    Tensor* decoder_input = input_tensors["decoder_input"];
     launchRMSNorm(&decoder_input, //in&out, [bs, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
                   rmsnorm_eps);
     DeviceSyncAndCheckCudaError();  
 
     // 2. bias and rope and self attn
-    Tensor step = input_tensors["step"];
-    Tensor finished = input_tensors["finished"];
-    Tensor decoder_output = output_tensors["decoder_output"];
-    Tensor all_k_cache = output_tensors["all_k_cache"];
-    Tensor all_v_cache = output_tensors["all_v_cache"];
+    Tensor* step = input_tensors["step"];
+    Tensor* finished = input_tensors["finished"];
+    Tensor* decoder_output = output_tensors["decoder_output"];
+    Tensor* all_k_cache = output_tensors["all_k_cache"];
+    Tensor* all_v_cache = output_tensors["all_v_cache"];
     DataType type_int = getTensorType<int>();
     int layer_id = 0;//TODO: enhance the layer_id update method
+    ONELLM_CHECK_WITH_INFO(decoder_input->as<T>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(decoder_output->as<T>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     TensorMap self_attn_inputs{
         {"attention_input", decoder_input},
-        {"layer_id", Tensor(Device::CPU, type_int, {1}, &layer_id)},
+        {"layer_id", &TensorWrapper(Device::CPU, type_int, {1}, &layer_id)},
         {"step", step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
         {"finished", finished}
     };
@@ -42,15 +43,15 @@ void LlamaSelfDecoder::forward(TensorMap& input_tensors, const std::vector<Llama
     };      
     for(int layer_id = 0; layer_id < num_layer; layer_id++) {
         if (layer_id > 0){
-            self_attn_inputs["layer_id"] = Tensor(Device::CPU, type_int, {1}, &layer_id);
+            self_attn_inputs["layer_id"] = &TensorWrapper(Device::CPU, type_int, {1}, &layer_id);
         }
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         selfAttn->forward(self_attn_inputs, self_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params);//, selfAttn->GetAttnStaticParams());
         //decoder_output += decoder_input
-        launchFusedAddBiasResidualRMSNorm((float*)(decoder_input.data), //in residual, [bs, q hidden_units]
-                                          (float*)(decoder_output.data), //in&out, [bs, q hidden_units]
-                                          (float*)(layerWeights[layer_id]->self_attn_weight.output.bias), //bias
-                                          (float*)(layerWeights[layer_id]->ffn_norm_weight.gamma),//rmsnorm weights, [q hidden_units]
+        launchFusedAddBiasResidualRMSNorm(decoder_input->as<T>(), //in residual, [bs, q hidden_units]
+                                          decoder_output->as<T>(), //in&out, [bs, q hidden_units]
+                                          layerWeights[layer_id]->self_attn_weight.output, //bias
+                                          layerWeights[layer_id]->ffn_norm_weight,//rmsnorm weights, [q hidden_units]
                                           rmsnorm_eps,
                                           dyn_params.batch_size,
                                           hidden_units);
@@ -62,12 +63,12 @@ void LlamaSelfDecoder::forward(TensorMap& input_tensors, const std::vector<Llama
             {"ffn_output", decoder_output}
         };
         ffn->forward(ffn_inputs, ffn_outputs, layerWeights[layer_id]->ffn_weight, dyn_params);
-        auto gamma = layer_id < num_layer - 1 ? layerWeights[layer_id + 1]->attn_norm_weight.gamma :
-                                                     (float*)input_tensors["output_norm_weight"].data;//llamaweight->output_norm_weight
-        launchFusedAddBiasResidualRMSNorm((float*)decoder_input.data, //in, [bs, hidden_units]
-                                          (float*)decoder_output.data, //in&out, [bs, hidden_units]
-                                          (float*)layerWeights[layer_id]->ffn_weight.down.bias, 
-                                          (float*)gamma,//rmsnorm weights, [hidden_units]
+        auto gamma = layer_id < num_layer - 1 ? layerWeights[layer_id + 1]->attn_norm_weight :
+                                                     input_tensors["output_norm_weight"]->as<T>();//llamaweight->output_norm_weight
+        launchFusedAddBiasResidualRMSNorm(decoder_input->as<T>(), //in, [bs, hidden_units]
+                                          decoder_output->as<T>(), //in&out, [bs, hidden_units]
+                                          layerWeights[layer_id]->ffn_weight.down, 
+                                          gamma,//rmsnorm weights, [hidden_units]
                                           rmsnorm_eps,
                                           dyn_params.batch_size,
                                           hidden_units);

@@ -8,8 +8,9 @@
 #include "src/kernels/cublas_wrapper.h"
 #include "src/models/llama/llama_params.h"
 #include "src/utils/macro.h"
-//template<typename T>
+
 // 这里面的数据成员都是只存在于attention layer，而不像finished，seqlengths这种贯穿整个过程
+template<typename T>
 class LLaMASelfAttentionLayer {
 private:
     // this params are shared across all LLMs
@@ -32,8 +33,8 @@ private:
     cublasWrapper* cublas_wrapper;
 
     // intermedia buffer
-    Tensor* qkv_buf     = nullptr; // for qkv linear output and mha input
-    Tensor* mha_output = nullptr; // mha output, then invoke a linear to attention output
+    TensorWrapper<T>* qkv_buf     = nullptr; // for qkv linear output and mha input
+    TensorWrapper<T>* mha_output = nullptr; // mha output, then invoke a linear to attention output
 
 
 public:
@@ -48,8 +49,7 @@ public:
     LLaMAAttentionStaticParams& GetAttnStaticParams(){
         return attn_static_params;
     }
-    template<typename T>
     void allocForForward(LLaMAAttentionDynParams& params);
     void free();
-    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params);
+    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params);
 };

@@ -47,14 +47,20 @@ __global__ void BuildCausalMasksConsideringContextPastKV(T* mask,
 }
 
 template<typename T>
-void launchBuildCausalMasks(T* mask, 
-                            const int* q_lens, 
-                            const int* k_lens, 
-                            int max_q_len, 
-                            int max_k_len, 
-                            int batch_size)
+void launchBuildCausalMasks(TensorWrapper<T>* mask, 
+                            TensorWrapper<int>* q_lens, 
+                            TensorWrapper<int>* k_lens)
 {
-    BuildCausalMasksConsideringContextPastKV<<<batch_size, 256>>>(mask, q_lens, k_lens, max_q_len, max_k_len);
+    int batch_size = mask->shape[0];
+    int max_q_len = mask->shape[1];
+    int max_k_len = mask->shape[2];
+    BuildCausalMasksConsideringContextPastKV<T><<<batch_size, 256>>>(mask, q_lens, k_lens, max_q_len, max_k_len);
 }
 
-template void launchBuildCausalMasks(float* mask, const int*, const int*, int, int, int);
+template void launchBuildCausalMasks(TensorWrapper<float>* mask, 
+                            TensorWrapper<int>* q_lens, 
+                            TensorWrapper<int>* k_lens);
+
+template void launchBuildCausalMasks(TensorWrapper<half>* mask, 
+                            TensorWrapper<int>* q_lens, 
+                            TensorWrapper<int>* k_lens);

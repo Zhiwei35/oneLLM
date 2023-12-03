@@ -3,7 +3,7 @@
 #include "src/weights/llama/attention_weights.h"
 #include "src/weights/llama/ffn_weights.h"
 #include "src/utils/cuda_utils.h"
-
+template<typename T>
 struct LlamaLayerWeight {
 private:
     int     head_num;
@@ -28,7 +28,7 @@ public:
 
     void loadWeights(std::string weight_path, WeightType weight_type);
     
-    template<typename T>
+
     void loadWeights(T* d_attn_norm_weight,
                      T* d_ffn_norm_weight,
                      T* d_qkv_weights,
@@ -40,8 +40,8 @@ public:
                      T* d_ffn_gate,
                      T* d_ffn_up);
 
-    LayerNormWeight attn_norm_weight;
-    LayerNormWeight ffn_norm_weight;
-    LLaMAattentionWeights self_attn_weight;
-    LLaMAFFNWeights ffn_weight;
+    LayerNormWeight<T> attn_norm_weight;
+    LayerNormWeight<T> ffn_norm_weight;
+    LLaMAattentionWeights<T> self_attn_weight;
+    LLaMAFFNWeights<T> ffn_weight;
 };

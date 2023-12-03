@@ -9,7 +9,7 @@
 #include "src/utils/tensor.h"
 #include "src/kernels/cublas_wrapper.h"
 #include "src/models/llama/llama_params.h"
-//template<typename T>
+template<typename T>
 class LLaMAContextAttentionLayer {
 private:
     // this params are shared across all LLMs
@@ -42,16 +42,16 @@ private:
     // float* qk_buf_float = nullptr; // for acc
     // T*     qkv_buf_w_pad = nullptr;
 
-    Tensor*  qkv_buf_wo_pad = nullptr;      
-    Tensor*  q_buf_w_pad = nullptr;
-    Tensor*  k_buf_w_pad = nullptr;
-    Tensor*  v_buf_w_pad = nullptr;
-    Tensor*  k_cache_buf = nullptr;
-    Tensor*  v_cache_buf = nullptr;
-    Tensor*  qk_buf = nullptr;
-    Tensor*  qk_buf_float = nullptr; // for acc
-    Tensor*  qkv_buf_w_pad = nullptr;
-    Tensor*  qkv_buf_wo_pad_1 = nullptr;      
+    TensorWrapper<T>*  qkv_buf_wo_pad = nullptr;      
+    TensorWrapper<T>*  q_buf_w_pad = nullptr;
+    TensorWrapper<T>*  k_buf_w_pad = nullptr;
+    TensorWrapper<T>*  v_buf_w_pad = nullptr;
+    TensorWrapper<T>*  k_cache_buf = nullptr;
+    TensorWrapper<T>*  v_cache_buf = nullptr;
+    TensorWrapper<T>*  qk_buf = nullptr;
+    TensorWrapper<T>*  qk_buf_float = nullptr; // for acc
+    TensorWrapper<T>*  qkv_buf_w_pad = nullptr;
+    TensorWrapper<T>*  qkv_buf_wo_pad_1 = nullptr;      
 
 
 public:
@@ -66,21 +66,21 @@ public:
     LLaMAAttentionStaticParams& GetAttnStaticParams(){
         return attn_static_params;
     }
-    template<typename T>
+    
     void allocForForward(LLaMAAttentionDynParams& params);
     void free();
-    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params);
-    void naiveMHA(float*          key_cache_ptr,
-                  float*          val_cache_ptr,
-                  size_t       cache_layer_offset,
-                  const float*     attention_mask,
-                  const int*   padding_offset,
-                  const int*   context_length,
-                  int          batch_size,
-                  int          num_tokens,
-                  int          max_q_len,
-                  int          max_k_len,
-                  int          max_seq_len); 
+    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params);
+    // void naiveMHA(float*          key_cache_ptr,
+    //               float*          val_cache_ptr,
+    //               size_t       cache_layer_offset,
+    //               const float*     attention_mask,
+    //               const int*   padding_offset,
+    //               const int*   context_length,
+    //               int          batch_size,
+    //               int          num_tokens,
+    //               int          max_q_len,
+    //               int          max_k_len,
+    //               int          max_seq_len); 
                   // whats the diff across these 3 max len:
                   // max_seq_len is the max kv len considering context, ep. multiple epochs chat
                   // max_q_len is the current max q len after padding

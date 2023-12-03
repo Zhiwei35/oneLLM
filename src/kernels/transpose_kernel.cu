@@ -4,8 +4,9 @@
 //[num layers, bs, kv head num, max_seq_len, head size]=>[bs, q head num, max_k_len, head size]
 //context_length.shape=[bs]
 // 这个kernel叫repeat_interleave或者broadcast比较合理
-__global__ void transpose_value_cache(float*          v_dst, 
-                                      const float*    v_src,
+template<typename T>
+__global__ void transpose_value_cache(T*          v_dst, 
+                                      const T*    v_src,
                                       const size_t layer_offset,
                                       const int    head_num,
                                       const int    q_head_per_kv,
@@ -41,13 +42,13 @@ __global__ void transpose_value_cache(float*          v_dst,
         val_dst[dst_idx] = val_src[src_idx];
     }
 }
-
-void launchTransposeKVCache(Tensor* k_cache_src,
-                            Tensor* v_cache_src,
-                            Tensor* context_length,
-                            Tensor* layer_id,
-                            Tensor* k_cache_dst,
-                            Tensor* v_cache_dst
+template<typename T>
+void launchTransposeKVCache(TensorWrapper<T>* k_cache_src,
+                            TensorWrapper<T>* v_cache_src,
+                            TensorWrapper<int>* context_length,
+                            TensorWrapper<int>* layer_id,
+                            TensorWrapper<T>* k_cache_dst,
+                            TensorWrapper<T>* v_cache_dst
                             )
 {
     int batch_size = context_length->shape[0];
@@ -57,33 +58,49 @@ void launchTransposeKVCache(Tensor* k_cache_src,
     
     int max_k_len = k_cache_dst->shape[2];
     int head_size = k_cache_dst->shape[3];
-    //note: here MUSTN'T use layer_id->getVal<int>(), because we cant access GPU memory directly by []
-    size_t layer_offset = 0 * batch_size * kv_head_num * max_seq_len * head_size;
+    int layer = layer_id->getVal<int>();
+    //note: here MUSTN'T use layer_id->getVal<int>(), because we cant access GPU memory directly by [] if data is on GPU
+    //note: so we can make layer data locate on CPU
+    size_t layer_offset = layer * batch_size * kv_head_num * max_seq_len * head_size;
     int q_head_per_kv = head_num / kv_head_num;
     int blockSize = 128;
     dim3 block(128);
     dim3 grid((max_k_len * head_size + blockSize - 1) / blockSize, batch_size, head_num); // q head num
     std::cout << "calling transpose/broadcast kernel" << "\n";    
-    transpose_value_cache<<<grid, block>>>((float*)v_cache_dst->data, 
-                                              (float*)v_cache_src->data,
+    transpose_value_cache<T><<<grid, block>>>(v_cache_dst->data, 
+                                              v_cache_src->data,
                                               layer_offset,
                                               head_num,
                                               q_head_per_kv,
                                               head_size,
-                                              (int*)context_length->data,
+                                              context_length->data,
                                               max_k_len,
                                               max_seq_len);
                                               
-    transpose_value_cache<<<grid, block>>>((float*)k_cache_dst->data, 
-                                              (float*)k_cache_src->data,
+    transpose_value_cache<T><<<grid, block>>>(k_cache_dst->data, 
+                                              k_cache_src->data,
                                               layer_offset,
                                               head_num,
                                               q_head_per_kv,
                                               head_size,
-                                              (int*)context_length->data,
+                                              context_length->data,
                                               max_k_len,
                                               max_seq_len);
     std::cout << "called transpose/broadcast kernel" << "\n";
 
 }
 
+template void launchTransposeKVCache(TensorWrapper<float>* k_cache_src,
+                            TensorWrapper<float>* v_cache_src,
+                            TensorWrapper<int>* context_length,
+                            TensorWrapper<int>* layer_id,
+                            TensorWrapper<float>* k_cache_dst,
+                            TensorWrapper<float>* v_cache_dst
+                            );
+template void launchTransposeKVCache(TensorWrapper<half>* k_cache_src,
+                            TensorWrapper<half>* v_cache_src,
+                            TensorWrapper<int>* context_length,
+                            TensorWrapper<int>* layer_id,
+                            TensorWrapper<half>* k_cache_dst,
+                            TensorWrapper<half>* v_cache_dst
+                            );
