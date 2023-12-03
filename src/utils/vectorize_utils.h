@@ -1,6 +1,13 @@
 #include <cuda.h>
 #include <cuda_fp16.h>
 #define __CUDA_ARCH__ 860
+inline __device__ float half_to_float(uint16_t h)
+{
+    float f;
+    asm volatile("cvt.f32.f16 %0, %1;\n" : "=f"(f) : "h"(h));
+    return f;
+}
+
 inline __device__ uint32_t float2_to_half2(float2 f)
 {
     union {

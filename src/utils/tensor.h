@@ -93,6 +93,22 @@ struct Tensor {
             {CPU, "CPU"}, {CPU_PINNED, "CPU_PINNED"}, {GPU, "GPU"}};
         return devicetring.at(location);
     }
+
+    virtual std::string toString() const
+    {
+        std::string device_str = DeviceString();
+
+        static const std::unordered_map<DataType, std::string> type_to_string{
+            {INT8, "INT8"},
+            {FP16, "FP16"},
+            {FP32, "FP32"},
+
+        };
+        return fmtstr("Tensor[where=%s, type=%s, shape=%s]",
+                    device_str.c_str(),
+                    type_to_string.at(dtype).c_str(),
+                    vec2str(shape).c_str());
+    }  
 };
 
 template<typename T>
@@ -140,7 +156,7 @@ public:
         return (T*)data + offset;
     }
     // for debug
-    std::string toString() const
+    virtual std::string toString() const
     {
         std::string device_str = DeviceString();
 
@@ -305,7 +321,7 @@ struct TensorMap {
         ss << "{";
         std::vector<std::string> key_names = keys();
         for (size_t i = 0; i < tensor_map_.size(); ++i) {
-            ss << key_names[i] << ": " << at(key_names[i]).toString();
+            ss << key_names[i] << ": " << at(key_names[i])->toString();
             if (i < tensor_map_.size() - 1) {
                 ss << ", ";
             }
