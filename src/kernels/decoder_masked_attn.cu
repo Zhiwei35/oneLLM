@@ -31,7 +31,7 @@ __device__ T blockReduceSum(T val){
         warpsum[warp_id] = val;
     }
     __syncthreads();
-    float warp_val = tid < warp_nums ? warpsum[tid] : 0;
+    float warp_val = tid < warp_nums ? warpsum[tid] : (T)0.0f;
     return warpReduceSum<T>(warp_val);
 
 }
@@ -52,14 +52,14 @@ __device__ T blockReduceMax(T val){
     int warp_nums = (blockDim.x + 31)/ 32;
     static __shared__ T warpmax[64];
     // returned val is the max computed by 0th thread.
-    val = warpReduceMax<T>(val);
+    val = warpReduceMax(val); // remove <T> can ignore the multi-overloaded error?
     //note: here return val of warpreducemax should be stored into smem , rather not reg, because here nums of return val  are warp nums not thread nums.
     if (lane_id == 0){
         warpmax[warp_id] = val;
     }
     __syncthreads();
-    float warp_val = tid < warp_nums ? warpmax[tid] : 0;
-    return warpReduceMax<T>(warp_val);
+    T warp_val = tid < warp_nums ? warpmax[tid] : (T)0;
+    return warpReduceMax(warp_val);
 }
 // kv cache is the output of context attention(prompt phase), and the input of masked attention(token gen)
 // struct masked_MHA_kernel_params
@@ -221,7 +221,7 @@ __global__ void masked_MHA_kernel(const T* q,
 
         // sq[tid] = q_mem[qkv_offset];
         __syncthreads();
-        T qk = (tid < head_size) ? sq[tid] * sk[tid] * scale : (T)0.0f;
+        T qk = (tid < head_size) ? (float)sq[tid] * (float)sk[tid] * (float)scale : (T)0.0f;
         //block reduce using multi warp reduce
         //TODO: maybe broadcast the attn score to each thread of the block in blockreducesum
         T attn_score = blockReduceSum<T>(qk);
@@ -287,7 +287,6 @@ __global__ void masked_MHA_kernel(const half* q,
                     //const int num_heads,
                     const int head_size,
                     const int step,
-                    half scale,
                     int   rotary_embedding_dim,
                     float rotary_embedding_base){// rsqrt(dh)
     int tid = threadIdx.x;

@@ -33,9 +33,9 @@ inline __device__ float2 GetRoPEres(const float2 v, const float2 coef)
 
 inline __device__ uint32_t GetRoPEres(const uint32_t v, const float2 coef)
 {
-    float2 fv     = half2_to_float2(v);
+    float2 fv     = __half22float2(v);
     float2 rot_fv = GetRoPEres(fv, coef);
-    return float2_to_half2(rot_fv);
+    return __float22half2_rn(rot_fv);
 }
 
 inline __device__ void apply_RoPE(uint32_t& q, int tid, int rot_embed_dim, float base, float t_step)

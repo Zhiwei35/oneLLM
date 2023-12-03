@@ -1,6 +1,5 @@
 #include <cuda.h>
 #include <cuda_fp16.h>
-#define __CUDA_ARCH__ 860
 template<typename T_OUT, typename T_IN>
 inline __device__ T_OUT scalar_cast_vec(T_IN val)
 {
