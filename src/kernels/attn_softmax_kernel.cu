@@ -134,7 +134,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
     //const int NUMS_PER_THREAD_PER_ROW = ceil(k_len / blockDim.x);
     int vec_size = Vec<T_half>::size;
     using Vec_t = typename Vec<T_half>::Type;
-    Vec_t scale_vec = static_cast<Vec_t>(__float2half(scale));
+    Vec_t scale_vec = scalar_cast_vec<Vec_t>(__float2half(scale));
     __shared__ float inv_sum, s_max;
     //warning: remember 1st priority thing is filtering the out-of-boundary threads
     if(threadIdx.x * vec_size >= k_len){
@@ -177,7 +177,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start * blockDim.x + threadIdx.x * vec_size;
             mask_offset = batch_id * q_len * k_len + row_start * k_len + col_start * blockDim.x + threadIdx.x * vec_size;
-            data[col_start] = h2exp(__hsub2(data[col_start], static_cast<Vec_t>(s_max)));
+            data[col_start] = h2exp(__hsub2(data[col_start], scalar_cast_vec<Vec_t>(s_max)));
             thread_sum += (float)data[col_start].x + (float)data[col_start].y;
             //debug info,printf("after, data[%d]=%f, thread_sum = %f\n",col_start, data[col_start], thread_sum);
         }
@@ -192,7 +192,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
        for(int col_start = 0; col_start < NUMS_PER_THREAD_PER_ROW; col_start++){ 
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start * blockDim.x + threadIdx.x * vec_size;
-            *reinterpret_cast<Vec_t*>(&attn_score[qk_offset]) = __hmul2(data[col_start], static_cast<Vec_t>(inv_sum));
+            *reinterpret_cast<Vec_t*>(&attn_score[qk_offset]) = __hmul2(data[col_start], scalar_cast_vec<Vec_t>(inv_sum));
         }
     }
 }
@@ -201,11 +201,11 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
 #define LAUNCH_SOFTMAX(dtype, vec_size)                                                                      \
     if (block.x > 2048 && block.x <= 4096) {                                                                 \
         constexpr int NUMS_PER_THREAD_PER_ROW = 4;                                                           \
-        block.x /= 4 * vec_size;                                                                            \
+        block.x /= 4 * vec_size;                                                                             \
         block.x = (block.x + 32 - 1) / 32 * 32;                                                              \
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
-                                                qk->data,                                                    \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
+                                                (dtype*)qk->data,                                            \
                                                 mask->data,                                                  \
                                                 batch_size,                                                  \
                                                 head_nums,                                                   \
@@ -217,8 +217,8 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
         block.x /= 2 * vec_size;                                                                             \                                    
         block.x = (block.x + 32 - 1) / 32 * 32;                                                              \   
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
-                                            qk->data,                                                        \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
+                                            (dtype*)qk->data,                                                \
                                             mask->data,                                                      \
                                             batch_size,                                                      \
                                             head_nums,                                                       \
@@ -229,8 +229,8 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
         constexpr int NUMS_PER_THREAD_PER_ROW = 1;                                                           \
         block.x /= vec_size;                                                                                 \
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
-                                            qk->data,                                                        \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
+                                            (dtype*)qk->data,                                                \
                                             mask->data,                                                      \
                                             batch_size,                                                      \
                                             head_nums,                                                       \
