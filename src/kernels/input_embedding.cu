@@ -23,17 +23,16 @@ __global__ void embeddingFunctor(const int* input_ids,
 template<typename T>
 void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, sequenue_length]
                           TensorWrapper<T>* output,       // FP32 [batch_size, sequeue_length, hidden_size]
-                          EmbeddingWeight<T>* embed_table)  // FP32 [vocal_size, hidden_size]
-{
+                          EmbeddingWeight<T>* embed_table,// FP32 [vocal_size, hidden_size]
+                          int vocab_size) {//consider add shape attr in embeddingweight to avoid vocab size input 
     const int blockSize = 256;
     const int batch_size = output->shape[0];
     const int sequeue_length = output->shape[1];
     const int hidden_size = output->shape[2];
-    const int vocab_size = embed_table->shape[0];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
     embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
                                                  output->data,
-                                                 embed_table->data,
+                                                 embed_table->emb_table,
                                                  batch_size,
                                                  sequeue_length,
                                                  hidden_size,
@@ -42,7 +41,9 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
 
 template void launchInputEmbedding(TensorWrapper<int>* input_ids,    
                                    TensorWrapper<float>* output,       
-                                   EmbeddingWeight<float>* embed_table);
+                                   EmbeddingWeight<float>* embed_table,
+                                   int vocab_size);
 template void launchInputEmbedding(TensorWrapper<int>* input_ids,    
                                    TensorWrapper<half>* output,       
-                                   EmbeddingWeight<half>* embed_table);
+                                   EmbeddingWeight<half>* embed_table,
+                                   int vocab_size);

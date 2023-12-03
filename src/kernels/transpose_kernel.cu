@@ -58,7 +58,7 @@ void launchTransposeKVCache(TensorWrapper<T>* k_cache_src,
     
     int max_k_len = k_cache_dst->shape[2];
     int head_size = k_cache_dst->shape[3];
-    int layer = layer_id->getVal<int>();
+    int layer = layer_id->getVal();
     //note: here MUSTN'T use layer_id->getVal<int>(), because we cant access GPU memory directly by [] if data is on GPU
     //note: so we can make layer data locate on CPU
     size_t layer_offset = layer * batch_size * kv_head_num * max_seq_len * head_size;

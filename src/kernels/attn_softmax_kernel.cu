@@ -43,7 +43,7 @@ __inline__ __device__ T blockReduce(T val) {
 
 
 template<typename T, int NUMS_PER_THREAD_PER_ROW>
-__global__ void ScaleMaskAndSoftmax(T* attn_score,
+__global__ void ScaleMaskAndSoftmax_float(T* attn_score,
                                     T* qk,
                                     uint8_t* mask,
                                     int batch_size,
@@ -119,7 +119,7 @@ __global__ void ScaleMaskAndSoftmax(T* attn_score,
 }
 // cant partial specialize in func
 template<typename T_half, int NUMS_PER_THREAD_PER_ROW>
-__global__ void ScaleMaskAndSoftmax(T_half* attn_score,
+__global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
                                     T_half* qk,
                                     uint8_t* mask,
                                     int batch_size,
@@ -204,7 +204,7 @@ __global__ void ScaleMaskAndSoftmax(T_half* attn_score,
         block.x /= 4 * vec_size;                                                                            \
         block.x = (block.x + 32 - 1) / 32 * 32;                                                              \
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
                                                 qk->data,                                                    \
                                                 mask->data,                                                  \
                                                 batch_size,                                                  \
@@ -217,7 +217,7 @@ __global__ void ScaleMaskAndSoftmax(T_half* attn_score,
         block.x /= 2 * vec_size;                                                                             \                                    
         block.x = (block.x + 32 - 1) / 32 * 32;                                                              \   
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
                                             qk->data,                                                        \
                                             mask->data,                                                      \
                                             batch_size,                                                      \
@@ -229,7 +229,7 @@ __global__ void ScaleMaskAndSoftmax(T_half* attn_score,
         constexpr int NUMS_PER_THREAD_PER_ROW = 1;                                                           \
         block.x /= vec_size;                                                                                 \
         assert(block.x < 1024);                                                                              \
-        ScaleMaskAndSoftmax<NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
+        ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>(attn_score->data,                      \
                                             qk->data,                                                        \
                                             mask->data,                                                      \
                                             batch_size,                                                      \

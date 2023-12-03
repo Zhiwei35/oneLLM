@@ -19,19 +19,20 @@ __global__ void SamplingKernel(int* topk_id,
     int tid = threadIdx.x;
     int offset = batch_id * K + tid;
     bool is_half = sizeof(T) == 2;
-    float max_val = is_half ? __half2float(topk_val[batch_id * K]) : topk_val[batch_id * K]; // max val is the top of the buffer, because topK
-    topk_val[offset] = expf(topk_val[offset] - max_val);
+    float max_val = (float)(topk_val[batch_id * K]) ; // max val is the top of the buffer, because topK
+    float val = (float)(topk_val[offset]);
+    val = expf(val - max_val);
     __shared__ float thredhold, sum;
     if(tid == 0) {
         sum = 0.0f;
         for(int i = 0; i < K; i++) {
-            sum += topk_val[batch_id * K + i];
+            sum += (float)topk_val[batch_id * K + i];
         }
         curandState_t state;
         curand_init((unsigned long long)rand_num,(unsigned long long)bid, (unsigned long long)0, &state);// not sure rand_num's type is suitable here or not
         thredhold = (float)curand_uniform(&state) * sum; // for a block
         for(int i = 0; i < K; i++) {
-            thredhold = thredhold - topk_val[offset];
+            thredhold = thredhold - val;
             if(thredhold < 0) {
                 output_id[bid] = topk_id[batch_id * K + i] % vocab_size;
                 break;
