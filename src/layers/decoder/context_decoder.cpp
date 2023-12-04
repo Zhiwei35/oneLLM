@@ -44,9 +44,9 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     int h_token_num{};//output 
     launchCalPaddingoffset(h_pinned_token_num_ptr, //pinned host mem alloced in h file
                            &h_token_num, //out
-                           padding_offset->as<int>(), //out
-                           cum_seqlens, //out
-                           seq_lens->as<int>(), // in
+                           padding_offset->as<int>()->data, //out
+                           cum_seqlens->data, //out
+                           seq_lens->as<int>()->data, // in
                            dyn_params.batch_size,
                            dyn_params.max_q_len);
     DeviceSyncAndCheckCudaError();
@@ -56,10 +56,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     //dyn_params.max_k_len = attention_mask->shape[2];
     launchBuildCausalMasks<T>(attention_mask->as<T>(), //out
                             seq_lens->as<int>(), //q, input lens, [bs]
-                            context_length->as<int>(), //k, context lens, [bs]
-                            dyn_params.max_q_len, 
-                            dyn_params.max_k_len, 
-                            dyn_params.batch_size);
+                            context_length->as<int>());//k, context lens, [bs]
     DeviceSyncAndCheckCudaError();
     // 3. RMSnorm
     Tensor* decoder_input = input_tensors["decoder_input"];
@@ -68,7 +65,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     std::cout << "RMSnorm shape: "<< "\n"
               << "input: "<< decoder_input->shape[0] << "," << decoder_input->shape[1] <<"\n";
 
-    launchRMSNorm(decoder_input, //in&out, [num tokens, q_hidden_units]
+    launchRMSNorm(decoder_input->as<T>(), //in&out, [num tokens, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
                   rmsnorm_eps);
     DeviceSyncAndCheckCudaError();
@@ -112,7 +109,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
         launchFusedAddBiasResidualRMSNorm(decoder_input->as<T>(), //in residual, [num tokens, hidden_units]
                                         decoder_output->as<T>(), //in&out, [num tokens, hidden_units]
                                         layerWeights[layer_id]->self_attn_weight.output, //bias
-                                        layerWeights[layer_id]->ffn_norm_weight,//rmsnorm weights, [hidden_units]
+                                        layerWeights[layer_id]->ffn_norm_weight.gamma,//rmsnorm weights, [hidden_units]
                                         rmsnorm_eps);
         DeviceSyncAndCheckCudaError();
         TensorMap ffn_inputs{

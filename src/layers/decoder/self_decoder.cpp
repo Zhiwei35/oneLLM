@@ -16,7 +16,7 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
 {
     //1. RMSNorm
     Tensor* decoder_input = input_tensors["decoder_input"];
-    launchRMSNorm(decoder_input, //in&out, [bs, q_hidden_units]
+    launchRMSNorm(decoder_input->as<T>(), //in&out, [bs, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
                   rmsnorm_eps);
     DeviceSyncAndCheckCudaError();  
@@ -57,7 +57,7 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
         launchFusedAddBiasResidualRMSNorm(decoder_input->as<T>(), //in residual, [bs, q hidden_units]
                                           decoder_output->as<T>(), //in&out, [bs, q hidden_units]
                                           layerWeights[layer_id]->self_attn_weight.output, //bias
-                                          layerWeights[layer_id]->ffn_norm_weight,//rmsnorm weights, [q hidden_units]
+                                          layerWeights[layer_id]->ffn_norm_weight.gamma,//rmsnorm weights, [q hidden_units]
                                           rmsnorm_eps);
         DeviceSyncAndCheckCudaError();
         TensorMap ffn_inputs{
