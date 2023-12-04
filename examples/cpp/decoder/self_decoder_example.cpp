@@ -161,7 +161,7 @@ int main(){
         layerWeights[i] = new LlamaLayerWeight<float>(head_num, kv_head_num,
                                                head_size, inter_size, wtype,
                                                /*attn_bias*/true);
-        layerWeights[i]->loadWeights<float>(d_attn_norm_weight,
+        layerWeights[i]->loadWeights(d_attn_norm_weight,
                                             d_ffn_norm_weight,
                                             d_qkv_weights,
                                             d_qkv_bias,
@@ -184,7 +184,7 @@ int main(){
                                                             type_bool, 
                                                             {attn_dyn_params.batch_size}, 
                                                             d_finished);
-    TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
+    TensorWrapper<int>* layer = new TensorWrapper<int>(GPU, 
                                                             type_int, 
                                                             {1}, 
                                                             &layer_id);
@@ -207,7 +207,7 @@ int main(){
     ONELLM_CHECK_WITH_INFO(decoder_input->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(step->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(finished->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    ONELLM_CHECK_WITH_INFO(layer_id->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(layer->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
 
 
     TensorMap decoder_inputs{
@@ -216,7 +216,7 @@ int main(){
         // {"total_padding_len", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, )},
         {"step",step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
         {"finished",finished},
-        {"layer_id",layer_id},
+        {"layer_id",layer},
         {"output_norm_weight",output_norm_weight}//located at llamaweights class, rather not llamalayerweigths
     };
     TensorMap decoder_outputs{

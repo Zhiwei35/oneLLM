@@ -188,7 +188,7 @@ int main(int argc, char** argv)
         layerWeights[i] = new LlamaLayerWeight<float>(head_num, kv_head_num,
                                                head_size, inter_size, wtype,
                                                /*attn_bias*/true);
-        layerWeights[i]->loadWeights<float>(d_attn_norm_weight,
+        layerWeights[i]->loadWeights(d_attn_norm_weight,
                                             d_ffn_norm_weight,
                                             d_qkv_weights,
                                             d_qkv_bias,
@@ -215,10 +215,10 @@ int main(int argc, char** argv)
                                                               type_int, 
                                                               {attn_dyn_params.batch_size}, 
                                                               d_input_len);
-    TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
+    TensorWrapper<int>* layer = new TensorWrapper<int>(GPU, 
                                                               type_int, 
                                                               {1}, 
-                                                              &h_layer_id);
+                                                              &layer_id);
     TensorWrapper<int>* context_length = new TensorWrapper<int>(GPU, 
                                                               type_int, 
                                                               {attn_dyn_params.batch_size}, 
@@ -247,7 +247,7 @@ int main(int argc, char** argv)
     ONELLM_CHECK_WITH_INFO(padding_offset->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(history_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(attention_mask->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    ONELLM_CHECK_WITH_INFO(layer_id->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(layer->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(context_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(output_norm_weight->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(input_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
@@ -260,7 +260,7 @@ int main(int argc, char** argv)
         {"context_length", context_length},
         {"attention_mask", attention_mask},
         {"output_norm_weight", output_norm_weight},//located at llamaweights class, rather not llamalayerweigths
-        {"layer_id", layer_id}
+        {"layer_id", layer}
     };
     //output buffer and input buffer are shared to reuse buffer between layers
     //I dont rewrite Tensor's copy constructor, default shallow copy, that can share buffer, which is I want
