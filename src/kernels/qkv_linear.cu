@@ -116,6 +116,22 @@ void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
     std::cout << "called batch gemm" <<"\n";
 }
 
+template void launchLinearGemm(TensorWrapper<float>* input,
+                      BaseWeight<float>& weight, 
+                      TensorWrapper<float>* output,
+                      cublasWrapper* cublas_wrapper,
+                      bool trans_a,
+                      bool trans_b,
+                      bool shared_out_buf)
+
+template void launchLinearGemm(TensorWrapper<half>* input,
+                      BaseWeight<half>& weight, 
+                      TensorWrapper<half>* output,
+                      cublasWrapper* cublas_wrapper,
+                      bool trans_a,
+                      bool trans_b,
+                      bool shared_out_buf)
+
 template void launchLinearStridedBatchGemm(TensorWrapper<float>* input1,
                                   TensorWrapper<float>* input2,
                                   TensorWrapper<float>* output,

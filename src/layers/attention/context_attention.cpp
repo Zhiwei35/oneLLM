@@ -151,7 +151,7 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     launchLinearGemm(qkv_buf_wo_pad_1, weights.output, attention_output->as<T>(), cublas_wrapper);
 
     if (is_free_buffer_after_fwd) {
-        this->free();
+        this->freeBuf();
     }
     DeviceSyncAndCheckCudaError();
 }

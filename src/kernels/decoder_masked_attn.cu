@@ -422,7 +422,7 @@ __global__ void masked_MHA_kernel(const half* q,
         }
         
         // float* mha_output_fp32 = reinterpret_cast<float*>(mha_output);
-        *reinterpret_cast<Vec_t*>(&mha_output_fp32[q_offset_vec]) = __float22half2(O);
+        *reinterpret_cast<Vec_t*>(&mha_output[q_offset_vec]) = __float22half2_rn(O);
     }
 }
 
