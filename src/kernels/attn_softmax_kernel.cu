@@ -45,7 +45,7 @@ __inline__ __device__ T blockReduce(T val) {
 template<typename T, int NUMS_PER_THREAD_PER_ROW>
 __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
                                     T* qk,
-                                    uint8_t* mask,
+                                    T* mask,
                                     int batch_size,
                                     int head_nums,
                                     int q_len,
@@ -65,7 +65,7 @@ __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
         int qk_offset = 0;
         int mask_offset = 0;
         T qk_data = static_cast<T>(0);
-        uint8_t mask_data = static_cast<uint8_t>(0);
+        T mask_data = static_cast<T>(0);
         T thread_max = FLT_MIN;
         T data[NUMS_PER_THREAD_PER_ROW]; // 面对这种一个block一个thread需要处理多行多列的时候，数据尽量用数组存储，计算出每个block和thread要处理几行几列
         //for(int col_start = threadIdx.x; col_start < k_len; col_start += blockDim.x){
@@ -78,7 +78,7 @@ __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
             mask_data = mask[mask_offset];
             
             //debug info,printf("before,data[%d]=%f\n",col_start, data[col_start]);
-            data[col_start] = scale * qk_data + (T)mask_data;
+            data[col_start] = scale * qk_data + mask_data;
             //debug info,printf("after,scale*qk_data=%f, (float)mask_data=%f,data[%d]=%f\n",scale * qk_data, (float)mask_data, col_start, data[col_start]);
             thread_max = fmax(data[col_start], thread_max);
         }
@@ -121,7 +121,7 @@ __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
 template<typename T_half, int NUMS_PER_THREAD_PER_ROW>
 __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
                                     T_half* qk,
-                                    uint8_t* mask,
+                                    T_half* mask,
                                     int batch_size,
                                     int head_nums,
                                     int q_len,

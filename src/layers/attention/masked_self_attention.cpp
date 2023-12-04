@@ -55,7 +55,7 @@ void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, 
     //1. qkv linear
     //[bs,1,q_hidden_units] * [q_hidden_units, hidden_units] = [bs,1,hidden_units]
     Tensor* attention_input = inputs["attention_input"];
-    launchLinearGemm(attention_input->as<T>(), weights.qkv, qkv_buf);
+    launchLinearGemm(attention_input->as<T>(), weights.qkv, qkv_buf, cublas_wrapper);
 
     //2. biasrope + masked mha
     //目前和FT lmdeploy相比少了total_padding_len(用在rope，timestep-=padlen（合理，不用对pad求rope），在llamabatch::initializeGenerate函数里面得到) sequence_lengths（每个句子所有轮的总长度，用在求tlength dynamic_ntk下的rotary_embedding_base）
@@ -68,10 +68,10 @@ void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, 
     Tensor* step = inputs["step"];//[1] onCPU
     Tensor* layer_id = inputs["layer_id"];//[1] onCPU
 
-    launchDecoderMaskedMHA(qkv_buf, weights.qkv, layer_id->as<int>, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
+    launchDecoderMaskedMHA<T>(qkv_buf, weights.qkv, layer_id->as<int>, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
 
-    launchLinearGemm(mha_output, weights.output, attention_output->as<T>());
+    launchLinearGemm(mha_output, weights.output, attention_output->as<T>(), cublas_wrapper);
     if (is_free_buffer_after_fwd) {
         this->freeBuf();
         DeviceSyncAndCheckCudaError();
