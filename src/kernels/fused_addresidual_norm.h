@@ -10,5 +10,5 @@ void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_
                                     TensorWrapper<T>* residual, 
                                     TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
                                     BaseWeight<T>& norm,
-                                    LayerNormWeight<T>& scale, //RMSNorm weights
+                                    T* scale, //RMSNorm weights
                                     float eps);

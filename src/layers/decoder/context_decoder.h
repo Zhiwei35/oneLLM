@@ -19,8 +19,8 @@ private:
     int hidden_units;
     float rmsnorm_eps; 
     TensorWrapper<T>* attention_mask;
-    TensorWrapper<T>* padding_offset;
-    TensorWrapper<T>* cum_seqlens;
+    TensorWrapper<int>* padding_offset;
+    TensorWrapper<int>* cum_seqlens;
     int* h_pinned_token_num_ptr;
     cudaStream_t stream;
     cublasWrapper* cublas_wrapper;

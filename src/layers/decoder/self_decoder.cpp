@@ -16,7 +16,7 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
 {
     //1. RMSNorm
     Tensor* decoder_input = input_tensors["decoder_input"];
-    launchRMSNorm(&decoder_input, //in&out, [bs, q_hidden_units]
+    launchRMSNorm(decoder_input, //in&out, [bs, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
                   rmsnorm_eps);
     DeviceSyncAndCheckCudaError();  
@@ -58,9 +58,7 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
                                           decoder_output->as<T>(), //in&out, [bs, q hidden_units]
                                           layerWeights[layer_id]->self_attn_weight.output, //bias
                                           layerWeights[layer_id]->ffn_norm_weight,//rmsnorm weights, [q hidden_units]
-                                          rmsnorm_eps,
-                                          dyn_params.batch_size,
-                                          hidden_units);
+                                          rmsnorm_eps);
         DeviceSyncAndCheckCudaError();
         TensorMap ffn_inputs{
             {"ffn_input", decoder_output}
@@ -69,15 +67,13 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
             {"ffn_output", decoder_output}
         };
         ffn->forward(ffn_inputs, ffn_outputs, layerWeights[layer_id]->ffn_weight, dyn_params);
-        auto gamma = layer_id < num_layer - 1 ? layerWeights[layer_id + 1]->attn_norm_weight :
-                                                     input_tensors["output_norm_weight"]->as<T>();//llamaweight->output_norm_weight
+        auto gamma = layer_id < num_layer - 1 ? layerWeights[layer_id + 1]->attn_norm_weight.gamma :
+                                                     input_tensors["output_norm_weight"]->as<T>()->data;//llamaweight->output_norm_weight
         launchFusedAddBiasResidualRMSNorm(decoder_input->as<T>(), //in, [bs, hidden_units]
                                           decoder_output->as<T>(), //in&out, [bs, hidden_units]
                                           layerWeights[layer_id]->ffn_weight.down, 
                                           gamma,//rmsnorm weights, [hidden_units]
-                                          rmsnorm_eps,
-                                          dyn_params.batch_size,
-                                          hidden_units);
+                                          rmsnorm_eps);
         DeviceSyncAndCheckCudaError();
         decoder_input = decoder_output; // for next iter
     }

@@ -145,13 +145,13 @@ void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_
                                     TensorWrapper<T>* residual, 
                                     TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
                                     BaseWeight<T>& norm,
-                                    LayerNormWeight<T>& scale, //RMSNorm weights
+                                    T* scale, //RMSNorm weights
                                     float eps) //RMSNorm eps
 {
     int batch_size = decoder_out->shape[0];
     int hidden_units = decoder_out->shape[1];
     T* bias = norm.bias;
-    T* gamma = scale.gamma;
+    T* gamma = scale;
     int vec_size = Vec<T>::size;
     int num_threads = hidden_units / vec_size; // assume head size can be divided by 4 and 2
     dim3 grid(batch_size);
@@ -170,11 +170,11 @@ template void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens
                                     TensorWrapper<float>* residual, 
                                     TensorWrapper<float>* decoder_out, // [num tokens, hidden_units]
                                     BaseWeight<float>& norm,
-                                    LayerNormWeight<float>& scale, //RMSNorm weights
+                                    float* scale, //RMSNorm weights
                                     float eps);
 template void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
                                     TensorWrapper<half>* residual, 
                                     TensorWrapper<half>* decoder_out, // [num tokens, hidden_units]
                                     BaseWeight<half>& norm,
-                                    LayerNormWeight<half>& scale, //RMSNorm weights
+                                    half* scale, //RMSNorm weights
                                     float eps);

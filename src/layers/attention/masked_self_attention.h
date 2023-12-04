@@ -35,7 +35,7 @@ private:
 
     // intermedia buffer
     TensorWrapper<T>* qkv_buf     = nullptr; // for qkv linear output and mha input
-    TensorWrapper<float>* mha_output = nullptr; // mha output, then invoke a linear to attention output
+    TensorWrapper<T>* mha_output = nullptr; // mha output, then invoke a linear to attention output
 
 
 public:
