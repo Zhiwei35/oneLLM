@@ -199,23 +199,75 @@ int main(int argc, char** argv)
                                             d_ffn_gate,
                                             d_ffn_up);
     }
-
+    TensorWrapper<float>* decoder_input = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.num_tokens, q_hidden_units}, 
+                                                                    d_decoder_input);
+    TensorWrapper<int>* padding_offset = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.num_tokens}, 
+                                                              d_padding_offset);
+    TensorWrapper<int>* history_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_history_len);
+    TensorWrapper<int>* input_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_input_len);
+    TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {1}, 
+                                                              &h_layer_id);
+    TensorWrapper<int>* context_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_ctx_len);
+    TensorWrapper<float>* attention_mask = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, 
+                                                              d_mask);
+    TensorWrapper<float>* decoder_output = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {attn_dyn_params.num_tokens, q_hidden_units}, 
+                                                              d_decoder_output);
+    TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                              d_all_k_cache);
+    TensorWrapper<float>* all_v_cache = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                              d_all_v_cache);
+    TensorWrapper<float>* output_norm_weight = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {q_hidden_units}, 
+                                                              d_output_norm_weight);
+    ONELLM_CHECK_WITH_INFO(decoder_input->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(padding_offset->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(history_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(attention_mask->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(layer_id->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(context_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(output_norm_weight->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(input_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    
     TensorMap decoder_inputs{
-        {"decoder_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
-        {"padding_offset", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
-        {"history_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
-        {"input_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
-        {"context_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
-        {"attention_mask", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)},
-        {"output_norm_weight", &TensorWrapper<float>(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
-        {"layer_id", &TensorWrapper<int>(CPU, type_int, {1}, &layer_id)},
+        {"decoder_input", decoder_input},
+        {"padding_offset", padding_offset},
+        {"history_length", history_length},
+        {"input_length", input_length},
+        {"context_length", context_length},
+        {"attention_mask", attention_mask},
+        {"output_norm_weight", output_norm_weight},//located at llamaweights class, rather not llamalayerweigths
+        {"layer_id", layer_id}
     };
     //output buffer and input buffer are shared to reuse buffer between layers
     //I dont rewrite Tensor's copy constructor, default shallow copy, that can share buffer, which is I want
     TensorMap decoder_outputs{
-        {"decoder_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_output)},
-        {"all_k_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"decoder_output", decoder_output},
+        {"all_k_cache", all_k_cache},
+        {"all_v_cache", all_v_cache}
     };
 
     LlamaContextDecoder<float>* ctxDecoder = new LlamaContextDecoder<float>(head_num,

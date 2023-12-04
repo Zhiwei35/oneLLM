@@ -103,7 +103,8 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     // same buffer between layers, reuse
     for(int layer_id = 0; layer_id < num_layer; layer_id++) {
         if (layer_id > 0){
-            ctx_attn_inputs["layer_id"] = &TensorWrapper(Device::CPU, type_int, {1}, &layer_id);
+            TensorWrapper<int>* layer = new TensorWrapper<int>(Device::CPU, type_int, {1}, &layer_id);
+            ctx_attn_inputs["layer_id"] = layer;
         }
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         ctxAttn->forward(ctx_attn_inputs, ctx_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params, ctxAttn->GetAttnStaticParams());

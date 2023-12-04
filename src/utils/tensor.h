@@ -122,7 +122,10 @@ public:
 
     TensorWrapper(Device location, DataType dtype, std::vector<int> shape, T* data):
     	Tensor(location, dtype, shape),
-    	data(data){}
+    	data(data){
+            DataType in_dtype = getTensorType<T>();
+            ONELLM_CHECK_WITH_INFO(in_dtype == dtype, "when build TensorWrapper, the passed in data type should be same as dtype in params");
+        }
 
     // friend bool operator==(Tensor& t1, Tensor& t2);
     virtual int size() const {

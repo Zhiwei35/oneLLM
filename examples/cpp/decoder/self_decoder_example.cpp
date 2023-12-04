@@ -172,20 +172,57 @@ int main(){
                                             d_ffn_gate,
                                             d_ffn_up);
     }
+    TensorWrapper<float>* decoder_input = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.batch_size, q_hidden_units}, 
+                                                                    d_decoder_input);
+    TensorWrapper<int>* step = new TensorWrapper<int>(GPU, 
+                                                        type_int, 
+                                                        {1}, 
+                                                        h_step);
+    TensorWrapper<bool>* finished = new TensorWrapper<bool>(GPU, 
+                                                            type_bool, 
+                                                            {attn_dyn_params.batch_size}, 
+                                                            d_finished);
+    TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
+                                                            type_int, 
+                                                            {1}, 
+                                                            h_layer_id);
+    TensorWrapper<float>* output_norm_weight = new TensorWrapper<float>(GPU, 
+                                                            type, 
+                                                            {q_hidden_units}, 
+                                                            d_output_norm_weight);
+    TensorWrapper<float>* decoder_output = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.batch_size, q_hidden_units}, 
+                                                                    d_decoder_output);
+    TensorWrapper<float>* key_cache = new TensorWrapper<float>(GPU, 
+                                                                type, 
+                                                                {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                                d_all_k_cache);
+    TensorWrapper<float>* value_cache = new TensorWrapper<float>(GPU, 
+                                                                type, 
+                                                                {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                                d_all_v_cache);
+    ONELLM_CHECK_WITH_INFO(decoder_input->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(step->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(finished->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(layer_id->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+
 
     TensorMap decoder_inputs{
-        {"decoder_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_input)},
+        {"decoder_input",decoder_input},
         // {"sequence_lengths", Tensor(GPU, type, {hidden_units}, )},
         // {"total_padding_len", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, )},
-        {"step", &TensorWrapper<int>(CPU, type_int, {1}, &h_step)},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
-        {"finished", &TensorWrapper<bool>(GPU, type_bool, {attn_dyn_params.batch_size}, d_finished)},
-        {"layer_id", &TensorWrapper<int>(CPU, type_int, {1}, &layer_id)},
-        {"output_norm_weight", &TensorWrapper<float>(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
+        {"step",step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
+        {"finished",finished},
+        {"layer_id",layer_id},
+        {"output_norm_weight",output_norm_weight}//located at llamaweights class, rather not llamalayerweigths
     };
     TensorMap decoder_outputs{
-        {"decoder_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_output)},
-        {"all_k_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"decoder_output",decoder_output},
+        {"all_k_cache",key_cache},
+        {"all_v_cache",value_cache}
     };
 
     LlamaSelfDecoder<float>* selfDecoder = new LlamaSelfDecoder<float>(head_num,

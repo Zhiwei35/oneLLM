@@ -27,13 +27,16 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
     Tensor* decoder_output = output_tensors["decoder_output"];
     Tensor* all_k_cache = output_tensors["all_k_cache"];
     Tensor* all_v_cache = output_tensors["all_v_cache"];
+    Tensor* layer_id = input_tensors["layer_id"];
     DataType type_int = getTensorType<int>();
-    int layer_id = 0;//TODO: enhance the layer_id update method
+    //int layer_id = 0;//TODO: enhance the layer_id update method
     ONELLM_CHECK_WITH_INFO(decoder_input->as<T>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    ONELLM_CHECK_WITH_INFO(decoder_output->as<T>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(step->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(finished->as<bool>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+
     TensorMap self_attn_inputs{
         {"attention_input", decoder_input},
-        {"layer_id", &TensorWrapper<int>(Device::CPU, type_int, {1}, &layer_id)},
+        {"layer_id", layer_id},
         {"step", step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
         {"finished", finished}
     };
@@ -41,10 +44,12 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
         {"attention_output", decoder_output},
         {"all_k_cache", all_k_cache},
         {"all_v_cache", all_v_cache}
-    };      
+    }; 
+       
     for(int layer_id = 0; layer_id < num_layer; layer_id++) {
         if (layer_id > 0){
-            self_attn_inputs["layer_id"] = &TensorWrapper<int>(Device::CPU, type_int, {1}, &layer_id);
+            TensorWrapper<int>* layer = new TensorWrapper<int>(Device::CPU, type_int, {1}, &layer_id);
+            self_attn_inputs["layer_id"] = layer;
         }
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         selfAttn->forward(self_attn_inputs, self_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params);//, selfAttn->GetAttnStaticParams());
