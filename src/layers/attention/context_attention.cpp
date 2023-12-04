@@ -137,7 +137,7 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     launchLinearStridedBatchGemm(q_buf_w_pad, k_cache_buf, qk_buf, false, true);
 
     //2.scale+mask+softmax
-    Tensorr* attention_mask = inputs["attention_mask"];
+    Tensor* attention_mask = inputs["attention_mask"];
     launchScaleMaskAndSoftmax(qk_buf, attention_mask->as<T>(), qk_buf, scale);
     DeviceSyncAndCheckCudaError();
     //3.qk*v [bs,head,qlen,klen]=>[bs,head,qlen,headsize]
