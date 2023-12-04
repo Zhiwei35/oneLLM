@@ -206,7 +206,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
         assert(block.x < 1024);                                                                              \
         ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
                                                 (dtype*)qk->data,                                            \
-                                                mask->data,                                                  \
+                                                (dtype*)mask->data,                                                  \
                                                 batch_size,                                                  \
                                                 head_nums,                                                   \
                                                 q_length,                                                    \
@@ -219,7 +219,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
         assert(block.x < 1024);                                                                              \
         ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
                                             (dtype*)qk->data,                                                \
-                                            mask->data,                                                      \
+                                            (dtype*)mask->data,                                                      \
                                             batch_size,                                                      \
                                             head_nums,                                                       \
                                             q_length,                                                        \
@@ -231,7 +231,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
         assert(block.x < 1024);                                                                              \
         ScaleMaskAndSoftmax_##dtype<dtype, NUMS_PER_THREAD_PER_ROW><<<grid, block>>>((dtype*)attn_score->data,\
                                             (dtype*)qk->data,                                                \
-                                            mask->data,                                                      \
+                                            (dtype*)mask->data,                                                      \
                                             batch_size,                                                      \
                                             head_nums,                                                       \
                                             q_length,                                                        \
