@@ -7,8 +7,8 @@
 #include "src/weights/llama/llama_weights.h"
 #include "src/utils/tensor.h"
 
-//layer weights is ready at the beginning 
-template<typename T>                                                                                                                                            by loadweights in onellm.cpp, outside of the decoder
+//layer weights is ready at the beginning by loadweights in onellm.cpp, outside of the decoder
+template<typename T>                                                                                                                                            
 class LlamaContextDecoder{
 private:
     int head_num;

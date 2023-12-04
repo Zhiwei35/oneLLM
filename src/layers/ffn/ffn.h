@@ -30,7 +30,7 @@ private:
     // [num tokens, intersize] 
     TensorWrapper<T>*  down_proj_input = nullptr; 
     // [num tokens, hiddenunits]
-    TensorWrapper<T>*  down_proj_output = nullptr;
+    // TensorWrapper<T>*  down_proj_output = nullptr;
   
 
 

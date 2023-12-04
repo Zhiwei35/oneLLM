@@ -134,7 +134,7 @@ int main(int argc, char** argv)
     TensorWrapper<int>* history_length = new TensorWrapper<int>(GPU, 
                                                               type_int, 
                                                               {attn_dyn_params.batch_size}, 
-                                                              d_history_length);
+                                                              d_history_len);
     TensorWrapper<int>* input_length = new TensorWrapper<int>(GPU, 
                                                               type_int, 
                                                               {attn_dyn_params.batch_size}, 

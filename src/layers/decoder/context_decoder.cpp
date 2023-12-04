@@ -13,8 +13,8 @@ void LlamaContextDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
     DataType type = getTensorType<T>(); 
     DataType type_int = getTensorType<int>(); 
     attention_mask = new TensorWrapper<T>(Device::GPU, type, {batch_size, max_q_len, max_k_len});
-    padding_offset = new TensorWrapper<T>(Device::GPU, type_int, {batch_size, max_q_len});
-    cum_seqlens = new TensorWrapper<T>(Device::GPU, type_int, {batch_size + 1});
+    padding_offset = new TensorWrapper<int>(Device::GPU, type_int, {batch_size, max_q_len});
+    cum_seqlens = new TensorWrapper<int>(Device::GPU, type_int, {batch_size + 1});
     attention_mask->data = allocator->Malloc(attention_mask->data, sizeof(T) * batch_size * max_q_len * max_k_len, false);
     padding_offset->data = allocator->Malloc(padding_offset->data, sizeof(int) * batch_size * max_q_len, false);
     cum_seqlens->data     = allocator->Malloc(cum_seqlens->data, sizeof(int) * (batch_size + 1), false);

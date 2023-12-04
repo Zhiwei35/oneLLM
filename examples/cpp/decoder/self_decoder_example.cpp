@@ -179,7 +179,7 @@ int main(){
     TensorWrapper<int>* step = new TensorWrapper<int>(GPU, 
                                                         type_int, 
                                                         {1}, 
-                                                        h_step);
+                                                        &h_step);
     TensorWrapper<bool>* finished = new TensorWrapper<bool>(GPU, 
                                                             type_bool, 
                                                             {attn_dyn_params.batch_size}, 
@@ -187,7 +187,7 @@ int main(){
     TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
                                                             type_int, 
                                                             {1}, 
-                                                            h_layer_id);
+                                                            &layer_id);
     TensorWrapper<float>* output_norm_weight = new TensorWrapper<float>(GPU, 
                                                             type, 
                                                             {q_hidden_units}, 
