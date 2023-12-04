@@ -33,7 +33,7 @@ void LlamaContextDecoder<T>::freeBuf()
 template<typename T>
 void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
 {
-    allocForForward<float>(dyn_params);
+    allocForForward(dyn_params);
     //1.
     Tensor* seq_lens = input_tensors["input_length"];
     Tensor* padding_offset = input_tensors["padding_offset"];
@@ -45,7 +45,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     launchCalPaddingoffset(h_pinned_token_num_ptr, //pinned host mem alloced in h file
                            &h_token_num, //out
                            padding_offset->as<int>(), //out
-                           cum_seqlens->as<int>(), //out
+                           cum_seqlens, //out
                            seq_lens->as<int>(), // in
                            dyn_params.batch_size,
                            dyn_params.max_q_len);
@@ -63,10 +63,10 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     DeviceSyncAndCheckCudaError();
     // 3. RMSnorm
     Tensor* decoder_input = input_tensors["decoder_input"];
-    dyn_params.num_tokens = decoder_input.shape[0];
+    dyn_params.num_tokens = decoder_input->shape[0];
     // todo: to enhance the (float*)nullptr
     std::cout << "RMSnorm shape: "<< "\n"
-              << "input: "<< decoder_input.shape[0] << "," << decoder_input.shape[1] <<"\n";
+              << "input: "<< decoder_input->shape[0] << "," << decoder_input->shape[1] <<"\n";
 
     launchRMSNorm(&decoder_input, //in&out, [num tokens, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
@@ -137,7 +137,10 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
         decoder_input = decoder_output; // for next iter
     }
     if (is_free_buffer_after_forward) {
-        free();
+        freeBuf();
     }
     DeviceSyncAndCheckCudaError();
 }
+
+template class LlamaContextDecoder<float>;
+template class LlamaContextDecoder<half>;

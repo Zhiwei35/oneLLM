@@ -155,3 +155,6 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     }
     DeviceSyncAndCheckCudaError();
 }
+
+template class LLaMAContextAttentionLayer<float>;
+template class LLaMAContextAttentionLayer<half>;

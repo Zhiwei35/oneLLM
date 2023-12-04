@@ -83,3 +83,6 @@ void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<Ll
     }
     // no intermedia buffer to free, so ignore call free
 }
+
+template class LlamaSelfDecoder<float>;
+template class LlamaSelfDecoder<half>;

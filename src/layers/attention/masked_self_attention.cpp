@@ -79,3 +79,6 @@ void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, 
     //seqlen将在sampling更新
     //Tensor sequence_lengths = inputs["sequence_lengths"]; //[bs] length_per_sample, 贯穿全kernel，to get tlength, to decide kv cache seqlen, that is kv cache's step/seqlen
 }
+
+template class LLaMASelfAttentionLayer<float>;
+template class LLaMASelfAttentionLayer<half>;

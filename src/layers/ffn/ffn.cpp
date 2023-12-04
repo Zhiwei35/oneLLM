@@ -71,3 +71,6 @@ void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWe
         this->freeBuf();
     }
 };
+
+template class LLaMAFFNLayer<float>;
+template class LLaMAFFNLayer<half>;
