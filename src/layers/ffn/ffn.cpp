@@ -1,7 +1,7 @@
 #include <iostream>
 #include "src/layers/ffn/ffn.h"
 #include "src/utils/macro.h"
-
+template<typename T>
 LLaMAFFNLayer<T>::LLaMAFFNLayer(int head_num,
                                int head_size,
                                int inter_size,
@@ -17,7 +17,7 @@ LLaMAFFNLayer<T>::LLaMAFFNLayer(int head_num,
     allocator(allocator), //cudaAllocator
     hidden_units(head_num * head_size),
     is_free_buffer_after_fwd(is_free_buffer_after_fwd) {}
-
+template<typename T>
 void LLaMAFFNLayer<T>::allocForForward(LLaMAAttentionDynParams& params){
     int num_tokens = params.num_tokens;
     DataType type = getTensorType<T>(); 
@@ -28,7 +28,7 @@ void LLaMAFFNLayer<T>::allocForForward(LLaMAAttentionDynParams& params){
     down_proj_input->data = allocator->Malloc(down_proj_input->data, sizeof(T) * num_tokens * inter_size, false);
     // down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * num_tokens * hidden_units, false);
 }
-
+template<typename T>
 void LLaMAFFNLayer<T>::allocForForward(int batch_size){
     DataType type = getTensorType<T>(); 
     SwiGLU_input = new TensorWrapper<T>(Device::GPU, type, {2, batch_size, inter_size});
@@ -38,7 +38,7 @@ void LLaMAFFNLayer<T>::allocForForward(int batch_size){
     down_proj_input->data = allocator->Malloc(down_proj_input->data, sizeof(T) * batch_size * inter_size, false);
     // down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
-
+template<typename T>
 void LLaMAFFNLayer<T>::free(){
     allocator->Free(SwiGLU_input->data);
     DeviceSyncAndCheckCudaError();
@@ -47,7 +47,7 @@ void LLaMAFFNLayer<T>::free(){
     // allocator->Free(down_proj_output->data);
     // DeviceSyncAndCheckCudaError();
 }
-
+template<typename T>
 void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){
     if (params.num_tokens > 0) {
         allocForForward<T>(params);

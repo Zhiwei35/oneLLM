@@ -1,16 +1,17 @@
 #include <iostream>
 #include "src/utils/macro.h"
 #include "src/layers/decoder/self_decoder.h"
-
+template<typename T>
 void LlamaSelfDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
 {
     // do nothing, no intermedia buffer
 }
+template<typename T>
 void LlamaSelfDecoder<T>::free()
 {
     // do nothing, no intermedia buffer
 }
-
+template<typename T>
 void LlamaSelfDecoder<T>::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
 {
     //1. RMSNorm

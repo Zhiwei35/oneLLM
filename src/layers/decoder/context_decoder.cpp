@@ -4,7 +4,7 @@
 //TODO: 1.more elegantly call DeviceSyncAndCheckCudaError();
 //2.ffn down proj dont have bias, but we cant pass void* to the fusedrmsnorm, here adopt a workaround that allocate 0.0f to bias,  which must be enhanced
 //3.line128 update the decoder input of next iter, I think this is right
-
+template<typename T>
 void LlamaContextDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
 {
     int batch_size = params.batch_size;
@@ -20,6 +20,7 @@ void LlamaContextDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
     cum_seqlens->data     = allocator->Malloc(cum_seqlens->data, sizeof(int) * (batch_size + 1), false);
    
 }
+template<typename T>
 void LlamaContextDecoder<T>::free()
 {
     allocator->Free(attention_mask->data);
@@ -29,6 +30,7 @@ void LlamaContextDecoder<T>::free()
     allocator->Free(cum_seqlens->data);
     DeviceSyncAndCheckCudaError();
 }
+template<typename T>
 void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params)
 {
     allocForForward<float>(dyn_params);

@@ -1,6 +1,6 @@
 #include <math.h>
 #include "src/layers/attention/masked_self_attention.h"
-
+template<typename T>
 LLaMASelfAttentionLayer<T>::LLaMASelfAttentionLayer(
                                int head_num,
                                int kv_head_num,
@@ -22,7 +22,7 @@ LLaMASelfAttentionLayer<T>::LLaMASelfAttentionLayer(
         // TODO: check kv_head_num is divided by haed_num
     q_head_per_kv(head_num / kv_head_num),
     scale(float(1 / sqrt(head_size))){}
-
+template<typename T>
 void LLaMASelfAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& params) {
     int batch_size = params.batch_size;
     int num_tokens = params.num_tokens;
@@ -39,14 +39,14 @@ void LLaMASelfAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& params
     mha_output->data = allocator->Malloc(
         mha_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
-
+template<typename T>
 LLaMASelfAttentionLayer<T>::free(){
     allocator->Free(qkv_buf->data);
     DeviceSyncAndCheckCudaError();
     allocator->Free(mha_output->data);
     DeviceSyncAndCheckCudaError();
 }
-
+template<typename T>
 LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params)
 {   
     //maybe we can create a method to arrange the input tensor and pointer to a struct

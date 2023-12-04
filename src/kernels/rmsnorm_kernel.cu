@@ -58,7 +58,7 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     float blocksum = blockReduceSum<float>(thread_accm);
     __shared__ Vec_t inv_fenmu;
     if(tid == 0){
-        inv_fenmu = static_cast<Vec_t>(rsqrt(blocksum / hidden_units + eps));
+        inv_fenmu = scalar_cast_vec<Vec_t>(rsqrt(blocksum / hidden_units + eps));
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
@@ -98,7 +98,7 @@ __global__ void RMSNorm(half* decoder_out, // [num tokens, q_hidden_units]
     float blocksum = blockReduceSum<float>(thread_accm);
     __shared__ Vec_t inv_fenmu;
     if(tid == 0){
-        inv_fenmu = scalar_cast_vec<Vec_t>(__float2half(rsqrt(blocksum / hidden_units + eps))) : 
+        inv_fenmu = scalar_cast_vec<Vec_t>(__float2half(rsqrt(blocksum / hidden_units + eps)));
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize

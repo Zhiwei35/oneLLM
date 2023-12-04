@@ -1,4 +1,5 @@
 #include "src/weights/llama/layer_weights.h"
+template<typename T>
 LlamaLayerWeight<T>::LlamaLayerWeight(int     head_num,
                                     int     kv_head_num,
                                     int     head_size,
@@ -39,6 +40,7 @@ LlamaLayerWeight<T>::LlamaLayerWeight(int     head_num,
     GPUMalloc(&ffn_weight.down.data, hidden_units * inter_size);
 }
 //model file type用来控制loadweightfrombin的第二个模板类型参数T_IN,如果T_IN和第一个模板参数不一致，需要将T_IN的weight使用ptx cast转换为T
+template<typename T>
 void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight_type)
 {
     loadWeightFromBin<T, T>(attn_norm_weight.gamma, {hidden_units}, weight_path + ".attention_norm.weight");
@@ -54,7 +56,7 @@ void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight
         loadWeightFromBin<T, T>(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias");
     }   
 }
-
+template<typename T>
 void LlamaLayerWeight<T>::loadWeights(T* d_attn_norm_weight,
                                 T* d_ffn_norm_weight,
                                 T* d_qkv_weights,
@@ -93,7 +95,7 @@ void freeWeights(BaseWeight<T>& weights)
     weights.data = nullptr;
     weights.bias = nullptr;
 }
-
+template<typename T>
 LlamaLayerWeight<T>::~LlamaLayerWeight()
 {
     // free norm

@@ -59,7 +59,7 @@ public:
         hidden_units(head_num * head_size),
         num_layer(num_layer),
         rmsnorm_eps(rmsnorm_eps),
-        data_type(getTensorType<float>()),
+        data_type(getTensorType<T>()),
         stream(stream),
         cublas_wrapper(cublas_wrapper),
         allocator(allocator),

@@ -1,7 +1,7 @@
 #include <iostream>
 #include "src/weights/llama/llama_weights.h"
-
-LlamaWeight::LlamaWeight(
+template<typename T>
+LlamaWeight<T>::LlamaWeight(
     int     head_num,
     int     kv_head_num,
     int     head_size,
@@ -32,20 +32,20 @@ LlamaWeight::LlamaWeight(
     GPUMalloc(&post_decoder_embedding_weight.emb_table, vocab_size * hidden_units);
     GPUMalloc(&pre_decoder_embedding_weight.emb_table, vocab_size * hidden_units);
 }
-
-void LlamaWeight::loadWeights(std::string weight_path) {
+template<typename T>
+void LlamaWeight<T>::loadWeights(std::string weight_path) {
     //weight_path += '/';
     std::cout << "the weight path is " << weight_path <<"\n";
-    loadWeightFromBin<float, float>(out_rmsnorm_weight.gamma, {hidden_units}, weight_path + ".norm.weight");
-    loadWeightFromBin<float, float>(post_decoder_embedding_weight.emb_table, {vocab_size, hidden_units}, weight_path + ".tok_embeddings.weight");
-    loadWeightFromBin<float, float>(pre_decoder_embedding_weight.emb_table, {vocab_size, hidden_units}, weight_path + ".output.weight");
+    loadWeightFromBin<T, T>(out_rmsnorm_weight.gamma, {hidden_units}, weight_path + ".norm.weight");
+    loadWeightFromBin<T, T>(post_decoder_embedding_weight.emb_table, {vocab_size, hidden_units}, weight_path + ".tok_embeddings.weight");
+    loadWeightFromBin<T, T>(pre_decoder_embedding_weight.emb_table, {vocab_size, hidden_units}, weight_path + ".output.weight");
 
     for (int layer = 0; layer < num_layer; ++layer) {
         llama_layer_weight[layer]->loadWeights(weight_path + "layers." + std::to_string(layer), weight_type);
     }
 }
-
-LlamaWeight::~LlamaWeight()
+template<typename T>
+LlamaWeight<T>::~LlamaWeight()
 {
     cudaFree(pre_decoder_embedding_weight.emb_table);
     cudaFree(out_rmsnorm_weight.gamma);
