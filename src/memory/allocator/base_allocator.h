@@ -9,8 +9,8 @@ public:
     virtual ~BaseAllocator(){};
     // unified interface for alloc buffer
     template<typename T>
-    void* Malloc(T* ptr, size_t size, bool is_host){
-        return deviceMalloc((void*)ptr, size, is_host);
+    T* Malloc(T* ptr, size_t size, bool is_host){
+        return (T*)deviceMalloc((void*)ptr, size, is_host);
     }
     virtual void* deviceMalloc(void* ptr, size_t size, bool is_host = false) = 0;
     template<typename T>

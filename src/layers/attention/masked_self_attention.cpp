@@ -73,7 +73,7 @@ void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, 
 
     launchLinearGemm(mha_output, weights.output, attention_output->as<T>());
     if (is_free_buffer_after_fwd) {
-        this->free();
+        this->freeBuf();
         DeviceSyncAndCheckCudaError();
     }
     //seqlen将在sampling更新
