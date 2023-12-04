@@ -108,3 +108,4 @@ int loadWeightFromBin(T* ptr, std::vector<size_t> shape, std::string filename)
 }
 
 template int loadWeightFromBin<float, float>(float* ptr, std::vector<size_t> shape, std::string filename);
+template int loadWeightFromBin<half, half>(half* ptr, std::vector<size_t> shape, std::string filename);

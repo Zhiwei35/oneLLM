@@ -1,3 +1,4 @@
+#pragma once
 #include <cuda.h>
 #include <cuda_fp16.h>
 template<typename T_OUT, typename T_IN>

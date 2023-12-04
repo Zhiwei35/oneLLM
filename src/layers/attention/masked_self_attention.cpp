@@ -51,7 +51,7 @@ LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMA
 {   
     //maybe we can create a method to arrange the input tensor and pointer to a struct
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
-    allocForForward<T>(params);//intermediat buf
+    allocForForward(params);//intermediat buf
     //1. qkv linear
     //[bs,1,q_hidden_units] * [q_hidden_units, hidden_units] = [bs,1,hidden_units]
     Tensor* attention_input = inputs["attention_input"];
@@ -59,16 +59,16 @@ LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMA
 
     //2. biasrope + masked mha
     //目前和FT lmdeploy相比少了total_padding_len(用在rope，timestep-=padlen（合理，不用对pad求rope），在llamabatch::initializeGenerate函数里面得到) sequence_lengths（每个句子所有轮的总长度，用在求tlength dynamic_ntk下的rotary_embedding_base）
-    Tensor* attention_output = outputs["attention_output"];
+    TensorWrapper* attention_output = outputs["attention_output"];
     //[step, bs, kv head num, head size],貌似少了一个layerid这样一个shape，后面看看添到哪维
-    Tensor* key_cache       = outputs["all_k_cache"]; // prepared in llamacachemgr and llamabatch::initialize
-    Tensor* value_cache     = outputs["all_v_cache"];
-    Tensor* finished = inputs["finished"];
+    TensorWrapper* key_cache       = outputs["all_k_cache"]; // prepared in llamacachemgr and llamabatch::initialize
+    TensorWrapper* value_cache     = outputs["all_v_cache"];
+    TensorWrapper* finished = inputs["finished"];
     // Tensor total_padding_len = inputs["total_padding_len"]; //[bs], for rope
-    Tensor* step = inputs["step"];//[1] onCPU
-    Tensor* layer_id = inputs["layer_id"];//[1] onCPU
+    TensorWrapper* step = inputs["step"];//[1] onCPU
+    TensorWrapper* layer_id = inputs["layer_id"];//[1] onCPU
 
-    launchDecoderMaskedMHA(qkv_buf, weights.qkv, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<T>(), mha_output, attn_static_params);
+    launchDecoderMaskedMHA(qkv_buf, weights.qkv, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
 
     launchLinearGemm(mha_output, weights.output, attention_output->as<T>());
