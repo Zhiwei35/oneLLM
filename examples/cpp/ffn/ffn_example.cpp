@@ -78,12 +78,19 @@ int main(int argc, char** argv)
     ffn_weights.up.shape = {hidden_units, inter_size};
     ffn_weights.down.data = d_down;
     ffn_weights.down.shape = {inter_size, hidden_units};
-
+    TensorWrapper<float>* ffn_input = new TensorWrapper<float>(GPU, 
+                                                               type, 
+                                                               {attn_dyn_params.num_tokens, hidden_units}, 
+                                                               d_ffn_input);
+    TensorWrapper<float>* ffn_output = new TensorWrapper<float>(GPU, 
+                                                               type, 
+                                                               {attn_dyn_params.num_tokens, hidden_units}, 
+                                                               d_ffn_output);
     TensorMap ffn_inputs{
-        {"ffn_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_input)}
+        {"ffn_input", ffn_input}
     };
     TensorMap ffn_outputs{
-        {"ffn_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_output)}
+        {"ffn_output", ffn_output}
     };
     std::cout << "initializing ffn layer" << "\n";
     LLaMAFFNLayer<float>* ffn_layer = new LLaMAFFNLayer<float>(head_num,
