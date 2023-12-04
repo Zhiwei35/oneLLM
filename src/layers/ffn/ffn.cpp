@@ -48,7 +48,7 @@ void LLaMAFFNLayer<T>::freeBuf(){
     // DeviceSyncAndCheckCudaError();
 }
 template<typename T>
-void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params){
+void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights<T>& weights, LLaMAAttentionDynParams& params){
     if (params.num_tokens > 0) {
         allocForForward<T>(params);
     } else {

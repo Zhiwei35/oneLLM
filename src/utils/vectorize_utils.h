@@ -14,6 +14,12 @@ inline __device__ half2 scalar_cast_vec<half2, float>(float val)
 }
 
 template<>
+inline __device__ float4 scalar_cast_vec<float4, float>(float val)
+{
+    return make_float4(val, val, val, val);
+}
+
+template<>
 inline __device__ float2 scalar_cast_vec<float2, float>(float val)
 {
     return make_float2(val, val);

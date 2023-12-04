@@ -40,14 +40,14 @@ void LLaMASelfAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& params
         mha_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
 template<typename T>
-LLaMASelfAttentionLayer<T>::freeBuf(){
+void LLaMASelfAttentionLayer<T>::freeBuf(){
     allocator->Free(qkv_buf->data);
     DeviceSyncAndCheckCudaError();
     allocator->Free(mha_output->data);
     DeviceSyncAndCheckCudaError();
 }
 template<typename T>
-LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params)
+void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params)
 {   
     //maybe we can create a method to arrange the input tensor and pointer to a struct
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
@@ -59,14 +59,14 @@ LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMA
 
     //2. biasrope + masked mha
     //目前和FT lmdeploy相比少了total_padding_len(用在rope，timestep-=padlen（合理，不用对pad求rope），在llamabatch::initializeGenerate函数里面得到) sequence_lengths（每个句子所有轮的总长度，用在求tlength dynamic_ntk下的rotary_embedding_base）
-    TensorWrapper* attention_output = outputs["attention_output"];
+    Tensor* attention_output = outputs["attention_output"];
     //[step, bs, kv head num, head size],貌似少了一个layerid这样一个shape，后面看看添到哪维
-    TensorWrapper* key_cache       = outputs["all_k_cache"]; // prepared in llamacachemgr and llamabatch::initialize
-    TensorWrapper* value_cache     = outputs["all_v_cache"];
-    TensorWrapper* finished = inputs["finished"];
+    Tensor* key_cache       = outputs["all_k_cache"]; // prepared in llamacachemgr and llamabatch::initialize
+    Tensor* value_cache     = outputs["all_v_cache"];
+    Tensor* finished = inputs["finished"];
     // Tensor total_padding_len = inputs["total_padding_len"]; //[bs], for rope
-    TensorWrapper* step = inputs["step"];//[1] onCPU
-    TensorWrapper* layer_id = inputs["layer_id"];//[1] onCPU
+    Tensor* step = inputs["step"];//[1] onCPU
+    Tensor* layer_id = inputs["layer_id"];//[1] onCPU
 
     launchDecoderMaskedMHA(qkv_buf, weights.qkv, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
