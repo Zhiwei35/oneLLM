@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "src/kernels/decoder_masked_attn.h"
-
+// kv cache shape = [numlayers, bs, kv head num, max_seq_len, head size]
 // bug1: scale's dtype must be float ,not int
 // bug2: mha_kernel_params struct's pointer is on CPU, not GPU, which cause we dont run the cuda kernel, so add cudacheck is a must!
 // bug3: blockreduce res should use tid=0 to write into smem
@@ -437,6 +437,7 @@ __global__ void masked_MHA_kernel(const half* q,
 template<typename T>
 void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             BaseWeight<T>& qkv,
+                            TensorWrapper<int>* layer_id,
                             TensorWrapper<T>* k_cache,
                             TensorWrapper<T>* v_cache,
                             TensorWrapper<bool>* finished,
@@ -445,10 +446,13 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             LLaMAAttentionStaticParams& static_params){
     const int batch_size = qkv_buf->shape[0];
     const int qkv_head_num = qkv_buf->shape[1];
-    const int kv_head_num = k_cache->shape[2]; 
+    const int kv_head_num = k_cache->shape[2];
+    const int max_seq_len = k_cache->shape[3]; 
     int head_num = qkv_head_num - 2 * kv_head_num;
     const int head_size = qkv_buf->shape[2];
     const int cur_step = step->getVal();
+    const int layer_id = layer_id->getVal();
+    const int layer_offset = layer_id * max_seq_len * batch_size * kv_head_num * head_size;
     T* qkv_data = qkv_buf->data;
     //[bs,1,qkv_head_num,head_size]
     T* q = qkv_data;
@@ -469,8 +473,8 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                                                                                 k,
                                                                                 v,
                                                                                 /*(T*)*/qkv.bias,
-                                                                                k_cache->data,
-                                                                                v_cache->data,
+                                                                                k_cache->data + layer_offset,
+                                                                                v_cache->data + layer_offset,
                                                                                 mha_output->data,
                                                                                 batch_size,
                                                                                 head_num,

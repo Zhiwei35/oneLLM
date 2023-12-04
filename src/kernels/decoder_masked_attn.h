@@ -8,6 +8,7 @@
 template<typename T>
 void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             BaseWeight<T>& qkv,
+                            TensorWrapper<int>* layer_id,
                             TensorWrapper<T>* k_cache,
                             TensorWrapper<T>* v_cache,
                             TensorWrapper<bool>* finished,

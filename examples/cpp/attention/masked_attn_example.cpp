@@ -101,20 +101,20 @@ int main(){
     self_attn_weights.output.shape = {q_hidden_units, q_hidden_units};
     self_attn_weights.output.type = wtype;
     TensorMap masked_attn_inputs{
-        {"attention_input", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_input)},
+        {"attention_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_input)},
         // {"sequence_lengths", Tensor(GPU, type, {hidden_units}, d_qkv_bias)},
         // {"total_padding_len", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_padding_offset)},
-        {"step", Tensor(CPU, type_int, {1}, &h_step)},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
-        {"finished", Tensor(GPU, type_bool, {attn_dyn_params.batch_size}, d_finished)},
-        {"layer_id", Tensor(GPU, type_int, {1}, &layer_id)},
+        {"step", &TensorWrapper<int>(CPU, type_int, {1}, &h_step)},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
+        {"finished", &TensorWrapper<bool>(GPU, type_bool, {attn_dyn_params.batch_size}, d_finished)},
+        {"layer_id", &TensorWrapper<float>(CPU, type_int, {1}, &layer_id)},
     };
     TensorMap masked_attn_outputs{
-        {"attention_output", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_output)},
-        {"key_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"value_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"attention_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_attention_output)},
+        {"key_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
+        {"value_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
     };
 
-    LLaMASelfAttentionLayer* self_attn_layer = new LLaMASelfAttentionLayer( head_num,
+    LLaMASelfAttentionLayer<float>* self_attn_layer = new LLaMASelfAttentionLayer<float>( head_num,
                                                                             kv_head_num,
                                                                             head_size,
                                                                             attn_static_params,

@@ -178,14 +178,14 @@ int main(int argc, char** argv)
     cudaMemcpy(d_ffn_down_bias, h_ffn_down_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_gate, h_ffn_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ffn_up, h_ffn_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-
+    int layer_id = 0;
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
-    std::vector<LlamaLayerWeight*> layerWeights;
+    std::vector<LlamaLayerWeight<float>*> layerWeights;
     WeightType wtype = getWeightType<float>();
     layerWeights.reserve(num_layers);
     for(int i = 0; i < num_layers; i++) {
-        layerWeights[i] = new LlamaLayerWeight(head_num, kv_head_num,
+        layerWeights[i] = new LlamaLayerWeight<float>(head_num, kv_head_num,
                                                head_size, inter_size, wtype,
                                                /*attn_bias*/true);
         layerWeights[i]->loadWeights<float>(d_attn_norm_weight,
@@ -201,23 +201,24 @@ int main(int argc, char** argv)
     }
 
     TensorMap decoder_inputs{
-        {"decoder_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
-        {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
-        {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
-        {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
-        {"context_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
-        {"attention_mask", Tensor(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)},
-        {"output_norm_weight", Tensor(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
+        {"decoder_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_input)},
+        {"padding_offset", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
+        {"history_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
+        {"input_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
+        {"context_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
+        {"attention_mask", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)},
+        {"output_norm_weight", &TensorWrapper<float>(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
+        {"layer_id", &TensorWrapper<int>(CPU, type_int, {1}, &layer_id)},
     };
     //output buffer and input buffer are shared to reuse buffer between layers
     //I dont rewrite Tensor's copy constructor, default shallow copy, that can share buffer, which is I want
     TensorMap decoder_outputs{
-        {"decoder_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_output)},
-        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"decoder_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_decoder_output)},
+        {"all_k_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
+        {"all_v_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
     };
 
-    LlamaContextDecoder* ctxDecoder = new LlamaContextDecoder(head_num,
+    LlamaContextDecoder<float>* ctxDecoder = new LlamaContextDecoder<float>(head_num,
                                                             kv_head_num,
                                                             head_size,
                                                             inter_size,

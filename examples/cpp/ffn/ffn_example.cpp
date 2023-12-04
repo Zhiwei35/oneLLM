@@ -71,7 +71,7 @@ int main(int argc, char** argv)
     CHECK(cudaMemcpy(d_up, h_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice));
     CHECK(cudaMemcpy(d_down, h_down, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice));
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
-    LLaMAFFNWeights ffn_weights;
+    LLaMAFFNWeights<float> ffn_weights;
     ffn_weights.gate.data = d_gate;
     ffn_weights.gate.shape = {hidden_units, inter_size};
     ffn_weights.up.data = d_up;
@@ -80,13 +80,13 @@ int main(int argc, char** argv)
     ffn_weights.down.shape = {inter_size, hidden_units};
 
     TensorMap ffn_inputs{
-        {"ffn_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_input)}
+        {"ffn_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_input)}
     };
     TensorMap ffn_outputs{
-        {"ffn_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_output)}
+        {"ffn_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, hidden_units}, d_ffn_output)}
     };
     std::cout << "initializing ffn layer" << "\n";
-    LLaMAFFNLayer* ffn_layer = new LLaMAFFNLayer(head_num,
+    LLaMAFFNLayer<float>* ffn_layer = new LLaMAFFNLayer<float>(head_num,
                                                 head_size,
                                                 inter_size,
                                                 stream,

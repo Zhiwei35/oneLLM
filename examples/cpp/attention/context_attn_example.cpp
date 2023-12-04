@@ -120,25 +120,25 @@ int main(int argc, char** argv)
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
     TensorMap ctx_attn_inputs{
-        {"attention_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_input)},
-        {"qkv_bias", Tensor(GPU, type, {hidden_units}, d_qkv_bias)},
-        {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
-        {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
-        {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
-        {"layer_id", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_layer_id)},
-//        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-//        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)},
-//        {"cur_query_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, dcur_query_len)},
-        {"context_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
-        {"attention_mask", Tensor(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)}
+        {"attention_input", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_input)},
+        {"qkv_bias", &TensorWrapper<float>(GPU, type, {hidden_units}, d_qkv_bias)},
+        {"padding_offset", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
+        {"history_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
+        {"input_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
+        {"layer_id", &TensorWrapper<int>(CPU, type_int, {attn_dyn_params.batch_size}, d_layer_id)},
+//        {"all_k_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
+//        {"all_v_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)},
+//        {"cur_query_length", &TensorWrapper<float>(GPU, type_int, {attn_dyn_params.batch_size}, dcur_query_len)},
+        {"context_length", &TensorWrapper<int>(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
+        {"attention_mask", &TensorWrapper<float>(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)}
     };
     TensorMap ctx_attn_outputs{
-        {"attention_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_output)},
-        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"attention_output", &TensorWrapper<float>(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_output)},
+        {"all_k_cache", &TensorWrapper<float>(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
+        {"all_v_cache", &TensorWrapper<float>(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
     };
     // weights are initialized in its constructor, see cpp/models/bert//bertlayerweight.cc
-    LLaMAattentionWeights ctx_attn_weights;
+    LLaMAattentionWeights<float> ctx_attn_weights;
     WeightType wtype = getWeightType<float>();
     ctx_attn_weights.qkv.data = d_qkv_weights;
     ctx_attn_weights.qkv.shape = {q_hidden_units, hidden_units};
@@ -148,7 +148,7 @@ int main(int argc, char** argv)
     ctx_attn_weights.output.shape = {q_hidden_units, q_hidden_units};
     ctx_attn_weights.output.type = wtype;
     // init ctxAttn
-    LLaMAContextAttentionLayer* ctxAttn = new LLaMAContextAttentionLayer(head_num,
+    LLaMAContextAttentionLayer<float>* ctxAttn = new LLaMAContextAttentionLayer<float>(head_num,
                                                                                        kv_head_num,
                                                                                        head_size,
                                                                                        attn_static_params,
