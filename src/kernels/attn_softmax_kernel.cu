@@ -267,11 +267,11 @@ void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk,
 }
 
 template void launchScaleMaskAndSoftmax(TensorWrapper<float>* qk,
-                               TensorWrapper<uint8_t>* mask,
+                               TensorWrapper<float>* mask,
                                TensorWrapper<float>* attn_score,
                                float scale);
 
 template void launchScaleMaskAndSoftmax(TensorWrapper<half>* qk,
-                               TensorWrapper<uint8_t>* mask,
+                               TensorWrapper<half>* mask,
                                TensorWrapper<half>* attn_score,
                                float scale);

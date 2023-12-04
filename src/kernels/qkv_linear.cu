@@ -121,11 +121,11 @@ template void launchLinearStridedBatchGemm(TensorWrapper<float>* input1,
                                   TensorWrapper<float>* output,
                                   cublasWrapper* cublas_wrapper,
                                   bool trans_a,
-                                  bool trans_b)
+                                  bool trans_b);
 
 template void launchLinearStridedBatchGemm(TensorWrapper<half>* input1,
                                   TensorWrapper<half>* input2,
                                   TensorWrapper<half>* output,
                                   cublasWrapper* cublas_wrapper,
                                   bool trans_a,
-                                  bool trans_b)
+                                  bool trans_b);
