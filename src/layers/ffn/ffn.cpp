@@ -50,9 +50,9 @@ void LLaMAFFNLayer<T>::freeBuf(){
 template<typename T>
 void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights<T>& weights, LLaMAAttentionDynParams& params){
     if (params.num_tokens > 0) {
-        allocForForward<T>(params);
+        allocForForward(params);
     } else {
-        allocForForward<T>(params.batch_size);
+        allocForForward(params.batch_size);
     }
     Tensor* ffn_input = inputs["ffn_input"];
     Tensor* ffn_output = outputs["ffn_output"];
@@ -61,7 +61,7 @@ void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWe
     // up proj
     launchLinearGemm(ffn_input->as<T>(), weights.up, SwiGLU_input, cublas_wrapper, false, false, true);
 
-    launchAct(SwiGLU_input->as<T>(), down_proj_input->as<T>(), params.batch_size, weights.gate.shape[1]);// down_proj_input maybe can reuse swiglu_input buf, will validate it later
+    launchAct(SwiGLU_input, down_proj_input);// down_proj_input maybe can reuse swiglu_input buf, will validate it later
     //down proj
     // error, output should be ffn output
     // launchLinearGemm(down_proj_input, weights.down, down_proj_output);
