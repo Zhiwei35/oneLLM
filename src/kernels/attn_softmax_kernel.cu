@@ -241,7 +241,7 @@ __global__ void ScaleMaskAndSoftmax_half(T_half* attn_score,
 
 template<typename T>
 void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk,
-                               TensorWrapper<uint8_t>* mask,
+                               TensorWrapper<T>* mask,
                                TensorWrapper<T>* attn_score,
                                float scale)
 {

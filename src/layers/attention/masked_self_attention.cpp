@@ -68,7 +68,7 @@ void LLaMASelfAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, 
     Tensor* step = inputs["step"];//[1] onCPU
     Tensor* layer_id = inputs["layer_id"];//[1] onCPU
 
-    launchDecoderMaskedMHA<T>(qkv_buf, weights.qkv, layer_id->as<int>, key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
+    launchDecoderMaskedMHA<T>(qkv_buf, weights.qkv, layer_id->as<int>(), key_cache->as<T>(), value_cache->as<T>(), finished->as<bool>(), step->as<int>(), mha_output, attn_static_params);
     DeviceSyncAndCheckCudaError();
 
     launchLinearGemm(mha_output, weights.output, attention_output->as<T>(), cublas_wrapper);
