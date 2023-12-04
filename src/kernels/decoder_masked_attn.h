@@ -13,5 +13,5 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             TensorWrapper<T>* v_cache,
                             TensorWrapper<bool>* finished,
                             TensorWrapper<int>* step,
-                            TensorWrapper<float>* mha_output,
+                            TensorWrapper<T>* mha_output,
                             LLaMAAttentionStaticParams& static_params);

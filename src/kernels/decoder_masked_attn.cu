@@ -426,16 +426,6 @@ __global__ void masked_MHA_kernel(const half* q,
     }
 }
 
-// void launchDecoderMaskedMHA(float* q,
-//                             float* k,
-//                             float* v,
-//                             float* k_cache,
-//                             float* v_cache,
-//                             float* mha_output,
-//                             const int batch_size,
-//                             const int num_heads,
-//                             const int head_size,
-//                             const int step){
 template<typename T>
 void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             BaseWeight<T>& qkv,
