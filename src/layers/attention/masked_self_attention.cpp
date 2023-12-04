@@ -33,11 +33,11 @@ void LLaMASelfAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& params
     //tensor wrapper
     // 当前step的q k v的shape里面step或seqlen都是1，之前step的kv在做gemv的时候直接从kv cache拿
     qkv_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, qkv_head_num, head_size}); 
-    mha_output = new TensorWrapper<float>(Device::GPU, type, {batch_size, hidden_units});
+    mha_output = new TensorWrapper<T>(Device::GPU, type, {batch_size, hidden_units});
     
     qkv_buf->data = allocator->Malloc(qkv_buf->data, sizeof(T) * batch_size * qkv_head_num * head_size, false);
     mha_output->data = allocator->Malloc(
-        mha_output->data, sizeof(float) * batch_size * hidden_units, false);
+        mha_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
 template<typename T>
 void LLaMASelfAttentionLayer<T>::freeBuf(){

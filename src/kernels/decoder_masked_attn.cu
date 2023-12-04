@@ -143,7 +143,7 @@ __global__ void masked_MHA_kernel(const T* q,
                     T* qkv_bias,
                     T* k_cache,
                     T* v_cache,
-                    float* mha_output,
+                    T* mha_output,
                     const int batch_size,
                     const int head_num,
                     const int kv_head_num,
@@ -281,7 +281,7 @@ __global__ void masked_MHA_kernel(const half* q,
                     half* qkv_bias,
                     half* k_cache,
                     half* v_cache,
-                    float* mha_output,
+                    half* mha_output,
                     const int batch_size,
                     const int head_num,
                     const int kv_head_num,
@@ -420,7 +420,9 @@ __global__ void masked_MHA_kernel(const half* q,
             //O += sv[tid] * logits[iter];
             __syncthreads();
         }
-        *reinterpret_cast<float2*>(&mha_output[q_offset_vec]) = O;
+        
+        // float* mha_output_fp32 = reinterpret_cast<float*>(mha_output);
+        *reinterpret_cast<Vec_t*>(&mha_output_fp32[q_offset_vec]) = __float22half2(O);
     }
 }
 
@@ -442,7 +444,7 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
                             TensorWrapper<T>* v_cache,
                             TensorWrapper<bool>* finished,
                             TensorWrapper<int>* step,
-                            TensorWrapper<float>* mha_output,
+                            TensorWrapper<T>* mha_output,
                             LLaMAAttentionStaticParams& static_params){
     const int batch_size = qkv_buf->shape[0];
     const int qkv_head_num = qkv_buf->shape[1];
@@ -504,5 +506,5 @@ template void launchDecoderMaskedMHA(TensorWrapper<half>* qkv_buf,
                             TensorWrapper<half>* v_cache,
                             TensorWrapper<bool>* finished,
                             TensorWrapper<int>* step,
-                            TensorWrapper<float>* mha_output,
+                            TensorWrapper<half>* mha_output,
                             LLaMAAttentionStaticParams& static_params);
