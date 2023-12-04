@@ -8,9 +8,10 @@ void GPUMalloc(T** ptr, size_t size)
 }
 
 template void GPUMalloc(float** ptr, size_t size);
+template void GPUMalloc(half** ptr, size_t size);
 
 template<typename T>
-void GPUFree(T*& ptr)
+void GPUFree(T* ptr)
 {
     if (ptr != NULL) {
         CHECK(cudaFree(ptr));
@@ -18,7 +19,8 @@ void GPUFree(T*& ptr)
     }
 }
 
-template void GPUFree(float*& ptr);
+template void GPUFree(float* ptr);
+template void GPUFree(half* ptr);
 
 template<typename T>
 void cudaH2Dcpy(T* tgt, const T* src, const size_t size)
@@ -27,6 +29,7 @@ void cudaH2Dcpy(T* tgt, const T* src, const size_t size)
 }
 
 template void cudaH2Dcpy(float* tgt, const float* src, const size_t size);
+template void cudaH2Dcpy(half* tgt, const half* src, const size_t size);
 // template<typename T_IN, typename T_OUT>
 // __global__ void cudaD2DcpyConvert(T_OUT* dst, const T_IN* src, const size_t size)
 // {
