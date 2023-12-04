@@ -39,7 +39,7 @@ void LLaMAFFNLayer<T>::allocForForward(int batch_size){
     // down_proj_output->data = allocator->Malloc(down_proj_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
 template<typename T>
-void LLaMAFFNLayer<T>::free(){
+void LLaMAFFNLayer<T>::freeBuf(){
     allocator->Free(SwiGLU_input->data);
     DeviceSyncAndCheckCudaError();
     allocator->Free(down_proj_input->data);
@@ -68,6 +68,6 @@ void LLaMAFFNLayer<T>::forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWe
     launchLinearGemm(down_proj_input, weights.down, ffn_output->as<T>(), cublas_wrapper);
 
     if (is_free_buffer_after_fwd) {
-        this->free();
+        this->freeBuf();
     }
-}
+};

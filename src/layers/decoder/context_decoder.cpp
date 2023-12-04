@@ -21,7 +21,7 @@ void LlamaContextDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
    
 }
 template<typename T>
-void LlamaContextDecoder<T>::free()
+void LlamaContextDecoder<T>::freeBuf()
 {
     allocator->Free(attention_mask->data);
     DeviceSyncAndCheckCudaError();

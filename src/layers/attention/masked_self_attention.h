@@ -51,6 +51,6 @@ public:
         return attn_static_params;
     }
     void allocForForward(LLaMAAttentionDynParams& params);
-    void free();
+    void freeBuf();
     void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params);
 };

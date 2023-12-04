@@ -68,7 +68,7 @@ public:
     }
     
     void allocForForward(LLaMAAttentionDynParams& params);
-    void free();
+    void freeBuf();
     void forward(TensorMap& inputs, TensorMap& outputs, LLaMAattentionWeights<T>& weights, LLaMAAttentionDynParams& params, LLaMAAttentionStaticParams& static_params);
     // void naiveMHA(float*          key_cache_ptr,
     //               float*          val_cache_ptr,

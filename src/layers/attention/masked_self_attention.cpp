@@ -40,7 +40,7 @@ void LLaMASelfAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& params
         mha_output->data, sizeof(T) * batch_size * hidden_units, false);
 }
 template<typename T>
-LLaMASelfAttentionLayer<T>::free(){
+LLaMASelfAttentionLayer<T>::freeBuf(){
     allocator->Free(qkv_buf->data);
     DeviceSyncAndCheckCudaError();
     allocator->Free(mha_output->data);

@@ -7,7 +7,7 @@ void LlamaSelfDecoder<T>::allocForForward(LLaMAAttentionDynParams& params)
     // do nothing, no intermedia buffer
 }
 template<typename T>
-void LlamaSelfDecoder<T>::free()
+void LlamaSelfDecoder<T>::freeBuf()
 {
     // do nothing, no intermedia buffer
 }

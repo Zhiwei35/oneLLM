@@ -20,7 +20,7 @@ LlamaWeight<T>::LlamaWeight(
 {
     llama_layer_weight.reserve(num_layer);
     for (int l = 0; l < num_layer; ++l) {
-        llama_layer_weight.push_back(new LlamaLayerWeight(head_num,
+        llama_layer_weight.push_back(new LlamaLayerWeight<T>(head_num,
                                                             kv_head_num,
                                                             head_size,
                                                             inter_size,

@@ -81,7 +81,7 @@ void LLaMAContextAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& par
 
 }
 template<typename T>    
-void LLaMAContextAttentionLayer<T>::free(){
+void LLaMAContextAttentionLayer<T>::freeBuf(){
     allocator->Free(qkv_buf_wo_pad->data);
     DeviceSyncAndCheckCudaError();
     allocator->Free(q_buf_w_pad->data);

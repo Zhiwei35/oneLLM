@@ -45,6 +45,6 @@ public:
 
     void allocForForward(LLaMAAttentionDynParams& params);
     void allocForForward(int batch_size);
-    void free();
+    void freeBuf();
     void forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights<T>& weights, LLaMAAttentionDynParams& params);
 };

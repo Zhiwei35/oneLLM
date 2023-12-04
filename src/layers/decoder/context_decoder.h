@@ -83,6 +83,6 @@ public:
                                     is_free_buffer_after_forward);
         };
     void allocForForward(LLaMAAttentionDynParams& dyn_params);
-    void free();
+    void freeBuf();
     void forward(TensorMap& input_tensors, const std::vector<LlamaLayerWeight<T>*>& layerWeights, TensorMap& output_tensors, LLaMAAttentionDynParams& dyn_params);
 };
