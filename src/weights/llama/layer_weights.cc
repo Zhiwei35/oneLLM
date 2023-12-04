@@ -109,3 +109,5 @@ LlamaLayerWeight<T>::~LlamaLayerWeight()
     freeWeights(ffn_weight.down);
 }
 
+template class LlamaLayerWeight<float>;
+template class LlamaLayerWeight<half>;

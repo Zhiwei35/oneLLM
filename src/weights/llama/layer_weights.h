@@ -4,7 +4,7 @@
 #include "src/weights/llama/ffn_weights.h"
 #include "src/utils/cuda_utils.h"
 template<typename T>
-struct LlamaLayerWeight {
+class LlamaLayerWeight {
 private:
     int     head_num;
     int     kv_head_num;
