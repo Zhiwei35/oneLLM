@@ -215,7 +215,7 @@ int main(int argc, char** argv)
                                                               type_int, 
                                                               {attn_dyn_params.batch_size}, 
                                                               d_input_len);
-    TensorWrapper<int>* layer = new TensorWrapper<int>(GPU, 
+    TensorWrapper<int>* layer = new TensorWrapper<int>(CPU, 
                                                               type_int, 
                                                               {1}, 
                                                               &layer_id);

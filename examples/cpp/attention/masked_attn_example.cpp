@@ -104,7 +104,7 @@ int main(){
                                                                     type, 
                                                                     {attn_dyn_params.batch_size, q_hidden_units}, 
                                                                     d_attention_input);
-    TensorWrapper<int>* step = new TensorWrapper<int>(GPU, 
+    TensorWrapper<int>* step = new TensorWrapper<int>(CPU, 
                                                         type_int, 
                                                         {1}, 
                                                         h_step);
@@ -112,7 +112,7 @@ int main(){
                                                             type_bool, 
                                                             {attn_dyn_params.batch_size}, 
                                                             d_finished);
-    TensorWrapper<int>* layer_id = new TensorWrapper<int>(GPU, 
+    TensorWrapper<int>* layer_id = new TensorWrapper<int>(CPU, 
                                                             type_int, 
                                                             {1}, 
                                                             h_layer_id);
