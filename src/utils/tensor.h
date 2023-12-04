@@ -115,11 +115,12 @@ template<typename T>
 class TensorWrapper: public Tensor {
 public:
     T* data;
-
-    TensorWrapper(Device location, DataType dtype, std::vector<int>& shape):
+    // cant declare shape's type to std::vector<int>&, because we usually pass a tmp var, which cant be non-const refer
+    //https://blog.csdn.net/lisemi/article/details/103928596
+    TensorWrapper(Device location, DataType dtype, std::vector<int> shape):
     	Tensor(location, dtype, shape){}
 
-    TensorWrapper(Device location, DataType dtype, std::vector<int>& shape, T* data):
+    TensorWrapper(Device location, DataType dtype, std::vector<int> shape, T* data):
     	Tensor(location, dtype, shape),
     	data(data){}
 

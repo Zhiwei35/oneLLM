@@ -451,8 +451,8 @@ void launchDecoderMaskedMHA(TensorWrapper<T>* qkv_buf,
     int head_num = qkv_head_num - 2 * kv_head_num;
     const int head_size = qkv_buf->shape[2];
     const int cur_step = step->getVal();
-    const int layer_id = layer_id->getVal();
-    const int layer_offset = layer_id * max_seq_len * batch_size * kv_head_num * head_size;
+    const int layer = layer_id->getVal();
+    const int layer_offset = layer * max_seq_len * batch_size * kv_head_num * head_size;
     T* qkv_data = qkv_buf->data;
     //[bs,1,qkv_head_num,head_size]
     T* q = qkv_data;
