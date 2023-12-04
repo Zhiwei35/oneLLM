@@ -94,7 +94,10 @@ void launchAppendKVCache(TensorWrapper<T>*     k_src, // from qkv bias and rope
     int max_q_len = k_src->shape[2];
     int head_size = k_src->shape[3];
     int blockSize = head_size;
+    std::cout <<"before getval"<<"\n";
+    std::cout <<layer_id->DeviceString()<<"\n";
     int layer = layer_id->getVal();
+    std::cout <<"after getval"<<"\n";
     size_t layer_offset = layer * batch_size * kv_head_num * max_seq_len * head_size;
     //note: this is for vectorization of kv cache for attention
     //constexpr int x = (sizeof(T) == 4) ? 4 : 8;

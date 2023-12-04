@@ -251,7 +251,7 @@ int main(int argc, char** argv)
     ONELLM_CHECK_WITH_INFO(context_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(output_norm_weight->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(input_length->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    
+    std::cout << "in context decoder example cpp: " << layer->DeviceString() << "\n";    
     TensorMap decoder_inputs{
         {"decoder_input", decoder_input},
         {"padding_offset", padding_offset},

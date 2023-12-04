@@ -100,6 +100,7 @@ struct Tensor {
 
         static const std::unordered_map<DataType, std::string> type_to_string{
             {INT8, "INT8"},
+            {INT32,"INT32"},
             {FP16, "FP16"},
             {FP32, "FP32"},
 

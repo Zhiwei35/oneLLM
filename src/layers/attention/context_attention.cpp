@@ -120,11 +120,9 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     //max_cache_seq_len = max_seq_len + max_prefix_prompt_length
     //{batch_size, kv_head_num, max_q_len, headsize}=>(num_layer ,batchxbeam ,max_cache_seq_len, hidden_units_};
     Tensor* layer_id = inputs["layer_id"]; //ON CPU
-    //Tensor cur_query_length = inputs["cur_query_length"];
     Tensor* all_k_cache = outputs["all_k_cache"];
     Tensor* all_v_cache = outputs["all_v_cache"];
-    launchAppendKVCache(k_buf_w_pad, v_buf_w_pad, input_length->as<int>(), history_length->as<int>(), 
-                                layer_id->as<int>(), all_k_cache->as<T>(), all_v_cache->as<T>());
+    launchAppendKVCache(k_buf_w_pad, v_buf_w_pad, layer_id->as<int>(), input_length->as<int>(), history_length->as<int>(), all_k_cache->as<T>(), all_v_cache->as<T>());
     DeviceSyncAndCheckCudaError();
     //4.MHA/MQA/GQA part, reduce kv cache size to [num_layer, bs, kv head num, max_seq_len, head size]
     //0.kv repeat/broadcast to adapt batchgemm shape requirement([bs, head num, seqlen, head size]) if need
