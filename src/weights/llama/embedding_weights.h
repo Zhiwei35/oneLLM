@@ -1,4 +1,5 @@
+#include "src/weights/base_weight.h"
 template<typename T>
-struct EmbeddingWeight {
-    T* emb_table;
+struct EmbeddingWeight: public BaseWeight {
+    // T* emb_table;
 };

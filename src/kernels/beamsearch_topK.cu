@@ -16,7 +16,7 @@ __device__ topK<T, K> reduce_functor(const topK<T, K>& a, const topK<T, K>& b) {
 }
 // gridsize:bs * beamwidth * BlockPerBeam 
 // blocksize:256
-// shape infer: [bs, beamwidth, vocab size] => [bs, beamwidth, BlockPerBeam, K]
+// shape infer: [bs, beamwidth, vocab size] => [bs, beamwidth, BlockPerBeam, K],在vocabsize的大小里选出blockPerBeam个topK
 template<typename T, int K, int blockSize, int BlockPerBeam>
 __global__ void topK_kernel_round1(const T* probs, const int vocab_size, 
                                          int* topK_ids, T* topK_vals)
@@ -50,7 +50,7 @@ __global__ void topK_kernel_round1(const T* probs, const int vocab_size,
         }
     }
 }
-// shape infer: [bs, beamwidth, BlockPerBeam, K] => [bs, K]
+// shape infer: [bs, beamwidth, BlockPerBeam, K] => [bs, K] ，这是sampling的topK（=>[bs, beamwidth, K]才是beamsearch topK），后期注意重写一个beamsearch的topK
 // ids是beamwidth * vocalsize中的全局word id
 // gridSize = bs
 // blockSize = 256

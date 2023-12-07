@@ -36,7 +36,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     allocForForward(dyn_params);
     //1.
     Tensor* seq_lens = input_tensors["input_length"];
-    Tensor* padding_offset = input_tensors["padding_offset"];
+    // Tensor* padding_offset = input_tensors["padding_offset"];
     // shape:
         //seq_lengths:[batch size]
         //output cum_seqlens:[batch size + 1], first ele is 0
@@ -44,17 +44,17 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     int h_token_num{};//output 
     launchCalPaddingoffset(h_pinned_token_num_ptr, //pinned host mem alloced in h file
                            &h_token_num, //out
-                           padding_offset->as<int>()->data, //out
+                           padding_offset->data, //out
                            cum_seqlens->data, //out
                            seq_lens->as<int>()->data, // in
                            dyn_params.batch_size,
                            dyn_params.max_q_len);
     DeviceSyncAndCheckCudaError();
     //2.
-    Tensor* attention_mask = input_tensors["attention_mask"];
+    // Tensor* attention_mask = input_tensors["attention_mask"];
     Tensor* context_length = input_tensors["context_length"];
     //dyn_params.max_k_len = attention_mask->shape[2];
-    launchBuildCausalMasks<T>(attention_mask->as<T>(), //out
+    launchBuildCausalMasks<T>(attention_mask, //out
                             seq_lens->as<int>(), //q, input lens, [bs]
                             context_length->as<int>());//k, context lens, [bs]
     DeviceSyncAndCheckCudaError();
@@ -78,9 +78,9 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     Tensor* layer_id = input_tensors["layer_id"];
     //int layer_id = 0;//TODO: enhance the layer_id update method
     ONELLM_CHECK_WITH_INFO(decoder_input->as<T>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    ONELLM_CHECK_WITH_INFO(padding_offset->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    // ONELLM_CHECK_WITH_INFO(padding_offset->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     ONELLM_CHECK_WITH_INFO(history_length->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
-    ONELLM_CHECK_WITH_INFO(attention_mask->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    // ONELLM_CHECK_WITH_INFO(attention_mask->as<int>()->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
     TensorMap ctx_attn_inputs{
         {"attention_input", decoder_input},
         {"padding_offset", padding_offset},

@@ -32,4 +32,5 @@ public:
     );
     ~LlamaWeight();
     void loadWeights(std::string weight_path);
+    void loadWeightsFromDummy();
 };

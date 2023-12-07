@@ -1,5 +1,19 @@
 #include "src/utils/cuda_utils.h"
 
+template<typename T_OUT, typename T_IN> 
+inline __device__ T_OUT type_cast(T_IN val) { 
+    return val; 
+}
+template<> 
+inline __device__ float type_cast(half val) { 
+    return __half2float(val); 
+}
+
+template<> 
+inline __device__ half type_cast(float val) { 
+    return __float2half(val); //还有ru和rd两种舍入方式
+}
+
 template<typename T>
 void GPUMalloc(T** ptr, size_t size)
 {
@@ -30,19 +44,25 @@ void cudaH2Dcpy(T* tgt, const T* src, const size_t size)
 
 template void cudaH2Dcpy(float* tgt, const float* src, const size_t size);
 template void cudaH2Dcpy(half* tgt, const half* src, const size_t size);
-// template<typename T_IN, typename T_OUT>
-// __global__ void cudaD2DcpyConvert(T_OUT* dst, const T_IN* src, const size_t size)
-// {
-//     for (size_t tid = threadIdx.x + blockIdx.x * blockDim.x; tid < size; tid += blockDim.x * gridDim.x) {
-//         dst[tid] = cuda_cast<T_OUT>(src[tid]);
-//     }
-// }
 
-// template<typename T_IN, typename T_OUT>
-// void invokeCudaD2DcpyConvert(T_OUT* tgt, const T_IN* src, const size_t size)
-// {
-//     cudaD2DcpyConvert<<<256, 256, 0, 0>>>(tgt, src, size);
-// }
+template<typename T_IN, typename T_OUT>
+__global__ void type_conversion(T_OUT* dst, const T_IN* src, const int size)
+{
+    int gtid = threadIdx.x + blockIdx.x * blockDim.x;
+    int total_thread_nums = blockDim.x * gridDim.x;
+    for (int index = gtid; index < size; index += total_thread_nums) {
+        dst[index] = type_cast<T_OUT>(src[index]);
+    }
+}
+
+template<typename T_IN, typename T_OUT>
+void cuda_type_conversion(T_OUT* dst, const T_IN* src, const int size)
+{
+    type_conversion<<<216, 256>>>(dst, src, size);
+}
+
+template void cuda_type_conversion(float* dst, const half* src, const int size);
+template void cuda_type_conversion(half* dst, const float* src, const int size);
 
 // from FT code
 // loads data from binary file. If it succeeds, returns a non-empty (shape size) vector. If loading fails or
@@ -86,29 +106,30 @@ std::vector<T> loadWeightFromBinHelper(std::vector<size_t> shape, std::string fi
     // If we succeed, return an array with values.
     return host_array;
 }
-
-template<typename T, typename T_IN>
-int loadWeightFromBin(T* ptr, std::vector<size_t> shape, std::string filename)
+///home/ubuntu/hzw/llamaweight/tmp/layers.0.attention.wq.weight
+template<typename T_OUT, typename T_FILE>
+int loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
 {
-    std::vector<T_IN> host_array = loadWeightFromBinHelper<T_IN>(shape, filename);
+    std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
 
     if (host_array.empty()) {
         return 0;
     }
 
-    if (std::is_same<T, T_IN>::value == true) {
-        cudaH2Dcpy(ptr, (T*)host_array.data(), host_array.size());
+    if (std::is_same<T_OUT, T_FILE>::value == true) {
+        cudaH2Dcpy(ptr, host_array.data(), host_array.size());
     }
     // TODO: add ptx type conversion later
-    // else {
-    //     T_IN* ptr_2 = nullptr;
-    //     GPUMalloc(&ptr_2, host_array.size());
-    //     cudaH2Dcpy(ptr_2, host_array.data(), host_array.size());
-    //     invokeCudaD2DcpyConvert(ptr, ptr_2, host_array.size());
-    //     GPUFree(ptr_2);
-    // }
+    else {
+        T_FILE* ptr_tmp;
+        GPUMalloc(&ptr_tmp, host_array.size());
+        cudaH2Dcpy(ptr_tmp, host_array.data(), host_array.size());
+        cuda_type_conversion(ptr, ptr_tmp, host_array.size());
+        GPUFree(ptr_tmp);
+    }
     return 0;
 }
 
 template int loadWeightFromBin<float, float>(float* ptr, std::vector<size_t> shape, std::string filename);
 template int loadWeightFromBin<half, half>(half* ptr, std::vector<size_t> shape, std::string filename);
+template int loadWeightFromBin<float, half>(float* ptr, std::vector<size_t> shape, std::string filename);

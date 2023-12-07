@@ -32,7 +32,7 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
     embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
                                                  output->data,
-                                                 embed_table->emb_table,
+                                                 embed_table->data,
                                                  batch_size,
                                                  sequeue_length,
                                                  hidden_size,

@@ -40,20 +40,22 @@ LlamaLayerWeight<T>::LlamaLayerWeight(int     head_num,
     GPUMalloc(&ffn_weight.down.data, hidden_units * inter_size);
 }
 //model file type用来控制loadweightfrombin的第二个模板类型参数T_IN,如果T_IN和第一个模板参数不一致，需要将T_IN的weight使用ptx cast转换为T
+// weight_path = weight_path + "layers." + std::to_string(layer)
+// weight from HF is always half type
 template<typename T>
 void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight_type)
 {
-    loadWeightFromBin<T, T>(attn_norm_weight.gamma, {hidden_units}, weight_path + ".attention_norm.weight");
-    loadWeightFromBin<T, T>(ffn_norm_weight.gamma, {hidden_units}, weight_path + ".ffn_norm.weight");
+    loadWeightFromBin<T, half>(attn_norm_weight.gamma, {hidden_units}, weight_path + ".attention_norm.weight");
+    loadWeightFromBin<T, half>(ffn_norm_weight.gamma, {hidden_units}, weight_path + ".ffn_norm.weight");
 
-    loadWeightFromBin<T, T>(self_attn_weight.qkv.data, {hidden_units, (head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.w_qkv.weight");
-    loadWeightFromBin<T, T>(self_attn_weight.output.data, {hidden_units, hidden_units}, weight_path + ".attention.wo.weight");
-    loadWeightFromBin<T, T>(ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w1.weight");
-    loadWeightFromBin<T, T>(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
-    loadWeightFromBin<T, T>(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
+    loadWeightFromBin<T, half>(self_attn_weight.qkv.data, {hidden_units, (head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.w_qkv.weight");
+    loadWeightFromBin<T, half>(self_attn_weight.output.data, {hidden_units, hidden_units}, weight_path + ".attention.wo.weight");
+    loadWeightFromBin<T, half>(ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w1.weight");
+    loadWeightFromBin<T, half>(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
+    loadWeightFromBin<T, half>(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
     if (attn_bias) {//TODO
-        loadWeightFromBin<T, T>(self_attn_weight.qkv.bias, {head_num *  head_size}, weight_path + ".attention.w_qkv.bias");
-        loadWeightFromBin<T, T>(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias");
+        loadWeightFromBin<T, half>(self_attn_weight.qkv.bias, {head_num *  head_size}, weight_path + ".attention.w_qkv.bias");
+        loadWeightFromBin<T, half>(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias");
     }   
 }
 template<typename T>

@@ -58,7 +58,7 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
 {
     half h_alpha = (half)(f_alpha);
     half h_beta  = (half)(f_beta);
-    int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
+    int is_fp16_computeType = computeType_ == CUBLAS_COMPUTE_16F ? 1 : 0; //之前是CUDA_R_16F
     const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&(h_alpha)) : reinterpret_cast<void*>(&f_alpha);
     const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&(h_beta)) : reinterpret_cast<void*>(&f_beta);
     // const void* alpha = reinterpret_cast<void*>(&f_alpha);

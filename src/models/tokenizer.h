@@ -91,7 +91,7 @@ struct Tokenizer {
         q.push(SymbolPairs(now->score, l, r, symbols[l].len + symbols[r].len));
     } // 插入备选symbol
 
-    Tensor Encode(const std::string &ori){
+    int* Encode(const std::string &ori){
         std::string blank = "";
         blank += 226, blank += 150, blank += 129;
         std::string s = blank;
@@ -176,7 +176,7 @@ struct Tokenizer {
             TryMergePairs(symbols, top.l, symbols[top.l].next, workQueue);
         }
 
-        std::vector<float> v;
+        std::vector<int> v;
         for (int i = 0; i < symbols.size(); i++) {
             if (symbols[i].len > 0) {
                 v.push_back(symbols[i].node->tokenId);
@@ -195,7 +195,7 @@ struct Tokenizer {
                 }
             }
         }
-        return Tensor(Device::GPU, DataType::FP32, {1, (int)v.size()}, v.data());
+        return v.data();
     }
 
     // 这里的data可以换成模型的输出
