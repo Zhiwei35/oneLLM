@@ -23,7 +23,8 @@ int main(int argc, char **argv) {
         // placeholder for more args
     }
     // 加载模型到自定义的model data structure，这一块去看看ft的实现，我感觉那一块更好
-    auto model = onellm::CreateOneLLMModelFromFile(model_path.path);//model.cpp拿到对应model class的pointer，同时load weight到该class的数据结构中
+    //auto model = onellm::CreateOneLLMModelFromFile(model_path.path);//model.cpp拿到对应model class的pointer，同时load weight到该class的数据结构中
+    auto model = onellm::CreateOneLLMModelFromDummy();
     std::string model_name = model->name;
     // exist when generate end token or reach max seq
     while (true) {

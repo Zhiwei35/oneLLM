@@ -15,7 +15,7 @@ namespace onellm {
     // }
     std::unique_ptr<baseModel> CreateOneLLMModelFromDummy(){
         baseModel *model = CreateModelWithName("llama");
-        model->loadWeights();
+        model->loadWeightsFromDummy();
         // model->WarmUp();
         return std::unique_ptr<baseModel> (model);        
     }
