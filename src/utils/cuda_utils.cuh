@@ -57,7 +57,7 @@ void cuda_type_conversion(T_OUT* dst, const T_IN* src, const int size)
 {
     dim3 grid(128);
     dim3 block(128);
-    type_conversion<<<grid, block, 0, 0>>>(dst, src, size);
+    type_conversion<T_IN, T_OUT><<<grid, block, 0, 0>>>(dst, src, size);
 }
 
 // from FT code
