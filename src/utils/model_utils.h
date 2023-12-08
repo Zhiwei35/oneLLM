@@ -1,4 +1,5 @@
 #include "src/models/basemodel.h"
+#include "src/models/llama/llama.h"
 #include "src/utils/macro.h"
 
 namespace onellm {

@@ -1,5 +1,5 @@
-#include "src/models/basemodel.h"
-#include "src/utils/common_utils.h"
+#include <stdio.h>
+#include "src/utils/model_utils.h"
 
 struct Config {
 	std::string path = "llama-7b-fp32.bin"; // 模型文件路径
