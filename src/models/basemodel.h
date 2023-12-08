@@ -1,7 +1,7 @@
 #include <string>
 #include <functional>
 #include "src/utils/tensor.h"
-#include "src/memory/base_allocator.h"
+#include "src/memory/allocator/base_allocator.h"
 #include "src/kernels/cublas_wrapper.h"
 
 using CallBack = std::function<void(int index, const char* GenerateContent)>;
