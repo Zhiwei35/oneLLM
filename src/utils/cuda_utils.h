@@ -14,4 +14,6 @@ void GPUFree(T* ptr);
 
 // template<typename T, typename T_IN>
 // int loadWeightFromBin(T* ptr, std::vector<size_t> shape, std::string filename);
-template <typename T_OUT, typename T_FILE, bool Enabled = std::is_same<T_OUT, T_FILE>::value> class loadWeightFromBin;  // 模板的泛化形式（原型）
+template <typename T_OUT, typename T_FILE, bool Enabled = std::is_same<T_OUT, T_FILE>::value> class loadWeightFromBin{
+    static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename);
+};  // 模板的泛化形式（原型）
