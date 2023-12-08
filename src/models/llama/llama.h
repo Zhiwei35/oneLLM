@@ -8,7 +8,7 @@
 #include "src/kernels/beamsearch_topK.h" //topK
 #include "src/kernels/topK_sampling.h" //sampling
 template<typename T>
-class Llama: public baseModel{
+class Llama: public BaseModel{
 private:
     const int head_num;
     const int kv_head_num;
@@ -102,7 +102,7 @@ public:
           int h_step,
         //for base model
           cudaStream_t stream,
-          cublasMMWrapper* cublas_wrapper,
+          cublasWrapper* cublas_wrapper,
           BaseAllocator* allocator,
           bool is_free_buffer_after_forward,
           cudaDeviceProp* cuda_device_prop):
@@ -165,10 +165,10 @@ public:
         this->free();
     };
     void loadWeights(std::string file){
-      llama_Weights->loadWeights(file);
+      llama_weights->loadWeights(file);
     }
     void loadWeightsFromDummy(){
-      llama_Weights->loadWeightsFromDummy();
+      llama_weights->loadWeightsFromDummy();
     }
     void allocateCPUBuffer(int max_batch_size);
     void allocateGPUBuffer(int batch_size);

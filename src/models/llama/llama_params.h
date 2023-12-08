@@ -1,7 +1,5 @@
 #pragma once
-struct StaticParams {
-
-};
+#include "src/models/common_params.h"
 struct LLaMAAttentionStaticParams: public StaticParams {
     int   rotary_embedding_dim;
     float rotary_embedding_base;
@@ -9,9 +7,6 @@ struct LLaMAAttentionStaticParams: public StaticParams {
     bool  use_dynamic_ntk; // for dyn scaling rope
 };
 
-struct DynParams {
-
-};
 struct LLaMAAttentionDynParams: public DynParams {
     int batch_size;
     int num_tokens;

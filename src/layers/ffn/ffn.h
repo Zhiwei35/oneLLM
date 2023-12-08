@@ -1,3 +1,4 @@
+#pragma once
 #include "src/weights/llama/attention_weights.h"
 #include "src/weights/llama/ffn_weights.h"
 #include "src/memory/allocator/cuda_allocator.h"

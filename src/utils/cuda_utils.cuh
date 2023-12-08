@@ -55,7 +55,9 @@ __global__ void type_conversion(T_OUT* dst, const T_IN* src, const int size)
 template<typename T_IN, typename T_OUT>
 void cuda_type_conversion(T_OUT* dst, const T_IN* src, const int size)
 {
-    type_conversion<<<216, 256>>>(dst, src, size);
+    dim3 grid(128);
+    dim3 block(128);
+    type_conversion<<<grid, block, 0, 0>>>(dst, src, size);
 }
 
 // from FT code
@@ -111,14 +113,6 @@ typename std::enable_if<std::is_same<T_OUT, T_FILE>::value, int>::type loadWeigh
     }
 
     cudaH2Dcpy(ptr, host_array.data(), host_array.size());
-    // TODO: add ptx type conversion later
-    else {
-        T_FILE* ptr_tmp;
-        GPUMalloc(&ptr_tmp, host_array.size());
-        cudaH2Dcpy(ptr_tmp, host_array.data(), host_array.size());
-        cuda_type_conversion(ptr, ptr_tmp, host_array.size());
-        GPUFree(ptr_tmp);
-    }
     return 0;
 }
 

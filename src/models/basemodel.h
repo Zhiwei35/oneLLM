@@ -1,6 +1,8 @@
+#pragma once
 #include <string>
 #include <functional>
 #include "src/utils/tensor.h"
+#include "src/models/common_params.h"
 #include "src/memory/allocator/base_allocator.h"
 #include "src/kernels/cublas_wrapper.h"
 
@@ -25,7 +27,7 @@ public:
         cublas_wrapper(cublas_wrapper),
         allocator(allocator),
         cuda_device_prop(cuda_device_prop),
-        is_free_buffer_after_fwd(is_free_buffer_after_forward){};
+        is_free_buffer_after_forward(is_free_buffer_after_forward){};
 
     virtual void loadWeights(std::string file) = 0;
 
@@ -34,6 +36,4 @@ public:
     virtual std::string MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output) = 0; // 根据当前轮次回复更新history
 
     virtual std::string Response(const std::string &input, CallBack PrintRes) = 0;
-
-    virtual int forward(TensorMap& inputs, TensorMap& outputs, Weight& weight, DynParams& dparams, StaticParams& sparams) = 0;
 };

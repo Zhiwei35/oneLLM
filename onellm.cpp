@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     int round = 0;
     std::string history = "";
 
-    ModelPath model_path;
+    Config model_path;
 
  	std::vector <std::string> sargv;
 	for (int i = 0; i < argc; i++) {

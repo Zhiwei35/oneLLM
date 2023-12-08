@@ -3,9 +3,9 @@
 #include "src/utils/macro.h"
 
 namespace onellm {
-    baseModel *CreateModelWithName(const std::string& model_name) {
+    BaseModel *CreateModelWithName(const std::string& model_name) {
         ONELLM_CHECK_WITH_INFO(model_name == "llama", "dont support other models except llama yet!") 
-        baseModel *model = new Llama();
+        BaseModel *model = new Llama();
         return model;
     }
     // std::unique_ptr<baseModel> CreateOneLLMModelFromFile(std::string model_path){
@@ -14,10 +14,10 @@ namespace onellm {
     //     // model->WarmUp();
     //     return std::unique_ptr<baseModel> (model);        
     // }
-    std::unique_ptr<baseModel> CreateOneLLMModelFromDummy(){
-        baseModel *model = CreateModelWithName("llama");
+    std::unique_ptr<BaseModel> CreateOneLLMModelFromDummy(){
+        BaseModel *model = CreateModelWithName("llama");
         model->loadWeightsFromDummy();
         // model->WarmUp();
-        return std::unique_ptr<baseModel> (model);        
+        return std::unique_ptr<BaseModel> (model);        
     }
 }
