@@ -1,4 +1,3 @@
-#pragma once
 #include "src/utils/cuda_utils.h"
 
 template<typename T_OUT, typename T_IN> 
@@ -144,6 +143,7 @@ struct loadWeightFromBin<T_OUT, T_FILE, false>
     }
 };
 
+// ！！report more than one instance
 // template<typename T_OUT, typename T_FILE>
 // typename std::enable_if<std::is_same<T_OUT, T_FILE>::value, int>::type loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
 // {

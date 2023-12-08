@@ -84,5 +84,5 @@ add_subdirectory(src)
 #add_subdirectory(tests)
 add_subdirectory(examples)
 
-add_executable(onellm onellm.cpp)
-target_link_libraries(onellm PUBLIC Llama)
+# add_executable(onellm onellm.cpp)
+# target_link_libraries(onellm PUBLIC Llama)
