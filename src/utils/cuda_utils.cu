@@ -111,6 +111,7 @@ std::vector<T> loadWeightFromBinHelper(std::vector<size_t> shape, std::string fi
 template <typename T_OUT, typename T_FILE>
 struct loadWeightFromBin<T_OUT, T_FILE, true>
 {
+public:
     static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename) {
         std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
 
@@ -126,6 +127,7 @@ struct loadWeightFromBin<T_OUT, T_FILE, true>
 template <typename T_OUT, typename T_FILE>
 struct loadWeightFromBin<T_OUT, T_FILE, false>
 {
+public:
     static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename) {
         std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
 
