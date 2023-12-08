@@ -175,6 +175,6 @@ struct loadWeightFromBin<T_OUT, T_FILE, false>
 //     return 0;
 // }
 
-template int loadWeightFromBin<float, float>;
-template int loadWeightFromBin<half, half>;
-template int loadWeightFromBin<float, half>;
+template struct loadWeightFromBin<float, float>;
+template struct loadWeightFromBin<half, half>;
+template struct loadWeightFromBin<float, half>;
