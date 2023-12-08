@@ -49,7 +49,7 @@ namespace onellm {
                                         cublas_wrapper,
                                         allocator,
                                         true,
-                                        deviceProp);
+                                        &deviceProp);
         return model;
     }
 

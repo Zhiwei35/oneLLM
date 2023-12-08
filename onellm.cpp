@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
             break;
         }    
         //index可以认为生成的第几个token，从0开始
-        std::string retString = model->Response(model->MakeInput(history, round, input), [](int index, const char* content) {
+        std::string retString = model->Response(model->MakeInput(history, round, input), [model_name](int index, const char* content) {
             if (index == 0) {
                 printf("%s:%s", model_name.c_str(), content);
                 fflush(stdout);

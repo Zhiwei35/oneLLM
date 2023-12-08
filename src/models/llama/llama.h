@@ -180,7 +180,7 @@ public:
 
     std::string MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output); // 根据当前轮次回复更新history
     // single request response
-    std::string Response(const std::string &input, CallBack PrintRes);
+    std::string Response(const std::tuple<std::string, int, int>& input, CallBack PrintRes);
 
     // int forward(DynParams& dparams);
     //copy token ids to CPU(h_token_ids), 暂时不需要，因为反正也是bs=1

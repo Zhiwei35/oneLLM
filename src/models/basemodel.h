@@ -37,5 +37,5 @@ public:
 
     virtual std::string MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output) = 0; // 根据当前轮次回复更新history
 
-    virtual std::string Response(const std::string &input, CallBack PrintRes) = 0;
+    virtual std::string Response(const std::tuple<std::string, int, int>& input, CallBack PrintRes) = 0;
 };
