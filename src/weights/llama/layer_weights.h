@@ -2,7 +2,7 @@
 #include "src/weights/llama/norm_weights.h"
 #include "src/weights/llama/attention_weights.h"
 #include "src/weights/llama/ffn_weights.h"
-#include "src/utils/cuda_utils.h"
+#include "src/utils/cuda_utils.cuh"
 template<typename T>
 class LlamaLayerWeight {
 private:

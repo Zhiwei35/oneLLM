@@ -1,4 +1,10 @@
-#include "src/utils/cuda_utils.h"
+#pragma once
+#include <cuda_runtime.h>
+#include <cuda.h>
+#include <cuda_fp16.h>
+#include <vector>
+#include <iostream>
+#include "src/utils/macro.h"
 
 template<typename T_OUT, typename T_IN> 
 inline __device__ T_OUT type_cast(T_IN val) { 
@@ -21,9 +27,6 @@ void GPUMalloc(T** ptr, size_t size)
     CHECK(cudaMalloc((void**)(ptr), sizeof(T) * size));
 }
 
-template void GPUMalloc(float** ptr, size_t size);
-template void GPUMalloc(half** ptr, size_t size);
-
 template<typename T>
 void GPUFree(T* ptr)
 {
@@ -33,17 +36,11 @@ void GPUFree(T* ptr)
     }
 }
 
-template void GPUFree(float* ptr);
-template void GPUFree(half* ptr);
-
 template<typename T>
 void cudaH2Dcpy(T* tgt, const T* src, const size_t size)
 {
     CHECK(cudaMemcpy(tgt, src, sizeof(T) * size, cudaMemcpyHostToDevice));
 }
-
-template void cudaH2Dcpy(float* tgt, const float* src, const size_t size);
-template void cudaH2Dcpy(half* tgt, const half* src, const size_t size);
 
 template<typename T_IN, typename T_OUT>
 __global__ void type_conversion(T_OUT* dst, const T_IN* src, const int size)
@@ -60,9 +57,6 @@ void cuda_type_conversion(T_OUT* dst, const T_IN* src, const int size)
 {
     type_conversion<<<216, 256>>>(dst, src, size);
 }
-
-template void cuda_type_conversion(float* dst, const half* src, const int size);
-template void cuda_type_conversion(half* dst, const float* src, const int size);
 
 // from FT code
 // loads data from binary file. If it succeeds, returns a non-empty (shape size) vector. If loading fails or
@@ -145,7 +139,3 @@ typename std::enable_if<!std::is_same<T_OUT, T_FILE>::value, int>::type loadWeig
     GPUFree(ptr_tmp);
     return 0;
 }
-
-template int loadWeightFromBin<float, float>(float* ptr, std::vector<size_t> shape, std::string filename);
-template int loadWeightFromBin<half, half>(half* ptr, std::vector<size_t> shape, std::string filename);
-template int loadWeightFromBin<float, half>(float* ptr, std::vector<size_t> shape, std::string filename);
