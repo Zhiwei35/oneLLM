@@ -108,37 +108,73 @@ std::vector<T> loadWeightFromBinHelper(std::vector<size_t> shape, std::string fi
     return host_array;
 }
 ///home/ubuntu/hzw/llamaweight/tmp/layers.0.attention.wq.weight
-template<typename T_OUT, typename T_FILE>
-typename std::enable_if<std::is_same<T_OUT, T_FILE>::value, int>::type loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
+
+template <typename T_OUT, typename T_FILE>
+struct loadWeightFromBin<T_OUT, T_FILE, true>
 {
-    std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
+    static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename) {
+        std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
 
-    if (host_array.empty()) {
-        return 0;
-    }
+        if (host_array.empty()) {
+            return;
+        }
 
-    cudaH2Dcpy(ptr, host_array.data(), host_array.size());
-    return 0;
-}
+        cudaH2Dcpy(ptr, host_array.data(), host_array.size());
+        return;    
+   }
+};
 
-template<typename T_OUT, typename T_FILE>
-typename std::enable_if<!std::is_same<T_OUT, T_FILE>::value, int>::type loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
+template <typename T_OUT, typename T_FILE>
+struct loadWeightFromBin<T_OUT, T_FILE, false>
 {
-    std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
+    static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename) {
+        std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
 
-    if (host_array.empty()) {
-        return 0;
+        if (host_array.empty()) {
+            return;
+        }
+
+
+        T_FILE* ptr_tmp;
+        GPUMalloc(&ptr_tmp, host_array.size());
+        cudaH2Dcpy(ptr_tmp, host_array.data(), host_array.size());
+        cuda_type_conversion(ptr, ptr_tmp, host_array.size());
+        GPUFree(ptr_tmp);
+        return;
     }
+};
+
+// template<typename T_OUT, typename T_FILE>
+// typename std::enable_if<std::is_same<T_OUT, T_FILE>::value, int>::type loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
+// {
+//     std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
+
+//     if (host_array.empty()) {
+//         return 0;
+//     }
+
+//     cudaH2Dcpy(ptr, host_array.data(), host_array.size());
+//     return 0;
+// }
+
+// template<typename T_OUT, typename T_FILE>
+// typename std::enable_if<!std::is_same<T_OUT, T_FILE>::value, int>::type loadWeightFromBin(T_OUT* ptr, std::vector<size_t> shape, std::string filename)
+// {
+//     std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
+
+//     if (host_array.empty()) {
+//         return 0;
+//     }
 
 
-    T_FILE* ptr_tmp;
-    GPUMalloc(&ptr_tmp, host_array.size());
-    cudaH2Dcpy(ptr_tmp, host_array.data(), host_array.size());
-    cuda_type_conversion(ptr, ptr_tmp, host_array.size());
-    GPUFree(ptr_tmp);
-    return 0;
-}
+//     T_FILE* ptr_tmp;
+//     GPUMalloc(&ptr_tmp, host_array.size());
+//     cudaH2Dcpy(ptr_tmp, host_array.data(), host_array.size());
+//     cuda_type_conversion(ptr, ptr_tmp, host_array.size());
+//     GPUFree(ptr_tmp);
+//     return 0;
+// }
 
-template int loadWeightFromBin<float, float>(float* ptr, std::vector<size_t> shape, std::string filename);
-template int loadWeightFromBin<half, half>(half* ptr, std::vector<size_t> shape, std::string filename);
-template int loadWeightFromBin<float, half>(float* ptr, std::vector<size_t> shape, std::string filename);
+template int loadWeightFromBin<float, float>;
+template int loadWeightFromBin<half, half>;
+template int loadWeightFromBin<float, half>;
