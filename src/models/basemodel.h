@@ -33,7 +33,7 @@ public:
 
     virtual void loadWeightsFromDummy() = 0;
 
-    virtual std::string MakeInput(const std::string &history, int round, const std::string &input) = 0; // 根据历史信息和当前输入生成prompt
+    virtual std::tuple<std::string, int, int> MakeInput(const std::string &history, int round, const std::string &input) = 0; // 根据历史信息和当前输入生成prompt
 
     virtual std::string MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output) = 0; // 根据当前轮次回复更新history
 
