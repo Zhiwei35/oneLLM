@@ -140,16 +140,6 @@ int main(){
 
     cudaMemcpy(d_finished, h_finished, sizeof(bool) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_output_norm_weight, h_output_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_attn_norm_weight, h_attn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_norm_weight, h_ffn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * q_hidden_units * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_output_weights, h_output_weights, sizeof(float) * q_hidden_units * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_out_bias, h_out_bias, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_down, h_ffn_down, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_down_bias, h_ffn_down_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_gate, h_ffn_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_up, h_ffn_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
 
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
@@ -161,16 +151,7 @@ int main(){
         layerWeights[i] = new LlamaLayerWeight<float>(head_num, kv_head_num,
                                                head_size, inter_size, wtype,
                                                /*attn_bias*/true);
-        layerWeights[i]->loadWeights(d_attn_norm_weight,
-                                            d_ffn_norm_weight,
-                                            d_qkv_weights,
-                                            d_qkv_bias,
-                                            d_output_weights,
-                                            d_out_bias,
-                                            d_ffn_down,
-                                            d_ffn_down_bias,
-                                            d_ffn_gate,
-                                            d_ffn_up);
+        layerWeights[i]->loadWeights();
     }
     TensorWrapper<float>* decoder_input = new TensorWrapper<float>(GPU, 
                                                                     type, 
