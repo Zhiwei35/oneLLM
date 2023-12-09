@@ -158,8 +158,7 @@ int main(){
     self_attn_layer->forward(masked_attn_inputs,
                              masked_attn_outputs,
                              self_attn_weights,
-                             attn_dyn_params,
-                             attn_static_params);
+                             attn_dyn_params);
     cudaDeviceSynchronize();
     free(h_attention_input);
     free(h_all_k_cache);
