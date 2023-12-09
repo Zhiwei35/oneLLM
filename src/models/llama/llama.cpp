@@ -26,7 +26,7 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
     //tokenids->output ids, [s,b]=>[b,s]，此处因为没有batch，先省掉
     // output_ids_buf_ = (int*)allocator->Malloc(output_ids_buf_, sizeof(int) * max_batch_size * output_token_limit, true); 
     h_input_ids_buf_ =
-        allocator->Malloc(h_input_ids_buf_, sizeof(int) * max_batch_size * max_seq_len, True);
+        allocator->Malloc(h_input_ids_buf_, sizeof(int) * max_batch_size * max_seq_len, true);
     h_input_length_buf_ =
         allocator->Malloc(h_input_length_buf_, sizeof(int) * max_batch_size, true);
     h_history_length_buf_ =
@@ -52,27 +52,25 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
 template<typename T>
 void Llama<T>::allocateGPUBuffer(int batch_size)
 {
-    step = new TensorWrapper<int>(CPU, getTensorType<int>, {1}, &h_step);
-    layer = new TensorWrapper<int>(CPU, getTensorType<int>, {1}, &layer_id);
-    context_decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>, {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
-    context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>, {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
-    decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>, {batch_size, hidden_units});
-    decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>, {batch_size, hidden_units});
-    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size, h_input_length_buf_[0]});//这里的seqlen应该是padding前的
-    input_length = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size});
-    history_length = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size});
-    context_length = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size});
-    sequence_lengths = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size});
-    all_k_cache = new TensorWrapper<T>(GPU, getTensorType<T>, {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
-    all_v_cache = new TensorWrapper<T>(GPU, getTensorType<T>, {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
-    token_ids = new TensorWrapper<int>(GPU, getTensorType<int>, {batch_size});
-    is_finished = new TensorWrapper<bool>(GPU, getTensorType<bool>, {batch_size});
-    output_rmsnorm_weight = new TensorWrapper<T>(GPU, getTensorType<T>, {hidden_units}, llama_weights->out_rmsnorm_weight->gamma);
+    step = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &h_step);
+    layer = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &layer_id);
+    context_decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
+    context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
+    decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
+    decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
+    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size, h_input_length_buf_[0]});//这里的seqlen应该是padding前的
+    input_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
+    history_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
+    context_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
+    sequence_lengths = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
+    all_k_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
+    all_v_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
+    token_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
+    is_finished = new TensorWrapper<bool>(GPU, getTensorType<bool>(), {batch_size});
+    output_rmsnorm_weight = new TensorWrapper<T>(GPU, getTensorType<T>(), {hidden_units}, llama_weights->out_rmsnorm_weight->gamma);
     probs = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, vocab_size});
     topk_workspace = new TensorWrapper<T>(GPU, getTensorType<T>(), {});
-    topk_id = new TensorWrapper<int>(GPU, getTensorType<int>(),
-                                                             {batch_size, K}, d_topk_workspace +  batch_size * K + 2 * batch_size * K * maxBlockPerBeam * K);
-    topk_val = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, K}, d_topk_workspace +  2 * batch_size * K * maxBlockPerBeam * K);
+
     context_decoder_input->data =
         allocator->Malloc(context_decoder_input->data, sizeof(T) * max_context_token_num_ * hidden_units, false);
     context_decoder_output->data =
@@ -101,7 +99,10 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     // seq_limit_len_ = (uint32_t*)allocator->Malloc(seq_limit_len_, sizeof(uint32_t) * batch_size, false);
     probs->data = allocator->Malloc(probs->data, sizeof(T) * batch_size * vocab_size, false);
     // 两个中间top ids和vals，和两个final topk ids和vals
-    topk_workspace->data = allocator->Malloc(topk_workspace->data, sizeof(T) * (2 * batch_size * beamwidth + 2 * batch_size * beamwidth * 8/*max block per beam*/ * beamwidth), false);
+    topk_workspace->data = allocator->Malloc(topk_workspace->data, sizeof(T) * (2 * batch_size * K + 2 * batch_size * K * 8/*max block per beam*/ * K), false);
+    topk_id = new TensorWrapper<int>(GPU, getTensorType<int>(),
+                                                             {batch_size, K}, topk_workspace->data +  batch_size * K + 2 * batch_size * K * 8 * K);
+    topk_val = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, K}, topk_workspace->data +  2 * batch_size * K * 8 * K);
 }
 //seems we should self define max_context_len, since we only support bs=1 now
 //将CPU的各个length拷到GPU
@@ -167,12 +168,12 @@ void Llama<T>::InitializeForSelfDecoder(){
 
 template<typename T>
 std::tuple<std::string, int, int> Llama<T>::MakeInput(const std::string &history, int round, const std::string &input) {
-    std::tuple<std::string, int, int> ret(std::make_tuple((round == 0 ? pre_prompt : history) + user_role + input + bot_role, history.length(), input.length()));
+    std::tuple<std::string, int, int> ret(std::make_tuple((round == 0 ? prompt : history) + user_role + input + bot_role, history.length(), input.length()));
     return ret;
 }
 template<typename T>
 std::string Llama<T>::MakeHistory(const std::string &history, int round, const std::string &input, const std::string &output) {
-    return (round == 0 ? pre_prompt : history) + user_role + input + bot_role + output + history_sep;
+    return (round == 0 ? prompt : history) + user_role + input + bot_role + output;// + history_sep;
 }
 template<typename T>
 void Llama<T>::inputEmbedding(TensorWrapper<int>* input_ids, TensorWrapper<T>* decoder_input){

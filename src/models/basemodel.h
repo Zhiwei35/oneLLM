@@ -11,8 +11,8 @@ using CallBack = std::function<void(int index, const char* GenerateContent)>;
 class BaseModel{
 public:
     std::string model_name;
-    std::string prompt;
-    std::string user_role, bot_role, history_sep; // 用于生成每一轮的prompt
+    std::string prompt = "today is a good day";
+    std::string user_role = "question", bot_role = "answer";//, history_sep; // 用于生成每一轮的prompt
     cudaStream_t stream;
     cublasWrapper* cublas_wrapper;
     BaseAllocator* allocator;

@@ -18,7 +18,7 @@ struct Tokenizer {
         int prev, next;
         int fixId;
 
-        Symbol (Tokenizer::TrieNode *node,
+        Symbol (TrieNode *node,
                 char *s, int pos, int len,
                 int prev, int next, int fixId) {
             this->node = node;
@@ -53,11 +53,11 @@ struct Tokenizer {
 //         std::unique_ptr<sentencepiece::SentencePieceProcessor> spProcessor;
 // #endif
 
-    Tokenizer::Tokenizer() {
+    Tokenizer() {
         root = new TrieNode();
     }
 
-    Tokenizer::~Tokenizer() {
+    ~Tokenizer() {
         std::vector <TrieNode*> q;
         q.push_back(root);
         for (int i = 0; i < q.size(); i++) {
@@ -199,10 +199,10 @@ struct Tokenizer {
     }
 
     // 这里的data可以换成模型的输出
-    std::string Decode(std::vector<float>& ret){
+    std::string Decode(std::vector<float> ret){
         std::vector <int> tokens;
         for (int i = 0; i < ret.size(); i++) {//data.Count(0)
-            tokens.push_back((int) ((float*) ret.data)[i]);
+            tokens.push_back((int) ((float*) ret.data())[i]);
         }
         return DecodeTokens(tokens);
     } // 解码

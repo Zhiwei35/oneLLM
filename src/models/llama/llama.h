@@ -27,12 +27,14 @@ private:
     int bos_token_id = 1;
     int eos_token_id = 2;
     int layer_id = 0;
+    int batch_size =  1; //tmp var, should included in dyn params
 
     LlamaWeight<T>* llama_weights;
     LlamaSelfDecoder<T>* self_decoder;
     LlamaContextDecoder<T>* context_decoder;
-
-    const int h_step;
+    int = max_context_token_num_ = 512;
+    int h_step;
+    int K = 4;
     TensorWrapper<int>* step;
     TensorWrapper<T>* output_rmsnorm_weight;
     TensorWrapper<int>* layer;
@@ -64,7 +66,7 @@ private:
 
     // used by sampling
     IntDict int_params_of_sample;
-    TensorWrapper<T>* prob;
+    TensorWrapper<T>* probs;
     TensorWrapper<int>* token_ids;
     //int* token_ids_buf_{};   // all token IDs in [S, B], indexed using `step`
     //int* output_ids_buf_{};  // output ids in [B, S]
