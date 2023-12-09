@@ -53,7 +53,7 @@ int main(){
     bool* h_finished = (bool*) malloc(sizeof(bool) * attn_dyn_params.batch_size);
     bool* d_finished;
     for(int i = 0; i < attn_dyn_params.batch_size; i++){
-        h_finished = static_cast<bool>(0);
+        h_finished[i] = static_cast<bool>(0);
     }
 
     float* h_qkv_weights = (float*) malloc(sizeof(float) * q_hidden_units * hidden_units);
@@ -91,7 +91,7 @@ int main(){
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
     DataType type_bool = getTensorType<bool>();
-    LLaMAattentionWeights self_attn_weights;
+    LLaMAattentionWeights<float> self_attn_weights;
     WeightType wtype = getWeightType<float>();
     self_attn_weights.qkv.data = d_qkv_weights;
     self_attn_weights.qkv.shape = {q_hidden_units, hidden_units};
@@ -107,7 +107,7 @@ int main(){
     TensorWrapper<int>* step = new TensorWrapper<int>(CPU, 
                                                         type_int, 
                                                         {1}, 
-                                                        h_step);
+                                                        &h_step);
     TensorWrapper<bool>* finished = new TensorWrapper<bool>(GPU, 
                                                             type_bool, 
                                                             {attn_dyn_params.batch_size}, 
@@ -115,7 +115,7 @@ int main(){
     TensorWrapper<int>* layer_id = new TensorWrapper<int>(CPU, 
                                                             type_int, 
                                                             {1}, 
-                                                            h_layer_id);
+                                                            &h_layer_id);
     TensorWrapper<float>* attention_output = new TensorWrapper<float>(GPU, 
                                                                     type, 
                                                                     {attn_dyn_params.batch_size, q_hidden_units}, 
