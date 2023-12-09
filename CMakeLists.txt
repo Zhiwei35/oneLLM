@@ -82,8 +82,8 @@ include_directories(
 link_directories(
   ${COMMON_LIB_DIRS}
 )
-file(GLOB_RECURSE ONELLM_CXX_SOURCES "*.cpp" "*.cc")
-file(GLOB_RECURSE ONELLM_CUDA_SOURCES "*.cu")
+file(GLOB_RECURSE ONELLM_CXX_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.cc ${PROJECT_SOURCE_DIR}/examples/*.cpp)
+file(GLOB_RECURSE ONELLM_CUDA_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cu)
 # set(ONELLM_CUDA_SOURCES src/)
 # set(ONELLM_CXX_SOURCES src/)
 add_library(onellm OBJECT
