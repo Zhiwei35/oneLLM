@@ -90,3 +90,6 @@ LlamaWeight<T>::~LlamaWeight()
         delete p;
     }
 }
+
+template struct LlamaWeight<float>;
+template struct LlamaWeight<half>;

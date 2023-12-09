@@ -177,7 +177,7 @@ std::string Llama<T>::MakeHistory(const std::string &history, int round, const s
 }
 template<typename T>
 void Llama<T>::inputEmbedding(TensorWrapper<int>* input_ids, TensorWrapper<T>* decoder_input){
-    launchInputEmbedding<T>(input_ids, decoder_input, &(llama_weights->pre_decoder_embedding_weight));
+    launchInputEmbedding<T>(input_ids, decoder_input, &(llama_weights->pre_decoder_embedding_weight), vocab_size);
     DeviceSyncAndCheckCudaError();
 }
 //每轮对话的1st token
