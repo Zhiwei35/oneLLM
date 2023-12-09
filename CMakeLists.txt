@@ -46,6 +46,8 @@ set(CMAKE_C_FLAGS_DEBUG    "${CMAKE_C_FLAGS_DEBUG}    -Wall -O0")
 set(CMAKE_CXX_FLAGS_DEBUG  "${CMAKE_CXX_FLAGS_DEBUG}  -Wall -O0")
 set(CMAKE_CUDA_FLAGS_DEBUG "${CMAKE_CUDA_FLAGS_DEBUG} -O0 -G -Xcompiler -Wall")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") #忽略所有警告
+message(STATUS "CMAKE_CXX_FLAGS" ${CMAKE_CXX_FLAGS})
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -80,9 +82,18 @@ include_directories(
 link_directories(
   ${COMMON_LIB_DIRS}
 )
+file(GLOB_RECURSE ONELLM_CXX_SOURCES "*.cpp" "*.cc")
+file(GLOB_RECURSE ONELLM_CUDA_SOURCES "*.cu")
+# set(ONELLM_CUDA_SOURCES src/)
+# set(ONELLM_CXX_SOURCES src/)
+add_library(onellm OBJECT
+            ${ONELLM_CXX_SOURCES}
+            ${ONELLM_CUDA_SOURCES}
+            )
+
 add_subdirectory(src)
 #add_subdirectory(tests)
 add_subdirectory(examples)
 
-# add_executable(onellm onellm.cpp)
-# target_link_libraries(onellm PUBLIC Llama)
+add_executable(main onellm.cpp)
+target_link_libraries(main PUBLIC onellm)
