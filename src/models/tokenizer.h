@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
-#include <priority_queue>
+#include <queue>
 
 struct Tokenizer {
     struct TrieNode {
