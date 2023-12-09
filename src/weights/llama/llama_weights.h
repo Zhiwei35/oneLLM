@@ -13,12 +13,13 @@ private:
     int     vocab_size_padded;
     int     num_layer;
     WeightType weight_type;
+    
+public:
     std::vector<LlamaLayerWeight<T>*> llama_layer_weight;
     LayerNormWeight<T> out_rmsnorm_weight;
     EmbeddingWeight<T> post_decoder_embedding_weight;
     EmbeddingWeight<T> pre_decoder_embedding_weight;
-
-public:    
+    
     LlamaWeight() = default;
     LlamaWeight(
         int     head_num,

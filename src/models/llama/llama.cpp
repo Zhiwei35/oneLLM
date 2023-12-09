@@ -67,7 +67,7 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     all_v_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
     token_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     is_finished = new TensorWrapper<bool>(GPU, getTensorType<bool>(), {batch_size});
-    output_rmsnorm_weight = new TensorWrapper<T>(GPU, getTensorType<T>(), {hidden_units}, llama_weights->out_rmsnorm_weight->gamma);
+    output_rmsnorm_weight = new TensorWrapper<T>(GPU, getTensorType<T>(), {hidden_units}, llama_weights->out_rmsnorm_weight.gamma);
     probs = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, vocab_size});
     topk_workspace = new TensorWrapper<T>(GPU, getTensorType<T>(), {});
 
@@ -101,7 +101,7 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     // 两个中间top ids和vals，和两个final topk ids和vals
     topk_workspace->data = allocator->Malloc(topk_workspace->data, sizeof(T) * (2 * batch_size * K + 2 * batch_size * K * 8/*max block per beam*/ * K), false);
     topk_id = new TensorWrapper<int>(GPU, getTensorType<int>(),
-                                                             {batch_size, K}, topk_workspace->data +  batch_size * K + 2 * batch_size * K * 8 * K);
+                                                             {batch_size, K}, (int*)(topk_workspace->data +  batch_size * K + 2 * batch_size * K * 8 * K));
     topk_val = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, K}, topk_workspace->data +  2 * batch_size * K * 8 * K);
 }
 //seems we should self define max_context_len, since we only support bs=1 now
@@ -177,7 +177,7 @@ std::string Llama<T>::MakeHistory(const std::string &history, int round, const s
 }
 template<typename T>
 void Llama<T>::inputEmbedding(TensorWrapper<int>* input_ids, TensorWrapper<T>* decoder_input){
-    launchInputEmbedding<T>(input_ids, decoder_input, llama_weights->pre_decoder_embedding_weight);
+    launchInputEmbedding<T>(input_ids, decoder_input, &(llama_weights->pre_decoder_embedding_weight));
     DeviceSyncAndCheckCudaError();
 }
 //每轮对话的1st token
@@ -252,7 +252,8 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
     
     launchLinearGemm(/*Tensor**/ decoder_output->as<T>(), //[bs, hidden_units]
                     /*BaseWeight&*/ llama_weights->post_decoder_embedding_weight, //[hidden_units, vocab_size]
-                     /*Tensor**/ probs);//这个属于是中间buffer，定义在allocatebuffer就行
+                     /*Tensor**/ probs,
+                     cublas_wrapper);//这个属于是中间buffer，定义在allocatebuffer就行
     DeviceSyncAndCheckCudaError();
 
     launchTopKforBeamSearch(probs, // [bs, vocab_size] 
@@ -315,8 +316,11 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
         PrintRes(index, genString.c_str());
         index++; //生成的token数量
         // deep copy
-        input_ids = TensorWrapper<int>(GPU, INT32, {1, 1}, &ret);
+        input_ids = new TensorWrapper<int>(GPU, INT32, {1, 1}, &ret);
     }
     PrintRes(-1, retString.c_str());
     return retString;
 }
+
+template class Llama<float>;
+template class Llama<half>;
