@@ -7,6 +7,7 @@
 #include "src/kernels/qkv_linear.h" //LM Head
 #include "src/kernels/beamsearch_topK.h" //topK
 #include "src/kernels/topK_sampling.h" //sampling
+#include "src/utils/cuda_utils.h"
 template<typename T>
 class Llama: public BaseModel{
 private:
