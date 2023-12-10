@@ -157,10 +157,15 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     // h_v_cache_ptr_buf_[i] = ;
     // step = h_context_length_buf_[0];
     // batch size = 1
+    printf("input ids h2d is done\n");
     CHECK(cudaMemcpyAsync(input_length->data, h_input_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    printf("input length h2d is done\n");
     CHECK(cudaMemcpyAsync(history_length->data, h_history_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    printf("history_length h2d is done\n");
     CHECK(cudaMemcpyAsync(context_length->data, h_context_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    printf("context_length is done\n");
     CHECK(cudaMemcpyAsync(is_finished->data, h_finished_buf_, RoundUpTo32x(sizeof(bool) * batch_size), cudaMemcpyHostToDevice, stream));
+    printf("InitializeForContextDecoder is done\n");
 }
 //
 template<typename T>
