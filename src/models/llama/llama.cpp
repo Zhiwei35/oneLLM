@@ -48,17 +48,21 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
     //     (uint32_t*)allocator->Malloc(h_seq_limit_len_, sizeof(uint32_t) * max_batch_size, true);
 }
 
+
+//后续剩余工作： 
+//1. 单独测试一下tokenizer.decode的输出到底是什么
+//2. loadweight的itrex代码问问liuzhenwei和zhaotao在什么地方
 //gpu buffer
 template<typename T>
 void Llama<T>::allocateGPUBuffer(int batch_size)
 {
     step = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &h_step);
     layer = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &layer_id);
-    context_decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
-    context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/batch_size * h_input_length_buf_[0], hidden_units});
+    context_decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/max_context_token_num_, hidden_units});
+    context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/max_context_token_num_, hidden_units});
     decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
     decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
-    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size, h_input_length_buf_[0]});//这里的seqlen应该是padding前的
+    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size, max_seq_len});//这里的seqlen应该是padding前的
     input_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     history_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     context_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
@@ -81,7 +85,7 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     decoder_input->data  = allocator->Malloc(decoder_input->data, sizeof(T) * batch_size * hidden_units, false);
     decoder_output->data = allocator->Malloc(decoder_output->data, sizeof(T) * batch_size * hidden_units, false);
 
-    input_ids->data      = allocator->Malloc(input_ids->data, sizeof(int) * batch_size * h_input_length_buf_[0], false);
+    input_ids->data      = allocator->Malloc(input_ids->data, sizeof(int) * batch_size * max_seq_len, false);
     input_length->data   = allocator->Malloc(input_length->data, sizeof(int) * batch_size, false);
     history_length->data = allocator->Malloc(history_length->data, sizeof(int) * batch_size, false);
     context_length->data = allocator->Malloc(context_length->data, sizeof(int) * batch_size, false);
@@ -139,7 +143,7 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     h_context_length_buf_[0] = int_params_first_token["context_length"];
     CHECK(cudaMemcpy(input_ids->data,  //
                     h_input_ids_buf_, //get from encode
-                    sizeof(int) * h_input_length_buf_[0], 
+                    sizeof(int) * h_input_length_buf_[0], //h_input_length_buf = 0B, cause allocation occurs before line137
                     cudaMemcpyHostToDevice));
     
     // 直接使用kv cache gpu buffer

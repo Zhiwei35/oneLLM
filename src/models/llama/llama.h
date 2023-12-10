@@ -15,7 +15,7 @@ private:
     const int head_size;
     const int inter_size;
     const int num_layers;
-    const int vocab_size;
+    int vocab_size;
     int vocab_size_padded;
     float rmsnorm_eps = 1e-6f;   
     // const int start_id = 0; // from hf modeling_config

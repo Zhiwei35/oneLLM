@@ -16,7 +16,7 @@ namespace onellm {
         int head_size = 8;
         int inter_size = 12;
         int num_layers = 2;
-        int max_seq_len = 12;
+        int max_seq_len = 100;
         int vocab_size = 100;
         int hidden_units = (head_num + 2 * kv_head_num) * head_size;
         int q_hidden_units = head_num * head_size;

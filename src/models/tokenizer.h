@@ -9,7 +9,7 @@ struct Tokenizer {
         int tokenId;
         float score;
         std::map <int, TrieNode*> next;
-        TrieNode();
+        TrieNode() = default;
     };
     struct Symbol {
         TrieNode *node;
