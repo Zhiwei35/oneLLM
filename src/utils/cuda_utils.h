@@ -18,7 +18,3 @@ template <typename T_OUT, typename T_FILE, bool Enabled = std::is_same<T_OUT, T_
 public:
     static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename);
 };  // 模板的泛化形式（原型）
-
-size_t RoundUpTo32x(size_t size) {
-    return ((size + 31) / 32) * 32;
-}

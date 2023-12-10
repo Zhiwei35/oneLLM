@@ -18,6 +18,11 @@
 // ):
 #include "src/models/llama/llama.h"
 #include "src/models/tokenizer.h"
+
+size_t RoundUpTo32x(size_t size) {
+    return ((size + 31) / 32) * 32;
+}
+
 //cpu pinned buffer
 template<typename T>
 void Llama<T>::allocateCPUBuffer(int max_batch_size){
