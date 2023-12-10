@@ -1,3 +1,4 @@
+#pragma once
 #include "src/kernels/build_casual_mask.h"
 #include "src/kernels/cal_paddingoffset.h"
 #include "src/kernels/fused_addresidual_norm.h"

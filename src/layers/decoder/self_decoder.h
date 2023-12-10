@@ -1,3 +1,4 @@
+#pragma once
 #include "src/kernels/decoder_masked_attn.h"
 #include "src/kernels/fused_addresidual_norm.h"
 #include "src/kernels/rmsnorm_kernel.h"
