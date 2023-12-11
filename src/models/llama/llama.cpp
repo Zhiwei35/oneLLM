@@ -186,7 +186,7 @@ void Llama<T>::InitializeForSelfDecoder(){
 
 template<typename T>
 std::tuple<std::string, int, int> Llama<T>::MakeInput(const std::string &history, int round, const std::string &input) {
-    std::tuple<std::string, int, int> ret(std::make_tuple((round == 0 ? prompt : history) + user_role + input + bot_role, history.length(), input.length()));
+    std::tuple<std::string, int, int> ret(std::make_tuple((round == 0 ? "" : history) + input, history.length(), input.length()));
     return ret;
 }
 template<typename T>
