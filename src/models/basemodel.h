@@ -29,6 +29,7 @@ public:
         cuda_device_prop(cuda_device_prop),
         is_free_buffer_after_forward(is_free_buffer_after_forward){};
 
+    virtual void loadTokenizer(std::string file) = 0;
     virtual void loadWeights(std::string file) = 0;
 
     virtual void loadWeightsFromDummy() = 0;
