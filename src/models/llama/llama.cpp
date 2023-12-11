@@ -147,10 +147,13 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     h_history_length_buf_[0] = int_params_first_token["history_length"];
     h_context_length_buf_[0] = int_params_first_token["context_length"];
     printf("h_input_length_buf_[0] = %d\n", h_input_length_buf_[0]);
-    CHECK(cudaMemcpyAsync(input_ids->data,  //
+    printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);
+    printf("h_input_ids_buf_[12] = %d\n", h_input_ids_buf_[12]);
+    printf("h_input_ids_buf_[13] = %d\n", h_input_ids_buf_[13]);
+    CHECK(cudaMemcpy(input_ids->data,  //
                     h_input_ids_buf_, //get from encode
                     RoundUpTo32x(sizeof(int) * max_seq_len), //h_input_length_buf = 0B, cause allocation occurs before line137
-                    cudaMemcpyHostToDevice, stream));
+                    cudaMemcpyHostToDevice));
     
     // 直接使用kv cache gpu buffer
     // h_k_cache_ptr_buf_[i] = ;
@@ -158,13 +161,13 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     // step = h_context_length_buf_[0];
     // batch size = 1
     printf("input ids h2d is done\n");
-    CHECK(cudaMemcpyAsync(input_length->data, h_input_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    CHECK(cudaMemcpy(input_length->data, h_input_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
     printf("input length h2d is done\n");
-    CHECK(cudaMemcpyAsync(history_length->data, h_history_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    CHECK(cudaMemcpy(history_length->data, h_history_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
     printf("history_length h2d is done\n");
-    CHECK(cudaMemcpyAsync(context_length->data, h_context_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice, stream));
+    CHECK(cudaMemcpy(context_length->data, h_context_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
     printf("context_length is done\n");
-    CHECK(cudaMemcpyAsync(is_finished->data, h_finished_buf_, RoundUpTo32x(sizeof(bool) * batch_size), cudaMemcpyHostToDevice, stream));
+    CHECK(cudaMemcpy(is_finished->data, h_finished_buf_, RoundUpTo32x(sizeof(bool) * batch_size), cudaMemcpyHostToDevice));
     printf("InitializeForContextDecoder is done\n");
 }
 //
@@ -290,14 +293,11 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
 template<typename T>
 std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, CallBack PrintRes) {
     // this input already include self-defined pre prompt
-    h_input_ids_buf_ = tokenizer.Encode(std::get<0>(input));
-
-    LLaMAAttentionDynParams attn_dyn_params;
-    attn_dyn_params.batch_size = 1;
-    attn_dyn_params.num_tokens = h_input_length_buf_[0];
-    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;
-    attn_dyn_params.max_k_len = max_seq_len;
-
+    printf("input= %s", std::get<0>(input));
+    std::vector<int> res = tokenizer.Encode(std::get<0>(input));
+    h_input_ids_buf_ = res.data();
+    // printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);//这个值有问题啊
+    // printf("h_input_ids_buf_[1] = %d\n", h_input_ids_buf_[1]);
     
     // ensure prepared all needed input buffer
     int index = 0;
@@ -309,6 +309,11 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     int_params_first_token["context_length"] = context_length;
     int_params_first_token["history_length"] = history_length;
     int_params_first_token["cur_input_length"] = cur_input_length;
+    LLaMAAttentionDynParams attn_dyn_params;
+    attn_dyn_params.batch_size = 1;
+    attn_dyn_params.num_tokens = cur_input_length;//这个此时还是0
+    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;
+    attn_dyn_params.max_k_len = max_seq_len;
     // retString为当前轮次对话的所有token string
     std::string retString = "";
     while (index < output_token_limit) {

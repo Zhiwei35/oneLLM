@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 #include "src/memory/allocator/base_allocator.h"
+#include "src/utils/macro.h"
+
 // I use Bytes to printf buffer size msg, because sometime I allocate <1KB buffer, which causes that display 0KB
 struct CudaBigBlock {
     void *data;
@@ -59,7 +61,9 @@ public:
         // not sure if w/o it, float4 works or not
         size = ((size + 31) / 32) * 32;
         if (is_host) {
-            cudaMallocHost(&ptr, size);
+            //CHECK(cudaMallocHost(&ptr, size));
+            ptr = malloc(size);
+            Memset(ptr, 0, size);
             return ptr;
         }
         //大buf, 先去bigblocks里面找空闲的（free出来的）
@@ -109,7 +113,8 @@ public:
         }
         // 没找到空闲的再cudaMalloc
         void* new_buffer = (void*)ptr;
-        cudaMalloc(&new_buffer, size);
+        CHECK(cudaMalloc(&new_buffer, size));
+        CHECK(cudaMemset(ptr, 0, size));
         std::cout << "allocate a new small block from OS using cudaMalloc, size = "
                                             << size  << "B"
                                             << std::endl;

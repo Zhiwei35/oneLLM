@@ -3,7 +3,7 @@
 
 struct Config {
 	std::string dir = "llama-7b-fp32.bin"; // 模型文件路径
-    std::string tokenizer_file = "llama2-7b-tokenizer.bin";
+    std::string tokenizer_file = "../llama2-7b-tokenizer.bin";
     int max_seq_len = -1; //输出句子的最大长度，超出即退出
 };
 

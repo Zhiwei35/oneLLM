@@ -182,7 +182,7 @@ struct Tokenizer {
         q.push(SymbolPairs(now->score, l, r, symbols[l].len + symbols[r].len));
     } // 插入备选symbol
 
-    int* Encode(const std::string &ori){
+    std::vector<int> Encode(const std::string &ori){
         std::string blank = "";
         blank += 226, blank += 150, blank += 129;
         std::string s = blank;
@@ -286,7 +286,7 @@ struct Tokenizer {
                 }
             }
         }
-        return v.data();
+        return v;
     }
 
     // 这里的data可以换成模型的输出
