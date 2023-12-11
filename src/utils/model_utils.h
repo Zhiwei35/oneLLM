@@ -55,9 +55,19 @@ namespace onellm {
     }
 
     template<typename T>
-    std::unique_ptr<BaseModel> CreateOneLLMModelFromDummy(){
+    std::unique_ptr<BaseModel> CreateOneLLMModelFromDummy(std::string tokenizer_file){
         BaseModel *model = CreateModelWithName<T>("llama");
+        model->loadTokenizer(tokenizer_file);
         model->loadWeightsFromDummy();
+        // model->WarmUp();
+        return std::unique_ptr<BaseModel> (model);        
+    }
+
+    template<typename T>
+    std::unique_ptr<BaseModel> CreateOneLLMModelFromFile(std::string model_dir, std::string tokenizer_file){
+        BaseModel *model = CreateModelWithName<T>("llama");
+        model->loadTokenizer(tokenizer_file);
+        model->loadWeights(model_dir);
         // model->WarmUp();
         return std::unique_ptr<BaseModel> (model);        
     }

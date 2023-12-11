@@ -1,8 +1,55 @@
+#pragma once
+#include <stdio.h>
 #include <map>
 #include <unordered_map>
 #include <vector>
 #include <string>
 #include <queue>
+
+struct FileBuffer {
+    FILE *f;
+
+    FileBuffer (const std::string &fileName) {
+        f = fopen(fileName.c_str(), "rb");
+    }
+
+    int ReadInt() {
+        int v;
+        if (fread(&v, 1, 4, f) != 4) { // fread(buf,1,sizeof(buf),fp);表示每个数据的大小为1，读了4次，一共4b，返回值为实际读取的数据个数即4
+            std::cout << "FileBuffer.ReadInt error." << "\n";
+        };
+        return v;
+    }
+
+    float ReadFloat() {
+        float v;
+        if (fread(&v, 1, 4, f) != 4) {
+            std::cout << "FileBuffer.ReadFloat error." << "\n";
+        };
+        return v;
+    }
+
+    std::string ReadString() {
+        int len = ReadInt();
+        std::string ret = "";
+        char *v = new char[len + 5];
+        v[len] = 0;
+        if (fread(v, 1, len, f) != len) {
+            std::cout << "FileBuffer.ReadString error." << "\n";
+        }
+        return v;
+    }
+
+    void ReadBytes(uint8_t *buffer, uint64_t bytes) {
+        if (fread(buffer, 1, bytes, f) != bytes) {
+            std::cout << "FileBuffer.ReadBytes error." << "\n";
+        }
+    }
+
+    ~FileBuffer() {
+        fclose(f);
+    }
+};
 
 struct Tokenizer {
     struct TrieNode {
@@ -71,6 +118,50 @@ struct Tokenizer {
         delete root;
     }
 
+    void Insert(const std::string &s, int tokenId, float score) {
+        TrieNode *now = this->root;
+        for (int i = 0; i < s.size(); i++) {
+            if (now->next.find(s[i]) == now->next.end()) {
+                now->next[s[i]] = new TrieNode();
+            }
+            now = now->next[s[i]];
+        }
+        now->tokenId = tokenId;
+        now->score = score;
+        tokenToStringDict[tokenId] = s;
+        stringToTokenDict[s] = tokenId;
+    }
+    //对应于torch2flm.py
+    void Initialize(std::string file){
+        FileBuffer buffer(file);//这里的filename就是读取的weight文件，读了这个之后才能用tokenizer
+        int versionId = buffer.ReadInt();
+
+        if (versionId >= 1) {
+            // versionId >= 1, 前置了一个key-value表
+            int keyValueLen = buffer.ReadInt();
+            for (int i = 0; i < keyValueLen; i++) {
+                std::string key = buffer.ReadString();
+                std::string value = buffer.ReadString();
+                // printf("key = %s, value = %s\n", key.c_str(), value.c_str());
+                // this->dicts[key] = value;
+            }
+        }
+
+        // tokenizer vocab
+        // bool useScore = this->dicts["tokenizer_use_score"] == "1";
+        int vocabLen = buffer.ReadInt();
+        for (int i = 0; i < vocabLen; i++) {
+            int len = buffer.ReadInt();
+            std::string x = "";
+            for (int j = 0; j < len; j++) {
+                x += buffer.ReadInt(); //encode内容，对应torch2flm.py#160
+            }
+            int id = buffer.ReadInt();
+            // float score = useScore ? buffer.ReadFloat() : -i;
+            float score = buffer.ReadFloat();
+            Insert(x, id, score);
+        }
+    }
     void TryMergePairs(std::vector<Symbol> &symbols, int l, int r, std::priority_queue <SymbolPairs> &q) {
         if (l == -1 || r == -1 || symbols[l].len == 0 || symbols[r].len == 0) {
             return;

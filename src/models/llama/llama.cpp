@@ -17,7 +17,7 @@
 //     **kwargs,
 // ):
 #include "src/models/llama/llama.h"
-#include "src/models/tokenizer.h"
+
 
 size_t RoundUpTo32x(size_t size) {
     return ((size + 31) / 32) * 32;
@@ -55,8 +55,8 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
 
 
 //后续剩余工作： 
-//1. 单独测试一下tokenizer.decode的输出到底是什么
-//2. loadweight的itrex代码问问liuzhenwei和zhaotao在什么地方
+//1. tokenizer目前有问题，试着加上fastllm.cpp/WeightMap::LoadFromFile(const std::string &fileName)这一段代码和torch2flm.py处理vocab的片段
+//2. loadweight按照tensorrt llm llama转换脚本去转换
 //gpu buffer
 template<typename T>
 void Llama<T>::allocateGPUBuffer(int batch_size)
@@ -289,7 +289,6 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
 // 单轮对话, batch size = 1
 template<typename T>
 std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, CallBack PrintRes) {
-    Tokenizer tokenizer;
     // this input already include self-defined pre prompt
     h_input_ids_buf_ = tokenizer.Encode(std::get<0>(input));
 

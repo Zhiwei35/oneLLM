@@ -7,7 +7,7 @@
 #include "src/kernels/qkv_linear.h" //LM Head
 #include "src/kernels/beamsearch_topK.h" //topK
 #include "src/kernels/topK_sampling.h" //sampling
-
+#include "src/models/tokenizer.h"
 template<typename T>
 class Llama: public BaseModel{
 private:
@@ -30,6 +30,7 @@ private:
     int layer_id = 0;
     int batch_size =  1; //tmp var, should included in dyn params
 
+    Tokenizer tokenizer;
     LlamaWeight<T>* llama_weights;
     LlamaSelfDecoder<T>* self_decoder;
     LlamaContextDecoder<T>* context_decoder;
@@ -167,6 +168,9 @@ public:
     ~Llama() {
         this->free();
     };
+    void loadTokenizer(std::string file){
+      tokenizer.Initialize(file);
+    }
     void loadWeights(std::string file){
       llama_weights->loadWeights(file);
     }
