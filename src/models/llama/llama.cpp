@@ -290,7 +290,7 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
                    /*IntDict&*/int_params_of_sample); //in, including step vocabsize endid
     DeviceSyncAndCheckCudaError();
 
-    CHECK(cudaMemcpy(h_output_ids, token_ids, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyDeviceToHost));
+    CHECK(cudaMemcpy(h_output_ids, token_ids->data, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyDeviceToHost));
     return h_output_ids[0]; // only for bs = 1
 }
 
