@@ -11,7 +11,8 @@ void launchLinearGemm(TensorWrapper<T>* input,
                       cublasWrapper* cublas_wrapper,
                       bool trans_a,
                       bool trans_b,
-                      bool shared_out_buf) {
+                      bool shared_out_buf,
+                      int cur_input_len) {
     //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
     // cudaStream_t stream;
     // cublasHandle_t cublas_handle;
@@ -26,9 +27,12 @@ void launchLinearGemm(TensorWrapper<T>* input,
     //                     new cublasWrapper(cublas_handle, cublaslt_handle);
     //                    // , stream);
     // cublas_wrapper->setFP32GemmConfig();
-    int input_lda = input->shape[0];
+    int input_lda = cur_input_len > 1 ? 1 : input->shape[0];
     int weight_ldb = input->shape.size() > 2 ? input->shape[1] * input->shape[2] : input->shape[1];
-    // TODO:check 2nd dim of input = 1st dim of weight
+    
+    
+    // !!!TODO:check 2nd dim of input = 1st dim of weight
+    // !!!TODO:check 1nd dim of input = 1st dim of output
     int output_ldc = input_lda;         
     int k = output->shape[1];
     cublasOperation_t transA = trans_a ? CUBLAS_OP_T: CUBLAS_OP_N;
@@ -43,13 +47,13 @@ void launchLinearGemm(TensorWrapper<T>* input,
               << "k: " << weight_ldb << "\n" //32
               << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
               << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
-    
+    ONELLM_CHECK_WITH_INFO(weight.shape[0] == weight_ldb, "2nd dim of input MUST = 1st dim of weight");
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m
                         k,              //n
                         weight_ldb,     //k
-                        input->data,   //A
+                        input->data + (cur_input_len - 1) * weight_ldb,   //A
                         input_lda,      //lda
                         weight.data,   //B
                         weight_ldb,     //ldb 

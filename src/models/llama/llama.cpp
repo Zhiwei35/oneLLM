@@ -269,10 +269,14 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
     Tensor* decoder_output = decoder_outputs["decoder_output"];
 
     
-    launchLinearGemm(/*Tensor**/ decoder_output->as<T>(), //[bs, hidden_units]
+    launchLinearGemm(/*Tensor**/ decoder_output->as<T>(), //ffn output: [bs, hidden_units] for self decoder or [num tokens, hidden units] for ctx decoder
                     /*BaseWeight&*/ llama_weights->post_decoder_embedding_weight, //[hidden_units, vocab_size]
-                     /*Tensor**/ probs,
-                     cublas_wrapper);//这个属于是中间buffer，定义在allocatebuffer就行
+                     /*Tensor**/ probs, //[bs, vocab size]
+                     cublas_wrapper,
+                     false,
+                     false,
+                     false,
+                     h_input_length_buf_[0]);//这个属于是中间buffer，定义在allocatebuffer就行
     DeviceSyncAndCheckCudaError();
 
     launchTopKforBeamSearch(probs, // [bs, vocab_size] 

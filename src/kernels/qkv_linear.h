@@ -14,7 +14,8 @@ void launchLinearGemm(TensorWrapper<T>* input,
                       cublasWrapper* cublas_wrapper,
                       bool trans_a = false,
                       bool trans_b = false,
-                      bool shared_out_buf = false);
+                      bool shared_out_buf = false,
+                      int cur_input_len = 1);
 template<typename T>
 void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
                                   TensorWrapper<T>* input2,
