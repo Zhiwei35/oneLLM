@@ -1,4 +1,5 @@
 #include "src/weights/llama/layer_weights.h"
+#include "src/utils/macro.h"
 template<typename T>
 LlamaLayerWeight<T>::LlamaLayerWeight(int     head_num,
                                     int     kv_head_num,
@@ -121,16 +122,16 @@ void LlamaLayerWeight<T>::loadWeights() // 这个改动可能会影响一些exam
     for (int i = 0; i < hidden_units * (head_num + 2 * kv_head_num) * head_size; i++) {
         h_dummy_qkv_weights[i] = (T)1;
     }
-    cudaMemcpy(d_dummy_attn_norm_weight, h_dummy_attn_norm_weight, sizeof(T) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_ffn_norm_weight, h_dummy_ffn_norm_weight, sizeof(T) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_qkv_weights, h_dummy_qkv_weights, sizeof(T) * hidden_units * (head_num + 2 * kv_head_num) * head_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_qkv_bias, h_dummy_qkv_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_output_weights, h_dummy_output_weights, sizeof(T) * hidden_units * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_output_bias, h_dummy_output_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_ffn_down, h_dummy_ffn_down, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_ffn_down_bias, h_dummy_ffn_down_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_ffn_gate, h_dummy_ffn_gate, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dummy_ffn_up, h_dummy_ffn_up, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice);
+    CHECK(cudaMemcpy(d_dummy_attn_norm_weight, h_dummy_attn_norm_weight, sizeof(T) * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_ffn_norm_weight, h_dummy_ffn_norm_weight, sizeof(T) * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_qkv_weights, h_dummy_qkv_weights, sizeof(T) * hidden_units * (head_num + 2 * kv_head_num) * head_size, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_qkv_bias, h_dummy_qkv_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_output_weights, h_dummy_output_weights, sizeof(T) * hidden_units * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_output_bias, h_dummy_output_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_ffn_down, h_dummy_ffn_down, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_ffn_down_bias, h_dummy_ffn_down_bias, sizeof(T) * hidden_units, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_ffn_gate, h_dummy_ffn_gate, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice));
+    CHECK(cudaMemcpy(d_dummy_ffn_up, h_dummy_ffn_up, sizeof(T) * hidden_units * inter_size, cudaMemcpyHostToDevice));
     // before kernel launch, the ptr is always void*, when luanching kernel, ptr type will be cast to float* or T*
     attn_norm_weight.gamma = d_dummy_attn_norm_weight;
     ffn_norm_weight.gamma = d_dummy_ffn_norm_weight;

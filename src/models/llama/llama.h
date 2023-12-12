@@ -127,7 +127,7 @@ public:
         layer = new TensorWrapper<int>(CPU, DataType::INT32, {1}, &layer_id);
         llama_weights = new LlamaWeight<T>(head_num,
                                           kv_head_num,
-                                          hidden_units,
+                                          head_size,
                                           inter_size,
                                           vocab_size,
                                           vocab_size_padded,

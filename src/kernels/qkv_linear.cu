@@ -40,10 +40,10 @@ void launchLinearGemm(TensorWrapper<T>* input,
     std::cout << "calling gemm" << "\n";
     std::cout << "m: " << input_lda
               << "n: " << k
-              << "k: " << weight_ldb << "\n"
+              << "k: " << weight_ldb << "\n" //32
               << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
               << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
-
+    
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m
