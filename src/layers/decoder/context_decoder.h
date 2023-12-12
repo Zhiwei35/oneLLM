@@ -65,7 +65,7 @@ public:
         cublas_wrapper(cublas_wrapper),
         allocator(allocator),
         is_free_buffer_after_forward(is_free_buffer_after_forward){
-            h_pinned_token_num_ptr = (int*)allocator->Malloc(h_pinned_token_num_ptr, sizeof(size_t), true);
+            //h_pinned_token_num_ptr = (int*)allocator->Malloc(h_pinned_token_num_ptr, sizeof(size_t), true);
             ctxAttn = new LLaMAContextAttentionLayer<T>(head_num,
                                                         kv_head_num,
                                                         head_size,

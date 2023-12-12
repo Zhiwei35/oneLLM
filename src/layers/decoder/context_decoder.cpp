@@ -41,9 +41,9 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
         //seq_lengths:[batch size]
         //output cum_seqlens:[batch size + 1], first ele is 0
         //output padding_offset:[batch size * max q len]
-    int h_token_num{};//output 
-    launchCalPaddingoffset(h_pinned_token_num_ptr, //pinned host mem alloced in h file
-                           &h_token_num, //out
+    //int h_token_num{};//output 
+    launchCalPaddingoffset(//h_pinned_token_num_ptr, //pinned host mem alloced in h file
+                           //&h_token_num, //out
                            padding_offset->data, //out
                            cum_seqlens->data, //out
                            seq_lens->as<int>()->data, // in

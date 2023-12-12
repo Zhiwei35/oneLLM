@@ -63,7 +63,7 @@ public:
         if (is_host) {
             //CHECK(cudaMallocHost(&ptr, size));
             ptr = malloc(size);
-            Memset(ptr, 0, size);
+            memset(ptr, 0, size);
             return ptr;
         }
         //大buf, 先去bigblocks里面找空闲的（free出来的）
@@ -114,7 +114,7 @@ public:
         // 没找到空闲的再cudaMalloc
         void* new_buffer = (void*)ptr;
         CHECK(cudaMalloc(&new_buffer, size));
-        CHECK(cudaMemset(ptr, 0, size));
+        CHECK(cudaMemset(new_buffer, 0, size));
         std::cout << "allocate a new small block from OS using cudaMalloc, size = "
                                             << size  << "B"
                                             << std::endl;
