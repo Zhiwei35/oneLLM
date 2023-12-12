@@ -55,7 +55,7 @@ void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight
     loadWeightFromBin<T, half>::internalFunc(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
     loadWeightFromBin<T, half>::internalFunc(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
     if (attn_bias) {//TODO
-        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.bias, {head_num *  head_size}, weight_path + ".attention.w_qkv.bias");
+        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.bias, {(head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.w_qkv.bias");
         loadWeightFromBin<T, half>::internalFunc(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias");
     }   
 }
@@ -85,7 +85,7 @@ void LlamaLayerWeight<T>::loadWeights() // 这个改动可能会影响一些exam
     GPUMalloc(&d_dummy_attn_norm_weight, sizeof(T) * hidden_units);
     GPUMalloc(&d_dummy_ffn_norm_weight, sizeof(T) * hidden_units);
     GPUMalloc(&d_dummy_qkv_weights, sizeof(T) * hidden_units * (head_num + 2 * kv_head_num) * head_size);
-    GPUMalloc(&d_dummy_qkv_bias, sizeof(T) * hidden_units);
+    GPUMalloc(&d_dummy_qkv_bias, sizeof(T) * (head_num + 2 * kv_head_num) * head_size);
     GPUMalloc(&d_dummy_output_weights, sizeof(T) * hidden_units * hidden_units);
     GPUMalloc(&d_dummy_output_bias, sizeof(T) * hidden_units);
     GPUMalloc(&d_dummy_ffn_down, sizeof(T) * hidden_units * inter_size);
@@ -96,7 +96,7 @@ void LlamaLayerWeight<T>::loadWeights() // 这个改动可能会影响一些exam
     T* h_dummy_attn_norm_weight = (T*)malloc(sizeof(T) * hidden_units);
     T* h_dummy_ffn_norm_weight = (T*)malloc(sizeof(T) * hidden_units);
     T* h_dummy_qkv_weights = (T*)malloc(sizeof(T) * hidden_units * (head_num + 2 * kv_head_num) * head_size);
-    T* h_dummy_qkv_bias = (T*)malloc(sizeof(T) * hidden_units);
+    T* h_dummy_qkv_bias = (T*)malloc(sizeof(T) * (head_num + 2 * kv_head_num) * head_size);
     T* h_dummy_output_weights = (T*)malloc(sizeof(T) * hidden_units * hidden_units);
     T* h_dummy_output_bias = (T*)malloc(sizeof(T) * hidden_units);
     T* h_dummy_ffn_down = (T*)malloc(sizeof(T) * hidden_units * inter_size);
@@ -107,9 +107,11 @@ void LlamaLayerWeight<T>::loadWeights() // 这个改动可能会影响一些exam
     for (int i = 0; i < hidden_units; i++){
         h_dummy_attn_norm_weight[i] = (T)1;
         h_dummy_ffn_norm_weight[i] = (T)1;
-        h_dummy_qkv_bias[i] = (T)1;
         h_dummy_output_bias[i] = (T)1;
         h_dummy_ffn_down_bias[i] = (T)0;
+    }
+    for (int i = 0; i < (head_num + 2 * kv_head_num) * head_size; i++) {
+        h_dummy_qkv_bias[i] = (T)1;
     }
     for (int i = 0; i < hidden_units * inter_size; i++) {
         h_dummy_ffn_down[i] = (T)1;
