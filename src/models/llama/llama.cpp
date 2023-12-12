@@ -150,9 +150,10 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);
     printf("h_input_ids_buf_[12] = %d\n", h_input_ids_buf_[12]);
     printf("h_input_ids_buf_[13] = %d\n", h_input_ids_buf_[13]);
+    printf("h_input_ids_buf_[20] = %d\n", h_input_ids_buf_[20]);
     CHECK(cudaMemcpy(input_ids->data,  //
                     h_input_ids_buf_, //get from encode
-                    RoundUpTo32x(sizeof(int) * max_seq_len), //h_input_length_buf = 0B, cause allocation occurs before line137
+                    RoundUpTo32x(sizeof(int) * h_input_length_buf_[0]), //h_input_length_buf = 0B, cause allocation occurs before line137
                     cudaMemcpyHostToDevice));
     
     // 直接使用kv cache gpu buffer
@@ -293,10 +294,14 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
 template<typename T>
 std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, CallBack PrintRes) {
     // this input already include self-defined pre prompt
-    printf("input= %s", std::get<0>(input));
+    // printf("input= %s", std::get<0>(input));
+    std::cout << "input = " << std::get<0>(input) << "\n";
     std::vector<int> res = tokenizer.Encode(std::get<0>(input));
-    h_input_ids_buf_ = res.data();
-    // printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);//这个值有问题啊
+    //h_input_ids_buf_ = res.data();// warning: dont use this method, should use for travese assign, or the former will generate trash val out of vector's scope
+    for(int i = 0; i < res.size(); i++) {
+        h_input_ids_buf_[i] = res[i];
+    }
+    printf("h_input_ids_vec_len = %d\n", res.size());//这个值有问题啊
     // printf("h_input_ids_buf_[1] = %d\n", h_input_ids_buf_[1]);
     
     // ensure prepared all needed input buffer
@@ -304,7 +309,8 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     int ret;
     int context_length = std::get<0>(input).length();
     int history_length = std::get<1>(input);
-    int cur_input_length = std::get<2>(input);
+    //int cur_input_length = std::get<2>(input);
+    int cur_input_length = res.size(); // res.size() is the input ids len, which is the real input len, rather not len of input string
     IntDict int_params_first_token;
     int_params_first_token["context_length"] = context_length;
     int_params_first_token["history_length"] = history_length;
@@ -312,7 +318,7 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     LLaMAAttentionDynParams attn_dyn_params;
     attn_dyn_params.batch_size = 1;
     attn_dyn_params.num_tokens = cur_input_length;//这个此时还是0
-    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;
+    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;//这个每次都等于实时输入的最大值感觉不太对？
     attn_dyn_params.max_k_len = max_seq_len;
     // retString为当前轮次对话的所有token string
     std::string retString = "";
