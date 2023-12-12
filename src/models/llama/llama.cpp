@@ -322,7 +322,7 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     LLaMAAttentionDynParams attn_dyn_params;
     attn_dyn_params.batch_size = 1;
     attn_dyn_params.num_tokens = cur_input_length;//这个此时还是0
-    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;//这个每次都等于实时输入的最大值感觉不太对？
+    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;//这个每次都等于实时输入的最大值感觉不太对？可能需要自己设一个max input len
     attn_dyn_params.max_k_len = max_seq_len;
     // retString为当前轮次对话的所有token string
     std::string retString = "";
