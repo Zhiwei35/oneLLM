@@ -34,7 +34,7 @@ private:
     LlamaWeight<T>* llama_weights;
     LlamaSelfDecoder<T>* self_decoder;
     LlamaContextDecoder<T>* context_decoder;
-    int max_context_token_num_ = 512;
+    int max_context_token_num_ = 32;
     int h_step;
     int K = 4;
     TensorWrapper<int>* step;
