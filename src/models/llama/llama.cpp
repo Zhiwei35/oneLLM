@@ -72,8 +72,8 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     history_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     context_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     sequence_lengths = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
-    all_k_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
-    all_v_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, max_seq_len, kv_head_num, head_size});
+    all_k_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, kv_head_num, max_seq_len, head_size});
+    all_v_cache = new TensorWrapper<T>(GPU, getTensorType<T>(), {num_layers, batch_size, kv_head_num, max_seq_len, head_size});
     token_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     is_finished = new TensorWrapper<bool>(GPU, getTensorType<bool>(), {batch_size});
     output_rmsnorm_weight = new TensorWrapper<T>(GPU, getTensorType<T>(), {hidden_units}, llama_weights->out_rmsnorm_weight.gamma);
@@ -345,7 +345,10 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
         PrintRes(index, genString.c_str());
         index++; //生成的token数量
         // deep copy
-        input_ids = new TensorWrapper<int>(GPU, INT32, {1, 1}, &ret);
+        input_ids->shape = {1, 1};
+        CHECK(cudaMemcpy(input_ids->data, &ret, sizeof(int), cudaMemcpyHostToDevice));//note: dont use input_ids = new TensorWrapper<int>(...&ret), because this is cpu ret
+
+        //input_ids = new TensorWrapper<int>(GPU, INT32, {1, 1}, &ret);
     }
     PrintRes(-1, retString.c_str());
     return retString;
