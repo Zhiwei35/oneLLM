@@ -103,7 +103,7 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     //unifed params order: (input[Tensor], input[Tensor],...,weight[Weight], output[*])
     allocForForward(params);//intermediat buf
     //1.qkv linear
-    //[num_tokens, hiddenunits] * [hiddenunits, hiddenunits]
+    //[num_tokens, qhiddenunits] * [qhiddenunits, hiddenunits]
     Tensor* attention_input = inputs["attention_input"];
     launchLinearGemm(attention_input->as<T>(), weights.qkv, qkv_buf_wo_pad, cublas_wrapper);
 //    DeviceSyncAndCheckCudaError();

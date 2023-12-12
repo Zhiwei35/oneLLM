@@ -130,8 +130,8 @@ public:
                                           head_size,
                                           inter_size,
                                           vocab_size,
-                                          vocab_size_padded,
                                           num_layers,
+                                          /*attn_bias*/true,
                                           getWeightType<T>());
 
         self_decoder = new LlamaSelfDecoder<T>(head_num,
