@@ -13,7 +13,7 @@ void launchLinearGemm(TensorWrapper<T>* input,
                       bool trans_b,
                       bool shared_out_buf,
                       int cur_input_len) {
-    //TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
+    //(done)TODO: enhance the below 3 obj and setgemmconfig created only once in highest file like ft/bert_example.cc
     // cudaStream_t stream;
     // cublasHandle_t cublas_handle;
     // cublasLtHandle_t cublaslt_handle;
@@ -29,7 +29,7 @@ void launchLinearGemm(TensorWrapper<T>* input,
     // cublas_wrapper->setFP32GemmConfig();
     int input_lda = cur_input_len > 1 ? 1 : input->shape[0];
     int weight_ldb = input->shape.size() > 2 ? input->shape[1] * input->shape[2] : input->shape[1];
-    
+    int weight_k = weight.shape[0];
     
     // !!!TODO:check 2nd dim of input = 1st dim of weight
     // !!!TODO:check 1nd dim of input = 1st dim of output
@@ -47,13 +47,17 @@ void launchLinearGemm(TensorWrapper<T>* input,
               << "k: " << weight_ldb << "\n" //32
               << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
               << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
-    ONELLM_CHECK_WITH_INFO(weight.shape[0] == weight_ldb, "2nd dim of input MUST = 1st dim of weight");
+    if(!trans_a && !trans_b) {
+        ONELLM_CHECK_WITH_INFO(weight.shape[0] == weight_ldb, "2nd dim of input MUST = 1st dim of weight");
+    } else if (trans_b) {
+        ONELLM_CHECK_WITH_INFO(weight.shape[1] == weight_ldb, "when trans_b, 2nd dim of input MUST = 2nd dim of weight");
+    }
     cublas_wrapper->Gemm(transA,
                         transB,
                         input_lda,      //m
-                        k,              //n
+                        trans_b ? weight_k : k,  //n, when load real weight, lmhead weight is same as pre embedding, which shape = [vocab, hidden], so here should transpose b
                         weight_ldb,     //k
-                        input->data + (cur_input_len - 1) * weight_ldb,   //A
+                        input->data + (cur_input_len - 1) * weight_ldb,   //A, cur_input_len is for context decoder lmhead
                         input_lda,      //lda
                         weight.data,   //B
                         weight_ldb,     //ldb 

@@ -12,21 +12,22 @@ namespace onellm {
     template<typename T>
     BaseModel *CreateModelWithName(const std::string& model_name) {
         ONELLM_CHECK_WITH_INFO(model_name == "llama", "dont support other models except llama yet!");
-        int head_num = 4;
-        int kv_head_num = 2;
-        int head_size = 8;
-        int inter_size = 12;
-        int num_layers = 2;
-        int max_seq_len = 100;
-        int vocab_size = 100;
+        int head_num = 32;//4;
+        int kv_head_num = 32;//2;
+        int head_size = 128;//8;
+        int inter_size = 11008;//12;
+        int num_layers = 32;//2;
+        int max_seq_len = 256;
+        int vocab_size = 32000;//100;
         int hidden_units = (head_num + 2 * kv_head_num) * head_size;
         int q_hidden_units = head_num * head_size;
-        int step = 10;
+        //int step = 0;
         float rmsnorm_eps = 1e-6;
+        bool attn_bias = false;
         LLaMAAttentionStaticParams attn_static_params;
         attn_static_params.rotary_embedding_dim = 128;
         attn_static_params.rotary_embedding_base = 10000;
-        attn_static_params.max_position_embeddings = 2048;
+        attn_static_params.max_position_embeddings = 4096;//2048; for llamav1
         attn_static_params.use_dynamic_ntk = false; // for dyn scaling rope
         cublasHandle_t cublas_handle;
         cublasLtHandle_t cublaslt_handle;
@@ -45,7 +46,7 @@ namespace onellm {
                                         vocab_size,
                                         attn_static_params,
                                         max_seq_len,
-                                        step,
+                                        //step,
                                         stream,
                                         cublas_wrapper,
                                         allocator,

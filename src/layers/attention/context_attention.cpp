@@ -38,7 +38,7 @@ void LLaMAContextAttentionLayer<T>::allocForForward(LLaMAAttentionDynParams& par
     v_buf_w_pad = new TensorWrapper<T>(Device::GPU, type, {batch_size, kv_head_num, max_q_len, head_size});
     //transpose kv cache
     k_cache_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});// why not kv_head_num？need repeat kv to adapt q head num
-    v_cache_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});
+    v_cache_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_k_len, head_size});// max k len mean max context len in this batch
     //q*k and softmax
     qk_buf = new TensorWrapper<T>(Device::GPU, type, {batch_size, head_num, max_q_len, max_k_len});
     //qk * v
@@ -118,7 +118,8 @@ void LLaMAContextAttentionLayer<T>::forward(TensorMap& inputs, TensorMap& output
     DeviceSyncAndCheckCudaError();
     //3.concat past kv cache
     //max_cache_seq_len = max_seq_len + max_prefix_prompt_length
-    //{batch_size, kv_head_num, max_q_len, headsize}=>(num_layer ,batchxbeam ,max_cache_seq_len, hidden_units_};
+    // max q len is input length with bs = 1
+    //{batch_size, kv_head_num, max_q_len, headsize}=>(num_layer ,batch , maxseqlen[cumsum_seq_len:cumsum_seq_len+cur_seq_len], hidden_units_}; 
     Tensor* layer_id = inputs["layer_id"]; //ON CPU
     Tensor* all_k_cache = outputs["all_k_cache"];
     Tensor* all_v_cache = outputs["all_v_cache"];

@@ -23,7 +23,7 @@ private:
     // const int end_id = 2;// from hf modeling_config
     const int hidden_units; 
     const int max_seq_len;
-    int output_token_limit = 512;
+    int output_token_limit = 256;
     int pad_token_id = 0;// from hf modeling_config 
     int bos_token_id = 1;
     int eos_token_id = 2;
@@ -35,7 +35,7 @@ private:
     LlamaSelfDecoder<T>* self_decoder;
     LlamaContextDecoder<T>* context_decoder;
     int max_context_token_num_ = 32;
-    int h_step;
+    //int h_step;
     int K = 4;
     TensorWrapper<int>* step;
     TensorWrapper<T>* output_rmsnorm_weight;
@@ -103,7 +103,7 @@ public:
         // int                          max_batch_size,
         // int                          max_context_token_num,
           int max_seq_len,//session_len
-          int h_step,
+          //int h_step,
         //for base model
           cudaStream_t stream,
           cublasWrapper* cublas_wrapper,
@@ -118,7 +118,7 @@ public:
     num_layers(num_layers),
     vocab_size(vocab_size),
     vocab_size_padded(vocab_size),
-    h_step(h_step),
+    //h_step(h_step),
     hidden_units(head_num * head_size),
     max_seq_len(max_seq_len) {
         int_params_of_sample.insert({"step", h_step});
@@ -131,7 +131,7 @@ public:
                                           inter_size,
                                           vocab_size,
                                           num_layers,
-                                          /*attn_bias*/true,
+                                          /*attn_bias*/false,
                                           getWeightType<T>());
 
         self_decoder = new LlamaSelfDecoder<T>(head_num,

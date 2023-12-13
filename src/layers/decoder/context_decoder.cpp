@@ -60,7 +60,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     DeviceSyncAndCheckCudaError();
     // 3. RMSnorm
     Tensor* decoder_input = input_tensors["decoder_input"];
-    dyn_params.num_tokens = decoder_input->shape[0];
+    //！！！dyn_params.num_tokens = decoder_input->shape[0]; //这种取法是max context token num，不加为好，就是实时token num
     // todo: to enhance the (float*)nullptr
     std::cout << "RMSnorm shape: "<< "\n"
               << "input: "<< decoder_input->shape[0] << "," << decoder_input->shape[1] <<"\n";

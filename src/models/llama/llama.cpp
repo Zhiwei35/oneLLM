@@ -61,7 +61,7 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
 template<typename T>
 void Llama<T>::allocateGPUBuffer(int batch_size)
 {
-    step = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &h_step);
+    step = new TensorWrapper<int>(CPU, getTensorType<int>(), {1});
     layer = new TensorWrapper<int>(CPU, getTensorType<int>(), {1}, &layer_id);
     context_decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/max_context_token_num_, hidden_units});
     context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/max_context_token_num_, hidden_units});
@@ -146,11 +146,11 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     h_input_length_buf_[0] = int_params_first_token["cur_input_length"];
     h_history_length_buf_[0] = int_params_first_token["history_length"];
     h_context_length_buf_[0] = int_params_first_token["context_length"];
-    printf("h_input_length_buf_[0] = %d\n", h_input_length_buf_[0]);
-    printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);
-    printf("h_input_ids_buf_[12] = %d\n", h_input_ids_buf_[12]);
-    printf("h_input_ids_buf_[13] = %d\n", h_input_ids_buf_[13]);
-    printf("h_input_ids_buf_[20] = %d\n", h_input_ids_buf_[20]);
+    // printf("h_input_length_buf_[0] = %d\n", h_input_length_buf_[0]);
+    // printf("h_input_ids_buf_[0] = %d\n", h_input_ids_buf_[0]);
+    // printf("h_input_ids_buf_[12] = %d\n", h_input_ids_buf_[12]);
+    // printf("h_input_ids_buf_[13] = %d\n", h_input_ids_buf_[13]);
+    // printf("h_input_ids_buf_[20] = %d\n", h_input_ids_buf_[20]);
     CHECK(cudaMemcpy(input_ids->data,  //
                     h_input_ids_buf_, //get from encode
                     RoundUpTo32x(sizeof(int) * h_input_length_buf_[0]), //h_input_length_buf = 0B, cause allocation occurs before line137
@@ -161,15 +161,15 @@ void Llama<T>::InitializeForContextDecoder(IntDict& int_params_first_token){
     // h_v_cache_ptr_buf_[i] = ;
     // step = h_context_length_buf_[0];
     // batch size = 1
-    printf("input ids h2d is done\n");
+    // printf("input ids h2d is done\n");
     CHECK(cudaMemcpy(input_length->data, h_input_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
-    printf("input length h2d is done\n");
+    // printf("input length h2d is done\n");
     CHECK(cudaMemcpy(history_length->data, h_history_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
-    printf("history_length h2d is done\n");
+    // printf("history_length h2d is done\n");
     CHECK(cudaMemcpy(context_length->data, h_context_length_buf_, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyHostToDevice));
-    printf("context_length is done\n");
+    // printf("context_length is done\n");
     CHECK(cudaMemcpy(is_finished->data, h_finished_buf_, RoundUpTo32x(sizeof(bool) * batch_size), cudaMemcpyHostToDevice));
-    printf("InitializeForContextDecoder is done\n");
+    // printf("InitializeForContextDecoder is done\n");
 }
 //
 template<typename T>
@@ -305,7 +305,7 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     for(int i = 0; i < res.size(); i++) {
         h_input_ids_buf_[i] = res[i];
     }
-    printf("h_input_ids_vec_len = %d\n", res.size());//这个值有问题啊
+    // printf("h_input_ids_vec_len = %d\n", res.size());//这个值有问题啊
     // printf("h_input_ids_buf_[1] = %d\n", h_input_ids_buf_[1]);
     
     // ensure prepared all needed input buffer
@@ -322,8 +322,9 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
     LLaMAAttentionDynParams attn_dyn_params;
     attn_dyn_params.batch_size = 1;
     attn_dyn_params.num_tokens = cur_input_length;//这个此时还是0
-    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;//这个每次都等于实时输入的最大值感觉不太对？可能需要自己设一个max input len
-    attn_dyn_params.max_k_len = max_seq_len;
+    attn_dyn_params.max_q_len = attn_dyn_params.num_tokens;//这个指一个batch中的q的最大长度，因为此时不支持batch，所以就等于cur input len
+    attn_dyn_params.max_k_len = context_length;//max_seq_len; //这个指max context len，指当前batch的动态最大上下文长度
+    step->data = &context_length;// 
     // retString为当前轮次对话的所有token string
     std::string retString = "";
     while (index < output_token_limit) {
@@ -334,6 +335,7 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
         // TODO move all needed data to GPU
         // no need input attnmask and positionid like fastllm, cause we build attnmask and dont support abili now
             ret = continueTokenGen(attn_dyn_params);
+            *step->data++;
             if (ret == eos_token_id) {
                 break;
             }

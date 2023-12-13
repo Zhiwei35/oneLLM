@@ -44,20 +44,35 @@ LlamaLayerWeight<T>::LlamaLayerWeight(int     head_num,
 // weight_path = weight_path + "layers." + std::to_string(layer)
 // weight from HF is always half type
 template<typename T>
-void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight_type)
+void LlamaLayerWeight<T>::loadWeights(std::string weight_path, WeightType weight_type) // weighttype参数比较多余
 {
-    loadWeightFromBin<T, half>::internalFunc(attn_norm_weight.gamma, {hidden_units}, weight_path + ".attention_norm.weight");
-    loadWeightFromBin<T, half>::internalFunc(ffn_norm_weight.gamma, {hidden_units}, weight_path + ".ffn_norm.weight");
+    loadWeightFromBin<T, half>::internalFunc(attn_norm_weight.gamma, {hidden_units}, weight_path + ".input_layernorm.weight.bin");
+    loadWeightFromBin<T, half>::internalFunc(ffn_norm_weight.gamma, {hidden_units}, weight_path + ".post_attention_layernorm.weight.bin");
 
-    loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.data, {hidden_units, (head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.w_qkv.weight");
-    loadWeightFromBin<T, half>::internalFunc(self_attn_weight.output.data, {hidden_units, hidden_units}, weight_path + ".attention.wo.weight");
-    loadWeightFromBin<T, half>::internalFunc(ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w1.weight");
-    loadWeightFromBin<T, half>::internalFunc(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".feed_forward.w3.weight");
-    loadWeightFromBin<T, half>::internalFunc(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".feed_forward.w2.weight");
+    loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.data, {hidden_units, (head_num + 2 * kv_head_num) * head_size}, weight_path + ".self_attn.qkv.weight.bin");
+    loadWeightFromBin<T, half>::internalFunc(self_attn_weight.output.data, {hidden_units, hidden_units}, weight_path + ".self_attn.o_proj.weight.bin");
+    loadWeightFromBin<T, half>::internalFunc(ffn_weight.gate.data, {hidden_units, inter_size}, weight_path + ".mlp.gate_proj.weight.bin");
+    loadWeightFromBin<T, half>::internalFunc(ffn_weight.up.data, {hidden_units, inter_size}, weight_path + ".mlp.up_proj.weight.bin");
+    loadWeightFromBin<T, half>::internalFunc(ffn_weight.down.data, {inter_size, hidden_units}, weight_path + ".mlp.down_proj.weight.bin");
     if (attn_bias) {//TODO
-        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.bias, {(head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.w_qkv.bias");
-        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias");
-    }   
+        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.qkv.bias, {(head_num + 2 * kv_head_num) * head_size}, weight_path + ".attention.wqkv.bias.bin");
+        loadWeightFromBin<T, half>::internalFunc(self_attn_weight.output.bias, {head_num *  head_size}, weight_path + ".attention.wo.bias.bin");
+    }  
+    // tmp! after I handle qkvbiasandrope and fusedbiasaddresidual's bias nullptr case, I can remove it
+    T* d_dummy_qkv_bias;
+    GPUMalloc(&d_dummy_qkv_bias, sizeof(T) * (head_num + 2 * kv_head_num) * head_size);
+    cudaMemset((void*)d_dummy_qkv_bias, 0, sizeof(T) * (head_num + 2 * kv_head_num) * head_size);
+    self_attn_weight.qkv.bias = (T*)d_dummy_qkv_bias;
+
+    T* d_dummy_output_bias;
+    GPUMalloc(&d_dummy_output_bias, sizeof(T) * head_num *  head_size);
+    cudaMemset((void*)d_dummy_output_bias, 0, sizeof(T) * head_num *  head_size);
+    self_attn_weight.output.bias = (T*)d_dummy_output_bias;
+
+    T* d_dummy_ffn_down_bias;
+    GPUMalloc(&d_dummy_ffn_down_bias, sizeof(T) * hidden_units);
+    cudaMemset((void*)d_dummy_ffn_down_bias, 0, sizeof(T) * hidden_units);
+    ffn_weight.down.bias = (T*)d_dummy_ffn_down_bias;
 }
 template<typename T>
 void LlamaLayerWeight<T>::loadWeights() // 这个改动可能会影响一些example，因为它们往里面传入了这几个dummy weight指针

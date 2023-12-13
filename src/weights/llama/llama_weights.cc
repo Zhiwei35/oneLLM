@@ -41,11 +41,14 @@ void LlamaWeight<T>::loadWeights(std::string weight_path) {
     //weight_path += '/';
     std::cout << "the weight path is " << weight_path <<"\n";
     // weight from HF is always half type
-    loadWeightFromBin<T, half>::internalFunc(out_rmsnorm_weight.gamma, {hidden_units}, weight_path + ".norm.weight");
-    loadWeightFromBin<T, half>::internalFunc(post_decoder_embedding_weight.data, {vocab_size, hidden_units}, weight_path + ".tok_embeddings.weight");
-    loadWeightFromBin<T, half>::internalFunc(pre_decoder_embedding_weight.data, {vocab_size, hidden_units}, weight_path + ".output.weight");
+    loadWeightFromBin<T, half>::internalFunc(out_rmsnorm_weight.gamma, {hidden_units}, weight_path + "model.norm.weight.bin");
+    std::cout << "loaded norm weight " << weight_path <<"\n";
+    loadWeightFromBin<T, half>::internalFunc(post_decoder_embedding_weight.data, {hidden_units, vocab_size}, weight_path + "lm_head.weight.bin");
+    std::cout << "loaded lmhead weight " << weight_path <<"\n";
+    loadWeightFromBin<T, half>::internalFunc(pre_decoder_embedding_weight.data, {vocab_size, hidden_units}, weight_path + "model.embed_tokens.weight.bin");
+    std::cout << "loaded embed tokens weight " << weight_path <<"\n";
     for (int layer = 0; layer < num_layer; ++layer) {
-        llama_layer_weight[layer]->loadWeights(weight_path + "layers." + std::to_string(layer), weight_type);
+        llama_layer_weight[layer]->loadWeights(weight_path + "model.layers." + std::to_string(layer), weight_type);
     }
 }
 
