@@ -2,7 +2,7 @@
 #include "src/utils/model_utils.h"
 
 struct Config {
-	std::string dir = "../llamaweight"; // 模型文件路径
+	std::string dir = "../llamaweight/"; // 模型文件路径
     std::string tokenizer_file = "../llama2-7b-tokenizer.bin";
     int max_seq_len = -1; //输出句子的最大长度，超出即退出
 };
