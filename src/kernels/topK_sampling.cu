@@ -78,10 +78,12 @@ template void launchSampling(TensorWrapper<int>* topk_id,
                     TensorWrapper<int>* seqlen,
                     TensorWrapper<bool>* is_finished,
                     TensorWrapper<int>* output_id,
+                    TensorWrapper<int>* step,
                     IntDict& params);
 template void launchSampling(TensorWrapper<int>* topk_id,
                     TensorWrapper<half>* topk_val,
                     TensorWrapper<int>* seqlen,
                     TensorWrapper<bool>* is_finished,
                     TensorWrapper<int>* output_id,
+                    TensorWrapper<int>* step,
                     IntDict& params);
