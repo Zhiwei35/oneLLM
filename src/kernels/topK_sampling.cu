@@ -48,11 +48,12 @@ void launchSampling(TensorWrapper<int>* topk_id,
                     TensorWrapper<int>* seqlen,
                     TensorWrapper<bool>* is_finished,
                     TensorWrapper<int>* output_id,
+                    TensorWrapper<int>* step,
                     IntDict& params) {
     int batch_size = topk_id->shape[0];
     int K = topk_id->shape[1];
     int vocab_size = params["vocab_size"];
-    int step = params["step"];
+    int step_ = step->getVal();
     int end_id = params["end_id"];
 
     dim3 grid(batch_size);
@@ -65,7 +66,7 @@ void launchSampling(TensorWrapper<int>* topk_id,
         seqlen->data,
         is_finished->data,
         K,
-        step,
+        step_,
         end_id,
         vocab_size
     );

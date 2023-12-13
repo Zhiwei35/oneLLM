@@ -121,7 +121,7 @@ public:
     //h_step(h_step),
     hidden_units(head_num * head_size),
     max_seq_len(max_seq_len) {
-        int_params_of_sample.insert({"step", h_step});
+        //int_params_of_sample.insert({"step", h_step});
         int_params_of_sample.insert({"vocab_size", vocab_size});
         int_params_of_sample.insert({"end_id", eos_token_id});
         layer = new TensorWrapper<int>(CPU, DataType::INT32, {1}, &layer_id);

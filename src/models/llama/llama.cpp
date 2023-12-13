@@ -287,6 +287,7 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
                    /*Tensor**/ sequence_lengths,//out, +1
                    /*Tensor**/ is_finished,//out, 判断一下是否结束
                    /*Tensor**/ token_ids, //out, 新生成的token ids
+                   step,
                    /*IntDict&*/int_params_of_sample); //in, including step vocabsize endid
     DeviceSyncAndCheckCudaError();
 
