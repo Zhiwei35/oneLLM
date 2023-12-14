@@ -259,8 +259,8 @@ int Llama<T>::continueTokenGen(LLaMAAttentionDynParams& dparams){
                           llama_weights->llama_layer_weight,
                           decoder_outputs,
                           dparams);
+    std::cout << "sampling..." << std::endl;
     int res = LMHeadAndTopKSample(decoder_outputs);
-    //std::cout << "token generated" << std::endl;
     return res;  
 }
 
@@ -292,6 +292,7 @@ int Llama<T>::LMHeadAndTopKSample(TensorMap& decoder_outputs){
     DeviceSyncAndCheckCudaError();
 
     CHECK(cudaMemcpy(h_output_ids, token_ids->data, RoundUpTo32x(sizeof(int) * batch_size), cudaMemcpyDeviceToHost));
+    std::cout << "sampling done" << std::endl;
     return h_output_ids[0]; // only for bs = 1
 }
 
@@ -341,6 +342,7 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
                 break;
             }
         }
+        std::cout << "generated index: " << ret << "\n";
 
         //results.push_back(ret);
         std::string genString = tokenizer.Decode({ret}).c_str();
