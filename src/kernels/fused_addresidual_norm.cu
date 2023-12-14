@@ -89,11 +89,11 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
         out[i].y = s[i].y * out[i].y * inv_fenmu;
         out[i].z = s[i].z * out[i].z * inv_fenmu;
         out[i].w = s[i].w * out[i].w * inv_fenmu;
-        if(i == 0) {
-            printf("context decoder top2 res: \n");
-            printf("%f\n",out[i].x);
-            printf("%f\n",out[i].y);
-        }
+        // if(i == 0) {
+        //     printf("context decoder top2 res: \n");
+        //     printf("%f\n",out[i].x);
+        //     printf("%f\n",out[i].y);
+        // }
     } 
 
 //    printf("in kernel 2\n");

@@ -13,14 +13,24 @@ __global__ void embeddingFunctor(const int* input_ids,
                const int hidden_size,
                const int vocab_size)
 {
-    for (int64_t index = blockIdx.x * blockDim.x + threadIdx.x; index < batch_size * sequeue_length * hidden_size;
-         index += blockDim.x * gridDim.x) {
-        int input_id = input_ids[index / hidden_size];
+    // for (int64_t index = blockIdx.x * blockDim.x + threadIdx.x; index < batch_size * sequeue_length * hidden_size;
+    //      index += blockDim.x * gridDim.x) {
+    //     int input_id = input_ids[index / hidden_size];
+    //     output[index] = embed_table[input_id * hidden_size + index % hidden_size];
+    //     if (index == 0){
+    //         printf("embedding res: \n");
+    //         printf("%f\n",output[index]);
+    //     }
+    // }
+    int index = blockIdx.x * blockDim.x + threadIdx.x;
+    while (index < batch_size * sequeue_length * hidden_size) {
+        int id = input_ids[index / hidden_size];
         output[index] = embed_table[input_id * hidden_size + index % hidden_size];
-        if (index == 0){
-            printf("embedding res: \n");
-            printf("%f\n",output[index]);
-        }
+        index += blockDim.x * gridDim.x;
+    }
+    if (index == 0){
+        printf("embedding res: \n");
+        printf("%f\n",output[index]);
     }
 }
 
