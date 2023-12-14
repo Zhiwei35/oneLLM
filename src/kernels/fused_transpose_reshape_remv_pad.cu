@@ -24,6 +24,10 @@ __global__ void fused_transpose_reshape_remv_pad(T*           src,
         int head_id = i / head_size;
         int head_size_id = i % head_size;
         dst[dst_offset + i] = src[src_offset + head_id * seq_len * head_size + head_size_id];
+        if (i == 0) {
+            printf("context attention top1 res: \n");
+            printf("%f\n",dst[dst_offset + i]);
+        }
     }
 }
 template<typename T>
