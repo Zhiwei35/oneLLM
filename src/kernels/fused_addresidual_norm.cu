@@ -156,7 +156,7 @@ void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_
     int num_threads = hidden_units / vec_size; // assume head size can be divided by 4 and 2
     dim3 grid(batch_size);
     dim3 block(num_threads);
-    printf("calling fusedAddBiasResidualAndRMSNorm\n");
+    // printf("calling fusedAddBiasResidualAndRMSNorm\n");
     FusedAddBiasResidualRMSNorm<T><<<grid, block>>>(residual->data, 
                                                 decoder_out->data,
                                                 bias,
@@ -164,7 +164,7 @@ void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_
                                                 eps,
                                                 batch_size,
                                                 hidden_units);
-    printf("called fusedAddBiasResidualAndRMSNorm\n");
+    // printf("called fusedAddBiasResidualAndRMSNorm\n");
 }
 template void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
                                     TensorWrapper<float>* residual, 

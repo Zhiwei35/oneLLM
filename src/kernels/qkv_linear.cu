@@ -41,12 +41,12 @@ void launchLinearGemm(TensorWrapper<T>* input,
     if(shared_out_buf) {
         int offset = input_lda * k; // num tokes * inter size, need to modify activate kernel input shape to [2, num tokens, inter size] and buf shape
     }
-    std::cout << "calling gemm" << "\n";
-    std::cout << "m: " << input_lda
-              << "n: " << k
-              << "k: " << weight_ldb << "\n" //32
-              << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
-              << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
+    // std::cout << "calling gemm" << "\n";
+    // std::cout << "m: " << input_lda
+    //           << "n: " << k
+    //           << "k: " << weight_ldb << "\n" //32
+    //           << "weight shape: " << weight.shape[0] << "," << weight.shape[1]  << "\n"
+    //           << "output shape: " << output->shape[0] << "," << output->shape[1] << "\n";
     if(!trans_a && !trans_b) {
         ONELLM_CHECK_WITH_INFO(weight.shape[0] == weight_ldb, "2nd dim of input MUST = 1st dim of weight");
     } else if (trans_b) {
@@ -65,7 +65,7 @@ void launchLinearGemm(TensorWrapper<T>* input,
                         output_ldc,     //ldc   
                         1.0f,
                         0.0f);
-    std::cout << "called gemm" << "\n";
+    // std::cout << "called gemm" << "\n";
 }
 template<typename T>
 void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
@@ -101,7 +101,7 @@ void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
     // TODO:check batchCount of two matrix is equal
     int batchCount = input1->shape[0] * input1->shape[1];
 
-    std::cout << "calling batch gemm" << "\n";
+    // std::cout << "calling batch gemm" << "\n";
     cublasOperation_t transA = trans_a ? CUBLAS_OP_T: CUBLAS_OP_N;
     cublasOperation_t transB = trans_b ? CUBLAS_OP_T: CUBLAS_OP_N;
     cublas_wrapper->stridedBatchedGemm(transA,
@@ -121,7 +121,7 @@ void launchLinearStridedBatchGemm(TensorWrapper<T>* input1,
                                        batchCount,
                                        1.0f,
                                        0.0f);
-    std::cout << "called batch gemm" <<"\n";
+    // std::cout << "called batch gemm" <<"\n";
 }
 
 template void launchLinearGemm(TensorWrapper<float>* input,

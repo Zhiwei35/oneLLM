@@ -38,7 +38,7 @@ void launchTransposeOutRemovePadding(TensorWrapper<T>* qkv_buf_w_pad,
     int num_tokens = qkv_buf_wo_pad_1->shape[0];
     dim3 grid(num_tokens);
     dim3 block(std::min(head_num * head_size, 1024));
-    std::cout << "calling remove pad kernel" << "\n";
+    // std::cout << "calling remove pad kernel" << "\n";
     fused_transpose_reshape_remv_pad<T><<<grid, block>>>(qkv_buf_w_pad->data,
                                                       qkv_buf_wo_pad_1->data,
                                                       num_tokens,
@@ -47,7 +47,7 @@ void launchTransposeOutRemovePadding(TensorWrapper<T>* qkv_buf_w_pad,
                                                       head_num,
                                                       head_size,
                                                       padding_offset->data);
-    std::cout << "called remove pad kernel" << "\n";
+    // std::cout << "called remove pad kernel" << "\n";
 
 }
 

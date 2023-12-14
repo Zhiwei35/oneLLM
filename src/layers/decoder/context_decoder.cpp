@@ -62,8 +62,8 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
     Tensor* decoder_input = input_tensors["decoder_input"];
     //！！！dyn_params.num_tokens = decoder_input->shape[0]; //这种取法是max context token num，不加为好，就是实时token num
     // todo: to enhance the (float*)nullptr
-    std::cout << "RMSnorm shape: "<< "\n"
-              << "input: "<< decoder_input->shape[0] << "," << decoder_input->shape[1] <<"\n";
+    // std::cout << "RMSnorm shape: "<< "\n"
+    //           << "input: "<< decoder_input->shape[0] << "," << decoder_input->shape[1] <<"\n";
 
     launchRMSNorm(decoder_input->as<T>(), //in&out, [num tokens, q_hidden_units]
                   layerWeights[0]->attn_norm_weight,//rmsnorm weights, [q_hidden_units]
@@ -103,6 +103,7 @@ void LlamaContextDecoder<T>::forward(TensorMap& input_tensors, const std::vector
             TensorWrapper<int>* layer = new TensorWrapper<int>(Device::CPU, type_int, {1}, &layer_id);
             ctx_attn_inputs.insert({"layer_id", layer});
         }
+        std::cout << "layer: "<< layer_id << " in ctx decoder"<<"\n";
         //TODO: context_attention.cpp#105, qkv bias should be changed to layerWeights[layer_id].self_attn_weight.qkv.bias
         ctxAttn->forward(ctx_attn_inputs, ctx_attn_outputs, layerWeights[layer_id]->self_attn_weight, dyn_params, ctxAttn->GetAttnStaticParams());
         //decoder_output += decoder_input

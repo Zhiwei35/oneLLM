@@ -108,10 +108,10 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
     const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&(f_beta)) : reinterpret_cast<const void*>(&f_beta);
     // const void* alpha = reinterpret_cast<void*>(&f_alpha);
     // const void* beta = reinterpret_cast<void*>(&f_beta);
-    std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"
-              << "lda,ldb,ldc=" << lda << "," << ldb << "," << ldc << "\n"
-              << "strideA,strideB,strideC=" << strideA << "," << strideB << "," << strideB << "\n"
-              << "batchcount=" << batchCount << "\n";
+    // std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"
+    //           << "lda,ldb,ldc=" << lda << "," << ldb << "," << ldc << "\n"
+    //           << "strideA,strideB,strideC=" << strideA << "," << strideB << "," << strideB << "\n"
+    //           << "batchcount=" << batchCount << "\n";
     CHECK_CUBLAS(cublasGemmStridedBatchedEx(cublas_handle_,
                                             transa,
                                             transb,

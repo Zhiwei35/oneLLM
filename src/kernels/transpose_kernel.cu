@@ -66,7 +66,7 @@ void launchTransposeKVCache(TensorWrapper<T>* k_cache_src,
     int blockSize = 128;
     dim3 block(128);
     dim3 grid((max_k_len * head_size + blockSize - 1) / blockSize, batch_size, head_num); // q head num
-    std::cout << "calling transpose/broadcast kernel" << "\n";    
+    // std::cout << "calling transpose/broadcast kernel" << "\n";    
     transpose_value_cache<T><<<grid, block>>>(v_cache_dst->data, 
                                               v_cache_src->data,
                                               layer_offset,
@@ -86,7 +86,7 @@ void launchTransposeKVCache(TensorWrapper<T>* k_cache_src,
                                               context_length->data,
                                               max_k_len,
                                               max_seq_len);
-    std::cout << "called transpose/broadcast kernel" << "\n";
+    // std::cout << "called transpose/broadcast kernel" << "\n";
 
 }
 

@@ -57,9 +57,9 @@ void launchAct(const TensorWrapper<T>* input, TensorWrapper<T>* out) {
     int intermedia_size = input->shape[2];
     dim3 grid(batch_size);
     dim3 block(256);
-    std::cout << "calling silu_and_mul kernel" << "\n";
+    // std::cout << "calling silu_and_mul kernel" << "\n";
     silu_and_mul_kernel<T><<<grid, block>>>(out->data, input->data, intermedia_size);
-    std::cout << "called silu_and_mul kernel" << "\n";
+    // std::cout << "called silu_and_mul kernel" << "\n";
 }
 // We must instancite the template, if not, will report linking issue
 template void launchAct(const TensorWrapper<float>* input, TensorWrapper<float>* output);

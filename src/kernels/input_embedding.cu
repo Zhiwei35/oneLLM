@@ -30,7 +30,7 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
     const int sequeue_length = output->shape[1];
     const int hidden_size = output->shape[2];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
-    printf("calling input embedding\n");
+    // printf("calling input embedding\n");
     embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
                                                  output->data,
                                                  embed_table->data,
@@ -38,7 +38,7 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
                                                  sequeue_length,
                                                  hidden_size,
                                                  vocab_size);
-    printf("called input embedding\n");
+    // printf("called input embedding\n");
 }
 
 template void launchInputEmbedding(TensorWrapper<int>* input_ids,    
