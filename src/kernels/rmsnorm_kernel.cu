@@ -43,7 +43,11 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     int tid = threadIdx.x;
     Vec_t* s;
     Vec_t dout, tmp;
-    
+    if(batch_id == 0 && tid == 0) {
+        printf("rmsnorm input: \n");
+        printf("%f\n",decoder_out[0]);
+        printf("%f\n",decoder_out[1]);
+    }
     float thread_accm = 0.0f;
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
         thread_accm += tmp.x * tmp.x + tmp.x * tmp.x;
@@ -69,11 +73,11 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
         out[i].y = s[i].y * out[i].y * inv_fenmu.y;
         out[i].z = s[i].z * out[i].z * inv_fenmu.z;
         out[i].w = s[i].w * out[i].w * inv_fenmu.w;
-        if(i == 0) {
-            printf("rmsnorm after emb top2 res: \n");
-            printf("%f\n",out[i].x);
-            printf("%f\n",out[i].y);
-        }
+        // if(i == 0) {
+        //     printf("rmsnorm after emb top2 res: \n");
+        //     printf("%f\n",out[i].x);
+        //     printf("%f\n",out[i].y);
+        // }
     }    
 }
 

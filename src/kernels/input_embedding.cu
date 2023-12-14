@@ -35,6 +35,8 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
     const int hidden_size = output->shape[2];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
     printf("calling input embedding\n");
+    printf("context decoder input shape:\n");
+    printf("%d, %d, %d\n", batch_size, sequeue_length, hidden_size);
     printf("block num = %d, thread num = %d\n", gridSize, blockSize);
     embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
                                                  output->data,
