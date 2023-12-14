@@ -25,8 +25,8 @@ __global__ void embeddingFunctor(const int* input_ids,
 }
 
 template<typename T>
-void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, sequenue_length]
-                          TensorWrapper<T>* output,       // FP32 [batch_size, sequeue_length, hidden_size]
+void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, sequenue_length] = [1, max seq len]
+                          TensorWrapper<T>* output,       // FP32 [batch_size, sequeue_length, hidden_size] = [1, max seq len, 4096]
                           EmbeddingWeight<T>* embed_table,// FP32 [vocal_size, hidden_size]
                           int vocab_size) {//consider add shape attr in embeddingweight to avoid vocab size input 
     const int blockSize = 256;
@@ -34,7 +34,8 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
     const int sequeue_length = output->shape[1];
     const int hidden_size = output->shape[2];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
-    // printf("calling input embedding\n");
+    printf("calling input embedding\n");
+    printf("block num = %d, thread num = %d\n", gridSize, blockSize);
     embeddingFunctor<T><<<gridSize, blockSize>>>(input_ids->data,
                                                  output->data,
                                                  embed_table->data,
@@ -42,7 +43,7 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, 
                                                  sequeue_length,
                                                  hidden_size,
                                                  vocab_size);
-    // printf("called input embedding\n");
+    printf("called input embedding\n");
 }
 
 template void launchInputEmbedding(TensorWrapper<int>* input_ids,    

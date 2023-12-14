@@ -102,7 +102,7 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
 
     int batch_id = dst_token_id / seq_len; //seqlen is max_seq_len for padding used to unify all seq's length
     int local_token_id = dst_token_id % seq_len; //每个seq中的局部token id
-    if(tid == 0) {
+    if(token_id == 0 && head_id == 0 && tid == 0) {
         printf("QKV top2 res: \n");
         printf("%f\n",QKV[tid]);
         printf("%f\n",QKV[1]);        
