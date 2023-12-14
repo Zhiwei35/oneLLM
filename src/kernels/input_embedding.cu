@@ -25,7 +25,7 @@ __global__ void embeddingFunctor(const int* input_ids,
     int index = blockIdx.x * blockDim.x + threadIdx.x;
     while (index < batch_size * sequeue_length * hidden_size) {
         int id = input_ids[index / hidden_size];
-        output[index] = embed_table[input_id * hidden_size + index % hidden_size];
+        output[index] = embed_table[id * hidden_size + index % hidden_size];
         index += blockDim.x * gridDim.x;
     }
     if (index == 0){
