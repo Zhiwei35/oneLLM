@@ -25,14 +25,14 @@ __global__ void embeddingFunctor(const int* input_ids,
 }
 
 template<typename T>
-void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [batch_size, sequenue_length] = [1, max seq len]
+void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [max context token num]
                           TensorWrapper<T>* output,       // FP32 [batch_size, sequeue_length, hidden_size] = [1, max seq len, 4096]
                           EmbeddingWeight<T>* embed_table,// FP32 [vocal_size, hidden_size]
                           int vocab_size) {//consider add shape attr in embeddingweight to avoid vocab size input 
     const int blockSize = 256;
-    const int batch_size = output->shape[0];
-    const int sequeue_length = output->shape[1];
-    const int hidden_size = output->shape[2];
+    const int batch_size = 1;
+    const int sequeue_length = output->shape[0];
+    const int hidden_size = output->shape[1];
     const int gridSize = (blockSize + output->size() - 1) / blockSize;
     printf("calling input embedding\n");
     printf("context decoder input shape:\n");
