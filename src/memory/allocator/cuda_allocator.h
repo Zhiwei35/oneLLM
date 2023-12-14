@@ -184,7 +184,7 @@ public:
             }
         }
         // std::cout << "NOT found the ptr in blocks, so free the ptr to OS using cudaFree"
-                                            << std::endl;
+                                            // << std::endl;
         cudaFree(ptr);    
     }
 };
