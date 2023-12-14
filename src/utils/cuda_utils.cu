@@ -177,6 +177,6 @@ public:
 //     return 0;
 // }
 
-template struct loadWeightFromBin<float, float>;
-template struct loadWeightFromBin<half, half>;
-template struct loadWeightFromBin<float, half>;
+template struct loadWeightFromBin<float, float, true>;
+template struct loadWeightFromBin<half, half, true>;
+template struct loadWeightFromBin<float, half, false>;

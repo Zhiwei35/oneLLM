@@ -110,8 +110,8 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     // 两个中间top ids和vals，和两个final topk ids和vals
     topk_workspace->data = allocator->Malloc(topk_workspace->data, sizeof(T) * (2 * batch_size * K + 2 * batch_size * K * 8/*max block per beam*/ * K), false);
     topk_id = new TensorWrapper<int>(GPU, getTensorType<int>(),
-                                                             {batch_size, K}, (int*)(topk_workspace->data +  batch_size * K + 2 * batch_size * K * 8 * K));
-    topk_val = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, K}, topk_workspace->data +  2 * batch_size * K * 8 * K);
+                                                             {batch_size, K}, (int*)((T*)((int*)(topk_workspace->data + batch_size * K * 8 * K) + batch_size * K * 8 * K) +  batch_size * K));
+    topk_val = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, K}, (T*)((int*)(topk_workspace->data + batch_size * K * 8 * K) + batch_size * K * 8 * K));
 }
 //seems we should self define max_context_len, since we only support bs=1 now
 //将CPU的各个length拷到GPU

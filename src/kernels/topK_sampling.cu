@@ -1,4 +1,4 @@
-#include <iostream>
+#include <stdio.h>
 #include "src/kernels/topK_sampling.h"
 // mini-softmax + curand_sample
 // input: [bs, K] from topK output
@@ -18,10 +18,14 @@ __global__ void SamplingKernel(int* topk_id,
     int bid = batch_id;
     int tid = threadIdx.x;
     int offset = batch_id * K + tid;
-    bool is_half = sizeof(T) == 2;
+    if (tid == 0) {
+        printf("topk_val max = %f\n", (float)topk_val[batch_id * K]);
+        printf("topk_id[0] = %d\n", topk_id[0]);
+    }
+
     float max_val = (float)(topk_val[batch_id * K]) ; // max val is the top of the buffer, because topK
-    float val = (float)(topk_val[offset]);
-    val = expf(val - max_val);
+    topk_val[offset] = expf((float)topk_val[offset] - max_val);
+
     __shared__ float thredhold, sum;
     if(tid == 0) {
         sum = 0.0f;
@@ -31,8 +35,13 @@ __global__ void SamplingKernel(int* topk_id,
         curandState_t state;
         curand_init((unsigned long long)rand_num,(unsigned long long)bid, (unsigned long long)0, &state);// not sure rand_num's type is suitable here or not
         thredhold = (float)curand_uniform(&state) * sum; // for a block
+        printf("sampling info: \n");
+        printf("sum = %f\n", sum);
+        printf("thredhold = %f\n", thredhold);
+        printf("top1 val = %f", (float)topk_val[0]);
+
         for(int i = 0; i < K; i++) {
-            thredhold = thredhold - val;
+            thredhold = thredhold - (float)topk_val[batch_id * K + i];
             if(thredhold < 0) {
                 output_id[bid] = topk_id[batch_id * K + i] % vocab_size;
                 break;

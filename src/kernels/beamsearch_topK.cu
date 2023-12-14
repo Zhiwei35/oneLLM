@@ -74,10 +74,12 @@ __global__ void topK_kernel_round2(const int* topK_ids, const T* topK_vals,
     // block reduce
     topK<T, K> block_topK = blockreduce(temp_storage).Reduce(thread_topK, reduce_functor<T, K>);
     if(tid == 0){
+        printf("topK id: \n");
         for(int k_offset = 0; k_offset < K; k_offset++) {
             // topK_vals[row_id * vocab_size + block_lane * blockSize + k_offset] = block_topK.val[k_offset]; //bug
             final_topK_vals[bid * K + k_offset] = block_topK.val[k_offset];
             final_topK_ids[bid * K + k_offset] = block_topK.id[k_offset];
+            printf("%d\n", block_topK.id[k_offset]);
         }
     }    
 }
