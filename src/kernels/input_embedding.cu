@@ -17,6 +17,10 @@ __global__ void embeddingFunctor(const int* input_ids,
          index += blockDim.x * gridDim.x) {
         int input_id = input_ids[index / hidden_size];
         output[index] = embed_table[input_id * hidden_size + index % hidden_size];
+        if (index == 0){
+            printf("embedding res: \n");
+            printf("%f\n",output[index]);
+        }
     }
 }
 

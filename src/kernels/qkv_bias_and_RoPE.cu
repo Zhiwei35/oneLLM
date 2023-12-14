@@ -102,7 +102,11 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
 
     int batch_id = dst_token_id / seq_len; //seqlen is max_seq_len for padding used to unify all seq's length
     int local_token_id = dst_token_id % seq_len; //每个seq中的局部token id
-
+    if(tid == 0) {
+        printf("QKV top2 res: \n");
+        printf("%f\n",QKV[tid]);
+        printf("%f\n",QKV[1]);        
+    }
     //2. bias add
     int qkv_head_num = head_num + 2 * kv_head_num;
     int q_id = token_id * qkv_head_num * head_size + head_id * head_size + tid * vec_size;
@@ -156,6 +160,11 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
         if (head_id < kv_head_num) {//for MQA and GQA
             *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k;
             *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
+        }
+        if(tid == 0) {
+            printf("rope top2 res: \n");
+            printf("%f\n",q_buf[tid]);
+            printf("%f\n",q_buf[1]);        
         }
     }
                                                     }
