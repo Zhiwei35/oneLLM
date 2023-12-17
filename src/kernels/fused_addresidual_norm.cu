@@ -86,7 +86,7 @@ __global__ void FusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hi
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
     if (scale != nullptr){
-        s = scalar_cast_vec<Vec_t>(*const_cast<T*>(scale));
+        s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale));
     }
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
         //s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];

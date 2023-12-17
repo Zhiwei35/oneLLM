@@ -70,7 +70,7 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
-    s = scalar_cast_vec<Vec_t>(*const_cast<T*>(scale));
+    s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale));
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
         //s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];
         out[i].x = s[i].x * out[i].x * inv_fenmu.x;
