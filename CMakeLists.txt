@@ -82,18 +82,17 @@ include_directories(
 link_directories(
   ${COMMON_LIB_DIRS}
 )
-file(GLOB_RECURSE ONELLM_CXX_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.cc)
-file(GLOB_RECURSE ONELLM_CUDA_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cu)
-# set(ONELLM_CUDA_SOURCES src/)
-# set(ONELLM_CXX_SOURCES src/)
-add_library(onellm OBJECT
-            ${ONELLM_CXX_SOURCES}
-            ${ONELLM_CUDA_SOURCES}
-            )
+#file(GLOB_RECURSE ONELLM_CXX_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.cc)
+#file(GLOB_RECURSE ONELLM_CUDA_SOURCES ${PROJECT_SOURCE_DIR}/src/*.cu)
+
+#add_library(onellm OBJECT
+#            ${ONELLM_CXX_SOURCES}
+#            ${ONELLM_CUDA_SOURCES}
+#            )
 
 add_subdirectory(src)
-#add_subdirectory(tests)
-add_subdirectory(examples)
+add_subdirectory(tests)
+#add_subdirectory(examples)
 
-add_executable(main onellm.cpp)
-target_link_libraries(main PUBLIC -lcublas -lcudart -lcudadevrt onellm)
+#add_executable(main onellm.cpp)
+#target_link_libraries(main PUBLIC -lcublas -lcudart -lcudadevrt onellm)

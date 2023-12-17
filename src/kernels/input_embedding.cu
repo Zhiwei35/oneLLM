@@ -43,7 +43,8 @@ void launchInputEmbedding(TensorWrapper<int>* input_ids,    // INT [max context 
     // const int batch_size = 1;
     const int max_context_token_num = output->shape[0];
     const int hidden_size = output->shape[1];
-    const int gridSize = (blockSize + output->size() - 1) / blockSize;
+//    const int gridSize = (blockSize + output->size() - 1) / blockSize;
+    const int gridSize = 2048;
     ONELLM_CHECK_WITH_INFO(max_context_token_num == input_ids->shape[0], "input ids 1st shape should equal to 1st shape of output");
     printf("calling input embedding\n");
     printf("context decoder input shape:\n");
