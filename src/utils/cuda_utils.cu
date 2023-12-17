@@ -114,7 +114,9 @@ struct loadWeightFromBin<T_OUT, T_FILE, true>
 public:
     static void internalFunc(T_OUT* ptr, std::vector<size_t> shape, std::string filename) {
         std::vector<T_FILE> host_array = loadWeightFromBinHelper<T_FILE>(shape, filename);
-
+        if(filename.find("embed") != -1) {
+            std::cout << "embed table: " << (float)host_array[0] << ", " << (float)host_array[1] << "\n";
+        }
         if (host_array.empty()) {
             return;
         }
