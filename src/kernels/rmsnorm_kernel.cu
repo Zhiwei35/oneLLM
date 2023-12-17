@@ -50,7 +50,7 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     }
     float thread_accm = 0.0f;
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
-        thread_accm += tmp.x * tmp.x + tmp.x * tmp.x;
+//        thread_accm += tmp.x * tmp.x + tmp.x * tmp.x;
 
         dout = reinterpret_cast<Vec_t*>(decoder_out)[batch_id * hidden_units / vec_size + i];// note the offset should divide vec size
 
@@ -63,6 +63,10 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     __shared__ Vec_t inv_fenmu;
     if(tid == 0){
         inv_fenmu = scalar_cast_vec<Vec_t>(rsqrt(blocksum / hidden_units + eps));
+        if (batch_id == 0){
+            printf("blocksum = %f\n", blocksum);
+            printf("inv_fenmu = %f\n", inv_fenmu.x);
+        }
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
@@ -73,11 +77,11 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
         out[i].y = s[i].y * out[i].y * inv_fenmu.y;
         out[i].z = s[i].z * out[i].z * inv_fenmu.z;
         out[i].w = s[i].w * out[i].w * inv_fenmu.w;
-        // if(i == 0) {
-        //     printf("rmsnorm after emb top2 res: \n");
-        //     printf("%f\n",out[i].x);
-        //     printf("%f\n",out[i].y);
-        // }
+        if(i == 0) {
+            printf("rmsnorm after emb top2 res: \n");
+            printf("%f\n",out[i].x);
+            printf("%f\n",out[i].y);
+        }
     }    
 }
 
@@ -93,7 +97,11 @@ __global__ void RMSNorm(half* decoder_out, // [num tokens, q_hidden_units]
     int tid = threadIdx.x;
     Vec_t* s;
     Vec_t dout, tmp;
-    
+    if(batch_id == 0 && tid == 0) {
+        printf("rmsnorm input: \n");
+        printf("%f\n",(float)decoder_out[0]);
+        printf("%f\n",(float)decoder_out[1]);
+    }    
     float thread_accm = 0.0f;
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
         thread_accm += __half2float(tmp.x) * __half2float(tmp.x) + __half2float(tmp.x) * __half2float(tmp.x);
@@ -127,7 +135,7 @@ void launchRMSNorm( TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
     int num_tokens = decoder_out->shape[0];
     int hidden_units = decoder_out->shape[1];
     int vec_size = Vec<T>::size;
-    int num_threads = hidden_units / vec_size; // assume head size can be divided by 4 and 2
+    int num_threads = hidden_units / 4;//vec size // assume head size can be divided by 4 and 2
     dim3 grid(num_tokens);
     dim3 block(num_threads);
     // printf("calling RMSNorm\n");

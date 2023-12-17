@@ -12,13 +12,13 @@ namespace onellm {
     template<typename T>
     BaseModel *CreateModelWithName(const std::string& model_name) {
         ONELLM_CHECK_WITH_INFO(model_name == "llama", "dont support other models except llama yet!");
-        int head_num = 32;//4;
-        int kv_head_num = 32;//2;
-        int head_size = 128;//8;
-        int inter_size = 11008;//12;
-        int num_layers = 32;//2;
+        int head_num = 4;// 32;//4;
+        int kv_head_num = 2;//32;//2;
+        int head_size = 8;//128;//8;
+        int inter_size = 12;//11008;//12;
+        int num_layers = 2;//32;//2;
         int max_seq_len = 256;
-        int vocab_size = 32000;//100;
+        int vocab_size = 100;//32000;//100;
         int hidden_units = (head_num + 2 * kv_head_num) * head_size;
         int q_hidden_units = head_num * head_size;
         //int step = 0;
