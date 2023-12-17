@@ -50,6 +50,7 @@ __global__ void type_conversion(T_OUT* dst, const T_IN* src, const int size)
     int total_thread_nums = blockDim.x * gridDim.x;
     for (int index = gtid; index < size; index += total_thread_nums) {
         dst[index] = type_cast<T_OUT>(src[index]);
+        if(gtid == 0) {printf("1st ele after half2float: %f\n", dst[gtid]);}
     }
 }
 

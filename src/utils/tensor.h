@@ -206,8 +206,8 @@ struct TensorMap {
                 insert(pair.first, pair.second);
             }
             else {
-                std::cout << "this is not a valid tensor, skip to insert into tensormap" << std::endl;
-                //ONELLM_INFO(fmtstr("%s is not a valid tensor, skipping insert into TensorMap", pair.first.c_str()));
+                // std::cout << "this is not a valid tensor, skip to insert into tensormap" << std::endl;
+                ONELLM_INFO(fmtstr("%s is not a valid tensor, skipping insert into TensorMap", pair.first.c_str()));
             }
         }
     }

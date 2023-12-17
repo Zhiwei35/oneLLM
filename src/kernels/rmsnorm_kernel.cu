@@ -70,7 +70,7 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
     }
     // rmsnorm
     Vec_t* out = reinterpret_cast<Vec_t*>(decoder_out + batch_id * hidden_units);// note before vec the stride is batch_id * hiddenunits w/o / vecsize
-    s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale));
+    s = scalar_cast_vec<Vec_t>(*const_cast<T*>(scale));
     for(int i = tid; i < hidden_units / vec_size; i += blockDim.x) {
         //s = reinterpret_cast<Vec_t*>(const_cast<T*>(scale))[i];
         out[i].x = s[i].x * out[i].x * inv_fenmu.x;
@@ -79,8 +79,8 @@ __global__ void RMSNorm(T* decoder_out, // [num tokens, q_hidden_units]
         out[i].w = s[i].w * out[i].w * inv_fenmu.w;
         if(i == 0) {
             printf("rmsnorm after emb top2 res: \n");
-            printf("%f\n",out[i].x);
-            printf("%f\n",out[i].y);
+            printf("out.x = %f, s[i].x = %f, inv_fenmu.x = %f\n",out[i].x, s[i].x, inv_fenmu.x);
+            printf("out.y = %f, s[i].y = %f, inv_fenmu.y = %f\n",out[i].y, s[i].y, inv_fenmu.y);
         }
     }    
 }

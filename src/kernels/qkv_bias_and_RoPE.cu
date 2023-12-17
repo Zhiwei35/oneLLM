@@ -161,11 +161,11 @@ __global__ void add_fusedQKV_bias_transpose_kernel(T*           q_buf,
             *reinterpret_cast<Vec_t*>(&k_buf[dst_kv_id]) = k;
             *reinterpret_cast<Vec_t*>(&v_buf[dst_kv_id]) = v;
         }
-        // if(tid == 0) {
-        //     printf("rope top2 res: \n");
-        //     printf("%f\n",q_buf[tid]);
-        //     printf("%f\n",q_buf[1]);        
-        // }
+        if(token_id == 0 && head_id == 0 && tid == 0) {
+            printf("rope top2 res: \n");
+            printf("%f\n",q_buf[tid]);
+            printf("%f\n",q_buf[1]);        
+        }
     }
                                                     }
 

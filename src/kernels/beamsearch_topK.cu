@@ -42,7 +42,7 @@ __global__ void topK_kernel_round1(const T* probs, const int vocab_size,
     topK<T, K> block_topK = blockreduce(temp_storage).Reduce(thread_topK, reduce_functor<T, K>);
 
     if(tid == 0){
-        printf("print probs input to topk...\n");
+        printf("in topK, print probs input to topk...\n");
         printf("probs[0] = %f\n", probs[0]);
         printf("probs[1] = %f\n", probs[1]);
         for(int k_offset = 0; k_offset < K; k_offset++) {

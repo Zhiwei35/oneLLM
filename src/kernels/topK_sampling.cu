@@ -19,8 +19,8 @@ __global__ void SamplingKernel(int* topk_id,
     int tid = threadIdx.x;
     int offset = batch_id * K + tid;
     if (tid == 0) {
-        printf("topk_val max = %f\n", (float)topk_val[batch_id * K]);
-        printf("topk_id[0] = %d\n", topk_id[0]);
+        printf("in sampling, topk_val max = %f\n", (float)topk_val[batch_id * K]);
+        printf("in sampling, input topk_id[0] = %d\n", topk_id[0]);
     }
 
     float max_val = (float)(topk_val[batch_id * K]) ; // max val is the top of the buffer, because topK

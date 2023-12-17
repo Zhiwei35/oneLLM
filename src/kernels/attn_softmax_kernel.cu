@@ -61,6 +61,11 @@ __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
     if(threadIdx.x >= k_len){
         return;
     }
+    if(blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0) {
+        printf("attn softmax input top2 data:\n");
+        printf("%f\n", qk[0]);
+        printf("%f\n", qk[1]);
+    }
     for(int row_start = blockIdx.x; row_start < q_len; row_start += gridDim.x) {
         int qk_offset = 0;
         int mask_offset = 0;
@@ -114,6 +119,11 @@ __global__ void ScaleMaskAndSoftmax_float(T* attn_score,
             qk_offset = batch_id * head_nums * q_len * k_len + head_id * q_len * k_len
                             + row_start * k_len + col_start * blockDim.x + threadIdx.x;
             attn_score[qk_offset] = (data[col_start] * inv_sum);
+            if(blockIdx.x == 0 && blockIdx.y == 0 && blockIdx.z == 0 && threadIdx.x == 0) {
+                printf("attn softmax output top2 data:\n");
+                printf("%f\n", attn_score[0]);
+                printf("%f\n", attn_score[1]);
+            }
         }
     }
 }
