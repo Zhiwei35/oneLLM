@@ -30,8 +30,10 @@ void Llama<T>::allocateCPUBuffer(int max_batch_size){
     //session_len即max_output_len,max_seq_len,output_token_limit
     //tokenids->output ids, [s,b]=>[b,s]，此处因为没有batch，先省掉
     // output_ids_buf_ = (int*)allocator->Malloc(output_ids_buf_, sizeof(int) * max_batch_size * output_token_limit, true); 
+    // h_input_ids_buf_ =
+    //     allocator->Malloc(h_input_ids_buf_, sizeof(int) * max_batch_size * max_seq_len, true);
     h_input_ids_buf_ =
-        allocator->Malloc(h_input_ids_buf_, sizeof(int) * max_batch_size * max_seq_len, true);
+        allocator->Malloc(h_input_ids_buf_, sizeof(int) * max_context_token_num_, true);    
     h_input_length_buf_ =
         allocator->Malloc(h_input_length_buf_, sizeof(int) * max_batch_size, true);
     h_history_length_buf_ =
@@ -67,7 +69,7 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     context_decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {/*token num*/max_context_token_num_, hidden_units});
     decoder_input = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
     decoder_output = new TensorWrapper<T>(GPU, getTensorType<T>(), {batch_size, hidden_units});
-    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size, max_seq_len});//这里的seqlen应该是padding前的
+    input_ids = new TensorWrapper<int>(GPU, getTensorType<int>(), {max_context_token_num_});//{batch_size, max_seq_len});//这里的seqlen应该是padding前的
     input_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     history_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
     context_length = new TensorWrapper<int>(GPU, getTensorType<int>(), {batch_size});
@@ -90,7 +92,7 @@ void Llama<T>::allocateGPUBuffer(int batch_size)
     decoder_input->data  = allocator->Malloc(decoder_input->data, sizeof(T) * batch_size * hidden_units, false);//4x32
     decoder_output->data = allocator->Malloc(decoder_output->data, sizeof(T) * batch_size * hidden_units, false);
 
-    input_ids->data      = allocator->Malloc(input_ids->data, sizeof(int) * batch_size * max_seq_len, false);//4x100,进位到32x为416
+    input_ids->data      = allocator->Malloc(input_ids->data, sizeof(int) * max_context_token_num_, false);//batch_size * max_seq_len, false);//4x100,进位到32x为416
     input_length->data   = allocator->Malloc(input_length->data, sizeof(int) * batch_size, false);
     history_length->data = allocator->Malloc(history_length->data, sizeof(int) * batch_size, false);
     context_length->data = allocator->Malloc(context_length->data, sizeof(int) * batch_size, false);
@@ -350,7 +352,8 @@ std::string Llama<T>::Response(const std::tuple<std::string, int, int>& input, C
         PrintRes(index, genString.c_str());
         index++; //生成的token数量
         // deep copy
-        input_ids->shape = {1, 1};
+        input_ids->shape = {1};
+        //input_ids->shape = {1,1};[bs, max seq len]
         CHECK(cudaMemcpy(input_ids->data, &ret, sizeof(int), cudaMemcpyHostToDevice));//note: dont use input_ids = new TensorWrapper<int>(...&ret), because this is cpu ret
 
         //input_ids = new TensorWrapper<int>(GPU, INT32, {1, 1}, &ret);
