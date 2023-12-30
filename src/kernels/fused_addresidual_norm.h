@@ -1,12 +1,14 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
 #include <cuda_fp16.h>
+#include "src/weights/base_weights.h"
+#include "src/weights/llama/norm_weights.h"
+#include "src/utils/tensor.h"
+#include "src/utils/vectorize_utils.h"
 template<typename T>
 void launchFusedAddBiasResidualRMSNorm( // residual.shape = [num tokens, hidden_units], batch_size = num tokens, n_dims = hidden_units
-                                    T* residual, 
-                                    T* decoder_out, // [num tokens, hidden_units]
-                                    const T* bias,
-                                    const T* scale, //RMSNorm weights
-                                    float eps, //RMSNorm eps
-                                    int num_tokens, 
-                                    int hidden_units);
+                                    TensorWrapper<T>* residual, 
+                                    TensorWrapper<T>* decoder_out, // [num tokens, hidden_units]
+                                    BaseWeight<T>& norm,
+                                    T* scale, //RMSNorm weights
+                                    float eps);

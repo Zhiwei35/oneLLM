@@ -6,6 +6,7 @@
 #include "src/utils/macro.h"
 
 // current example dont consider layer_id in masked self attn
+// now consider it
 int main(){
     int h_step = 3;
     int head_num = 4;
@@ -139,55 +140,73 @@ int main(){
 
     cudaMemcpy(d_finished, h_finished, sizeof(bool) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_output_norm_weight, h_output_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_attn_norm_weight, h_attn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_norm_weight, h_ffn_norm_weight, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_weights, h_qkv_weights, sizeof(float) * q_hidden_units * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_qkv_bias, h_qkv_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_output_weights, h_output_weights, sizeof(float) * q_hidden_units * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_out_bias, h_out_bias, sizeof(float) * q_hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_down, h_ffn_down, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_down_bias, h_ffn_down_bias, sizeof(float) * hidden_units, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_gate, h_ffn_gate, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ffn_up, h_ffn_up, sizeof(float) * hidden_units * inter_size, cudaMemcpyHostToDevice);
 
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
     DataType type_bool = getTensorType<bool>();
-    std::vector<LlamaLayerWeight*> layerWeights;
+    std::vector<LlamaLayerWeight<float>*> layerWeights;
     WeightType wtype = getWeightType<float>();
     layerWeights.reserve(num_layers);
     for(int i = 0; i < num_layers; i++) {
-        layerWeights[i] = new LlamaLayerWeight(head_num, kv_head_num,
+        layerWeights[i] = new LlamaLayerWeight<float>(head_num, kv_head_num,
                                                head_size, inter_size, wtype,
                                                /*attn_bias*/true);
-        layerWeights[i]->loadWeights<float>(d_attn_norm_weight,
-                                            d_ffn_norm_weight,
-                                            d_qkv_weights,
-                                            d_qkv_bias,
-                                            d_output_weights,
-                                            d_out_bias,
-                                            d_ffn_down,
-                                            d_ffn_down_bias,
-                                            d_ffn_gate,
-                                            d_ffn_up);
+        layerWeights[i]->loadWeights();
     }
+    TensorWrapper<float>* decoder_input = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.batch_size, q_hidden_units}, 
+                                                                    d_decoder_input);
+    TensorWrapper<int>* step = new TensorWrapper<int>(CPU, 
+                                                        type_int, 
+                                                        {1}, 
+                                                        &h_step);
+    TensorWrapper<bool>* finished = new TensorWrapper<bool>(GPU, 
+                                                            type_bool, 
+                                                            {attn_dyn_params.batch_size}, 
+                                                            d_finished);
+    TensorWrapper<int>* layer = new TensorWrapper<int>(CPU, 
+                                                            type_int, 
+                                                            {1}, 
+                                                            &layer_id);
+    TensorWrapper<float>* output_norm_weight = new TensorWrapper<float>(GPU, 
+                                                            type, 
+                                                            {q_hidden_units}, 
+                                                            d_output_norm_weight);
+    TensorWrapper<float>* decoder_output = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.batch_size, q_hidden_units}, 
+                                                                    d_decoder_output);
+    TensorWrapper<float>* key_cache = new TensorWrapper<float>(GPU, 
+                                                                type, 
+                                                                {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                                d_all_k_cache);
+    TensorWrapper<float>* value_cache = new TensorWrapper<float>(GPU, 
+                                                                type, 
+                                                                {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                                d_all_v_cache);
+    ONELLM_CHECK_WITH_INFO(decoder_input->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(step->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(finished->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+    ONELLM_CHECK_WITH_INFO(layer->data != nullptr, "the data ptr of tensor inserted into TensorMap is nullptr!");
+
 
     TensorMap decoder_inputs{
-        {"decoder_input", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_input)},
+        {"decoder_input",decoder_input},
         // {"sequence_lengths", Tensor(GPU, type, {hidden_units}, )},
         // {"total_padding_len", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, )},
-        {"step", Tensor(CPU, type_int, {1}, &h_step)},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
-        {"finished", Tensor(GPU, type_bool, {attn_dyn_params.batch_size}, d_finished)},
-//        {"layer_id", Tensor(CPU, type_int, {1}, &layer_id)},
-        {"output_norm_weight", Tensor(GPU, type, {q_hidden_units}, d_output_norm_weight)}//located at llamaweights class, rather not llamalayerweigths
+        {"step",step},// a batch shared same step, dim=1 tensor can locate on CPU, no need GPU
+        {"finished",finished},
+        {"layer_id",layer},
+        {"output_norm_weight",output_norm_weight}//located at llamaweights class, rather not llamalayerweigths
     };
     TensorMap decoder_outputs{
-        {"decoder_output", Tensor(GPU, type, {attn_dyn_params.batch_size, q_hidden_units}, d_decoder_output)},
-        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"decoder_output",decoder_output},
+        {"all_k_cache",key_cache},
+        {"all_v_cache",value_cache}
     };
 
-    LlamaSelfDecoder* selfDecoder = new LlamaSelfDecoder(head_num,
+    LlamaSelfDecoder<float>* selfDecoder = new LlamaSelfDecoder<float>(head_num,
                                                             kv_head_num,
                                                             head_size,
                                                             inter_size,

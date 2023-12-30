@@ -1,10 +1,8 @@
 #include<cuda_runtime.h>
 #include<cuda.h>
-
+#include<cuda_fp16.h>
+#include "src/utils/tensor.h"
 template<typename T>
-void launchBuildCausalMasks(T* mask, 
-                            const int* q_lens, 
-                            const int* k_lens, 
-                            int max_q_len, 
-                            int max_k_len, 
-                            int batch_size);
+void launchBuildCausalMasks(TensorWrapper<T>* mask, 
+                            TensorWrapper<int>* q_lens, 
+                            TensorWrapper<int>* k_lens);

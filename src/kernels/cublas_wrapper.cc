@@ -38,7 +38,7 @@ void cublasWrapper::setFP16GemmConfig()
     Atype_       = CUDA_R_16F;
     Btype_       = CUDA_R_16F;
     Ctype_       = CUDA_R_16F;
-    computeType_ = CUBLAS_COMPUTE_16F;
+    computeType_ = CUBLAS_COMPUTE_16F; // cuda version > 11.0的写法, <的时候是CUDA_R_16F的写法
 }
 
 //fp32 gemm and fp16 gemm
@@ -56,37 +56,32 @@ void cublasWrapper::Gemm(cublasOperation_t transa,
                            float             f_alpha = 1.0f,
                            float             f_beta = 0.0f)
 {
-    //half h_alpha = (half)(f_alpha);
-    //half h_beta  = (half)(f_beta);
-    //int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
-    //const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_alpha)) : reinterpret_cast<void*>(&f_alpha);
-    //const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&((half)h_beta)) : reinterpret_cast<void*>(&f_beta);
-    const void* alpha = reinterpret_cast<void*>(&f_alpha);
-    const void* beta = reinterpret_cast<void*>(&f_beta);
-    //cublasStatus_t status;
+    half h_alpha = (half)(f_alpha);
+    half h_beta  = (half)(f_beta);
+    int is_fp16_computeType = computeType_ == CUBLAS_COMPUTE_16F ? 1 : 0; //之前是CUDA_R_16F
+    const void* alpha = is_fp16_computeType ? reinterpret_cast<void*>(&(h_alpha)) : reinterpret_cast<void*>(&f_alpha);
+    const void* beta  = is_fp16_computeType ? reinterpret_cast<void*>(&(h_beta)) : reinterpret_cast<void*>(&f_beta);
+    // const void* alpha = reinterpret_cast<void*>(&f_alpha);
+    // const void* beta = reinterpret_cast<void*>(&f_beta);
     CHECK_CUBLAS(cublasGemmEx(cublas_handle_,
-                transa,
-                transb,
-                m,
-                n,
-                k,
-                alpha,
-                A,
-                Atype_,
-                lda,
-                B,
-                Btype_,
-                ldb,
-                beta,
-                C,
-                Ctype_,
-                ldc,
-                computeType_,
-                CUBLAS_GEMM_DEFAULT));
-//                CUBLAS_GEMM_DEFAULT_TENSOR_OP);//this version will be deprecated
-//    if (status != CUBLAS_STATUS_SUCCESS){
-//        std::cout << "gemm kernel exec error!!" << "\n";
-//    }
+                            transa,
+                            transb,
+                            m,
+                            n,
+                            k,
+                            alpha,
+                            A,
+                            Atype_,
+                            lda,
+                            B,
+                            Btype_,
+                            ldb,
+                            beta,
+                            C,
+                            Ctype_,
+                            ldc,
+                            computeType_,
+                            CUBLAS_GEMM_DEFAULT));
 }
 
 void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
@@ -107,41 +102,37 @@ void cublasWrapper::stridedBatchedGemm(cublasOperation_t transa,
                                         float       f_alpha = 1.0f,
                                         float       f_beta  = 0.0f)
 {
-    //int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
-    //const void* alpha =
-    //    is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_alpha)) : reinterpret_cast<const void*>(&f_alpha);
-    //const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&((half)f_beta)) : reinterpret_cast<const void*>(&f_beta);
-    const void* alpha = reinterpret_cast<void*>(&f_alpha);
-    const void* beta = reinterpret_cast<void*>(&f_beta);
-    std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"
-              << "lda,ldb,ldc=" << lda << "," << ldb << "," << ldc << "\n"
-              << "strideA,strideB,strideC=" << strideA << "," << strideB << "," << strideB << "\n"
-              << "batchcount=" << batchCount << "\n";
-//    cublasStatus_t status;
+    int is_fp16_computeType = computeType_ == CUDA_R_16F ? 1 : 0;
+    const void* alpha =
+       is_fp16_computeType ? reinterpret_cast<void*>(&(f_alpha)) : reinterpret_cast<const void*>(&f_alpha);
+    const void* beta = is_fp16_computeType ? reinterpret_cast<void*>(&(f_beta)) : reinterpret_cast<const void*>(&f_beta);
+    // const void* alpha = reinterpret_cast<void*>(&f_alpha);
+    // const void* beta = reinterpret_cast<void*>(&f_beta);
+    // std::cout << "m,n,k=" << m << "," << n << "," << k << "\n"
+    //           << "lda,ldb,ldc=" << lda << "," << ldb << "," << ldc << "\n"
+    //           << "strideA,strideB,strideC=" << strideA << "," << strideB << "," << strideB << "\n"
+    //           << "batchcount=" << batchCount << "\n";
     CHECK_CUBLAS(cublasGemmStridedBatchedEx(cublas_handle_,
-                                transa,
-                                transb,
-                                m,
-                                n,
-                                k,
-                                alpha,
-                                A,
-                                Atype_,
-                                lda,
-                                strideA,
-                                B,
-                                Btype_,
-                                ldb,
-                                strideB,
-                                beta,
-                                C,
-                                Ctype_,
-                                ldc,
-                                strideC,
-                                batchCount,
-                                computeType_,
-                                CUBLAS_GEMM_DEFAULT));
-   // if (status != CUBLAS_STATUS_SUCCESS){
-   //     std::cout << "batched gemm kernel exec error!!" << "\n";
-   // }    
+                                            transa,
+                                            transb,
+                                            m,
+                                            n,
+                                            k,
+                                            alpha,
+                                            A,
+                                            Atype_,
+                                            lda,
+                                            strideA,
+                                            B,
+                                            Btype_,
+                                            ldb,
+                                            strideB,
+                                            beta,
+                                            C,
+                                            Ctype_,
+                                            ldc,
+                                            strideC,
+                                            batchCount,
+                                            computeType_,
+                                            CUBLAS_GEMM_DEFAULT));
 }

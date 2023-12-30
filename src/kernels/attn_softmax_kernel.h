@@ -1,8 +1,10 @@
 #include <cuda_runtime.h>
 #include <cuda.h>
+#include <cuda_fp16.h>
 #include "src/utils/tensor.h"
-
-void launchScaleMaskAndSoftmax(Tensor* qk,
-                               Tensor* mask,
-                               Tensor* attn_score,
+#include "src/utils/vectorize_utils.h"
+template<typename T>
+void launchScaleMaskAndSoftmax(TensorWrapper<T>* qk,
+                               TensorWrapper<T>* mask,
+                               TensorWrapper<T>* attn_score,
                                float scale);

@@ -82,9 +82,9 @@ int main(int argc, char** argv)
     int* h_input_len = (int*) malloc(sizeof(int) * attn_dyn_params.batch_size);
     int* d_input_len;
     cudaMalloc((void**)&d_input_len, sizeof(int) * attn_dyn_params.batch_size);
-    int* h_layer_id = (int*) malloc(sizeof(int) * attn_dyn_params.batch_size);
-    int* d_layer_id;
-    cudaMalloc((void**)&d_layer_id, sizeof(int) * attn_dyn_params.batch_size);
+    int h_layer_id = 0;
+    // int* d_layer_id;
+    // cudaMalloc((void**)&d_layer_id, sizeof(int) * attn_dyn_params.batch_size);
     // note: cur_query_len and input_len are the same, I think
     // int* hcur_query_len = (int*) malloc(sizeof(int) * attn_dyn_params.batch_size);
     // int* dcur_query_len;
@@ -94,7 +94,7 @@ int main(int argc, char** argv)
     cudaMalloc((void**)&d_ctx_len, sizeof(int) * attn_dyn_params.batch_size);
     for(int i = 0; i < attn_dyn_params.batch_size; i++){
         h_history_len[i] = 0; // for kv cache cumsum seqlen and rope's timestep compute
-        h_layer_id[i] = 0;
+        // h_layer_id[i] = 0;
         //hcur_query_len[i] = 7;
         h_input_len[i] = 7; // corresponding to padding offset
         h_ctx_len[i] = h_history_len[i] + h_input_len[i];
@@ -112,33 +112,83 @@ int main(int argc, char** argv)
     cudaMemcpy(d_all_v_cache, h_all_v_cache, sizeof(float) * num_layers * attn_dyn_params.batch_size * kv_head_num * max_seq_len * head_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_padding_offset, h_padding_offset, sizeof(int) * attn_dyn_params.num_tokens, cudaMemcpyHostToDevice);
     cudaMemcpy(d_history_len, h_history_len, sizeof(int) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_layer_id, h_layer_id, sizeof(int) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
+    // cudaMemcpy(d_layer_id, h_layer_id, sizeof(int) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_ctx_len, h_ctx_len, sizeof(int) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_input_len, h_input_len, sizeof(int) * attn_dyn_params.batch_size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_mask, h_mask, sizeof(float) * attn_dyn_params.batch_size * attn_dyn_params.max_q_len * attn_dyn_params.max_k_len, cudaMemcpyHostToDevice);
     // prepare input、weight and output tensor by std::initializer_list
     DataType type = getTensorType<float>(); // note: the type should be as a class data member!
     DataType type_int = getTensorType<int>();
+    TensorWrapper<float>* attention_input = new TensorWrapper<float>(GPU, 
+                                                                    type, 
+                                                                    {attn_dyn_params.num_tokens, q_hidden_units}, 
+                                                                    d_attention_input);
+    TensorWrapper<float>* qkv_bias = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {hidden_units}, 
+                                                              d_qkv_bias);
+    TensorWrapper<int>* padding_offset = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.num_tokens}, 
+                                                              d_padding_offset);
+    TensorWrapper<int>* history_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_history_len);
+    TensorWrapper<int>* input_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_input_len);
+    TensorWrapper<int>* layer_id = new TensorWrapper<int>(CPU, 
+                                                              type_int, 
+                                                              {1}, 
+                                                              &h_layer_id);
+    TensorWrapper<int>* context_length = new TensorWrapper<int>(GPU, 
+                                                              type_int, 
+                                                              {attn_dyn_params.batch_size}, 
+                                                              d_ctx_len);
+    TensorWrapper<float>* attention_mask = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, 
+                                                              d_mask);
+    TensorWrapper<float>* attention_output = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {attn_dyn_params.num_tokens, q_hidden_units}, 
+                                                              d_attention_output);
+    TensorWrapper<float>* all_k_cache = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                              d_all_k_cache);
+    TensorWrapper<float>* all_v_cache = new TensorWrapper<float>(GPU, 
+                                                              type, 
+                                                              {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, 
+                                                              d_all_v_cache);
+    ONELLM_CHECK_WITH_INFO(attention_input->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(qkv_bias->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(padding_offset->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(history_length->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(input_length->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(layer_id->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(context_length->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+    ONELLM_CHECK_WITH_INFO(attention_mask->data != nullptr, "tensor inserted in tensormap is nullptr data!");
+
     TensorMap ctx_attn_inputs{
-        {"attention_input", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_input)},
-        {"qkv_bias", Tensor(GPU, type, {hidden_units}, d_qkv_bias)},
-        {"padding_offset", Tensor(GPU, type_int, {attn_dyn_params.num_tokens}, d_padding_offset)},
-        {"history_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_history_len)},
-        {"input_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_input_len)},
-        {"layer_id", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_layer_id)},
-//        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-//        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)},
-//        {"cur_query_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, dcur_query_len)},
-        {"context_length", Tensor(GPU, type_int, {attn_dyn_params.batch_size}, d_ctx_len)},
-        {"attention_mask", Tensor(GPU, type, {attn_dyn_params.batch_size, attn_dyn_params.max_q_len, attn_dyn_params.max_k_len}, d_mask)}
+        {"attention_input", attention_input},
+        {"qkv_bias", qkv_bias},
+        {"padding_offset",padding_offset},
+        {"history_length", history_length},
+        {"input_length", input_length},
+        {"layer_id", layer_id},
+        {"context_length", context_length},
+        {"attention_mask", attention_mask}
     };
     TensorMap ctx_attn_outputs{
-        {"attention_output", Tensor(GPU, type, {attn_dyn_params.num_tokens, q_hidden_units}, d_attention_output)},
-        {"all_k_cache", Tensor(GPU, type,{num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_k_cache)},
-        {"all_v_cache", Tensor(GPU, type, {num_layers, attn_dyn_params.batch_size, kv_head_num, max_seq_len, head_size}, d_all_v_cache)}
+        {"attention_output", attention_output},
+        {"all_k_cache", all_k_cache},
+        {"all_v_cache", all_v_cache}
     };
     // weights are initialized in its constructor, see cpp/models/bert//bertlayerweight.cc
-    LLaMAattentionWeights ctx_attn_weights;
+    LLaMAattentionWeights<float> ctx_attn_weights;
     WeightType wtype = getWeightType<float>();
     ctx_attn_weights.qkv.data = d_qkv_weights;
     ctx_attn_weights.qkv.shape = {q_hidden_units, hidden_units};
@@ -148,7 +198,7 @@ int main(int argc, char** argv)
     ctx_attn_weights.output.shape = {q_hidden_units, q_hidden_units};
     ctx_attn_weights.output.type = wtype;
     // init ctxAttn
-    LLaMAContextAttentionLayer* ctxAttn = new LLaMAContextAttentionLayer(head_num,
+    LLaMAContextAttentionLayer<float>* ctxAttn = new LLaMAContextAttentionLayer<float>(head_num,
                                                                                        kv_head_num,
                                                                                        head_size,
                                                                                        attn_static_params,
@@ -174,8 +224,8 @@ int main(int argc, char** argv)
     cudaFree(d_history_len);
     free(h_input_len);
     cudaFree(d_input_len);
-    free(h_layer_id);
-    cudaFree(d_layer_id);
+    // free(h_layer_id);
+    // cudaFree(d_layer_id);
     free(h_ctx_len);
     cudaFree(d_ctx_len);
     cudaFree(d_attention_output);

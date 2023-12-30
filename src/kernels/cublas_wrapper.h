@@ -22,7 +22,7 @@ class cublasWrapper {
         cublasComputeType_t computeType_;   
 
         //cudaStream_t   stream_;
-        void* cublas_workspace = nullptr;
+        // void* cublas_workspace = nullptr;
 //        BaseAllocator* allocator_ = nullptr;
     
     public:

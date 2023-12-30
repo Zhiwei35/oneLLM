@@ -1,3 +1,4 @@
+#pragma once
 #include "src/weights/llama/attention_weights.h"
 #include "src/weights/llama/ffn_weights.h"
 #include "src/memory/allocator/cuda_allocator.h"
@@ -6,7 +7,7 @@
 #include "src/kernels/cublas_wrapper.h"
 #include "src/models/llama/llama_params.h"
 #include "src/kernels/activation_kernel.h"
-
+template<typename T>
 class LLaMAFFNLayer {
 private:
     // this params are shared across all LLMs
@@ -26,11 +27,11 @@ private:
 
     // buffer
     // [num tokens, 2, intersize]
-    Tensor*  SwiGLU_input = nullptr;  //gate proj and up proj output buf   
+    TensorWrapper<T>*  SwiGLU_input = nullptr;  //gate proj and up proj output buf   
     // [num tokens, intersize] 
-    Tensor*  down_proj_input = nullptr; 
+    TensorWrapper<T>*  down_proj_input = nullptr; 
     // [num tokens, hiddenunits]
-    Tensor*  down_proj_output = nullptr;
+    // TensorWrapper<T>*  down_proj_output = nullptr;
   
 
 
@@ -42,10 +43,9 @@ public:
                     cublasWrapper* cublas_wrapper,
                     BaseAllocator* allocator,
                     bool is_free_buffer_after_fwd);
-    template<typename T>
+
     void allocForForward(LLaMAAttentionDynParams& params);
-    template<typename T>
     void allocForForward(int batch_size);
-    void free();
-    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights& weights, LLaMAAttentionDynParams& params);
+    void freeBuf();
+    void forward(TensorMap& inputs, TensorMap& outputs, LLaMAFFNWeights<T>& weights, LLaMAAttentionDynParams& params);
 };

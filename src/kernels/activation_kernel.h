@@ -1,3 +1,8 @@
 #include <cuda_runtime.h>
+#include <cuda.h>
+#include <cuda_fp16.h>
+#include "src/utils/tensor.h"
+#include "src/utils/vectorize_utils.h"
+
 template<typename T>
-void launchAct(const T* input, T* out, const int batch_size, const int intermedia_size);
+void launchAct(const TensorWrapper<T>* input, TensorWrapper<T>* out);

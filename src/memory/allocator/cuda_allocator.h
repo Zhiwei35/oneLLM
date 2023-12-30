@@ -4,6 +4,8 @@
 #include <vector>
 #include <iostream>
 #include "src/memory/allocator/base_allocator.h"
+#include "src/utils/macro.h"
+
 // I use Bytes to printf buffer size msg, because sometime I allocate <1KB buffer, which causes that display 0KB
 struct CudaBigBlock {
     void *data;
@@ -41,7 +43,7 @@ public:
         cudaGetDevice(&dev_id);
     }
     ~CudaAllocator() {
-        std::cout << "cudaAllocator deconstructor!" << std::endl;
+        // std::cout << "cudaAllocator deconstructor!" << std::endl;
         for (auto &it: cudaSmallBlocksMap) {
             auto &cudaBlocks = it.second; //vector
             for (int i = 0; i < cudaBlocks.size(); i++) {
@@ -59,7 +61,9 @@ public:
         // not sure if w/o it, float4 works or not
         size = ((size + 31) / 32) * 32;
         if (is_host) {
-            cudaMallocHost(&ptr, size);
+            //CHECK(cudaMallocHost(&ptr, size));
+            ptr = malloc(size);
+            memset(ptr, 0, size);
             return ptr;
         }
         //大buf, 先去bigblocks里面找空闲的（free出来的）
@@ -78,19 +82,19 @@ public:
             // the allocated big block id
             if (blockID != -1) {
                 BigBlocks[blockID].is_allocated = true;
-                std::cout << "allocate a existed big block, id = " << blockID 
-                                                <<", size = "<< size << "B"
-                                                <<", block size = "<< BigBlocks[blockID].size << "B"
-                                                << std::endl;
+                // std::cout << "allocate a existed big block, id = " << blockID 
+                //                                 <<", size = "<< size << "B"
+                //                                 <<", block size = "<< BigBlocks[blockID].size << "B"
+                //                                 << std::endl;
                                                 
                 return BigBlocks[blockID].data;
             }
             // 没找到空闲的再cudaMalloc
             void* new_buffer;
             cudaMalloc(&new_buffer, size);
-            std::cout << "allocate a new big block from OS using cudaMalloc, size = "
-                                                << size << "B"
-                                                << std::endl;
+            // std::cout << "allocate a new big block from OS using cudaMalloc, size = "
+            //                                     << size << "B"
+            //                                     << std::endl;
             BigBlocks.push_back(CudaBigBlock(new_buffer, size, true));
             return new_buffer;
         }
@@ -100,19 +104,20 @@ public:
             if (SmallBlocks[i].size >= size && !SmallBlocks[i].is_allocated) {
                 SmallBlocks[i].is_allocated = true;
                 FreeSize[i] += SmallBlocks[i].size;//小buf size
-                std::cout << "allocate a existed small block, id = " << i 
-                                <<", size = "<< size << "B"
-                                <<", block size = "<< SmallBlocks[i].size << "B"
-                                << std::endl;
+                // std::cout << "allocate a existed small block, id = " << i 
+                //                 <<", size = "<< size << "B"
+                //                 <<", block size = "<< SmallBlocks[i].size << "B"
+                //                 << std::endl;
                 return SmallBlocks[i].data;
             }
         }
         // 没找到空闲的再cudaMalloc
         void* new_buffer = (void*)ptr;
-        cudaMalloc(&new_buffer, size);
-        std::cout << "allocate a new small block from OS using cudaMalloc, size = "
-                                            << size  << "B"
-                                            << std::endl;
+        CHECK(cudaMalloc(&new_buffer, size));
+        CHECK(cudaMemset(new_buffer, 0, size));
+        // std::cout << "allocate a new small block from OS using cudaMalloc, size = "
+        //                                     << size  << "B"
+        //                                     << std::endl;
 
         SmallBlocks.push_back(CudaSmallBlock(new_buffer, size, true));
         return new_buffer;
@@ -134,11 +139,11 @@ public:
                 for (int i = 0; i < cudaBlocks.size(); i++) {
                     if (!cudaBlocks[i].is_allocated) {
                         cudaSetDevice(it.first);
-                        std::cout << "free a small block to OS using cudaFree, block id = "
-                                                            << i
-                                                            << ",size = "
-                                                            << cudaBlocks[i].size << "B"
-                                                            << std::endl;
+                        // std::cout << "free a small block to OS using cudaFree, block id = "
+                        //                                     << i
+                        //                                     << ",size = "
+                        //                                     << cudaBlocks[i].size << "B"
+                        //                                     << std::endl;
                         cudaFree(cudaBlocks[i].data);
                     } else {
                         temp.push_back(cudaBlocks[i]);
@@ -156,11 +161,11 @@ public:
                 if (cudaBlocks[i].data == ptr) {
                     FreeSize[it.first] += cudaBlocks[i].size;
                     cudaBlocks[i].is_allocated = false;
-                    std::cout << "free a small block but not to OS, block id = "
-                                                        << i
-                                                        << ",size = "
-                                                        << cudaBlocks[i].size << "B"
-                                                        << std::endl;
+                    // std::cout << "free a small block but not to OS, block id = "
+                    //                                     << i
+                    //                                     << ",size = "
+                    //                                     << cudaBlocks[i].size << "B"
+                    //                                     << std::endl;
                     return;
                 }
             }
@@ -168,18 +173,18 @@ public:
             auto &bigBlocks = cudaBigBlocksMap[it.first];
             for (int i = 0; i < bigBlocks.size(); i++) {
                 if (bigBlocks[i].data == ptr) {
-                    std::cout << "free a big block but not to OS, block id = "
-                                                        << i
-                                                        << ",size = "
-                                                        << cudaBlocks[i].size << "B"
-                                                        << std::endl;
+                    // std::cout << "free a big block but not to OS, block id = "
+                    //                                     << i
+                    //                                     << ",size = "
+                    //                                     << cudaBlocks[i].size << "B"
+                    //                                     << std::endl;
                     bigBlocks[i].is_allocated = false;
                     return;
                 }
             }
         }
-        std::cout << "NOT found the ptr in blocks, so free the ptr to OS using cudaFree"
-                                            << std::endl;
+        // std::cout << "NOT found the ptr in blocks, so free the ptr to OS using cudaFree"
+                                            // << std::endl;
         cudaFree(ptr);    
     }
 };
